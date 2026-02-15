@@ -1,7 +1,5 @@
 # One Skill to Rule Them All
 
-![One Skill to Rule Them All](one-skill-to-rule-them-all.png)
-
 **The meta-skill that builds and improves all your skills, including itself.**
 
 Creating Claude skills is powerful but time-consuming. And the skills that do get built stay frozen — they never learn from how you actually use them.
