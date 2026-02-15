@@ -1,6 +1,6 @@
 # One Skill to Rule Them All
 
-![One Skill to Rule Them All](assets/task-observer-hero-dark.png)
+![One Skill to Rule Them All](one-skill-to-rule-them-all.png)
 
 **The meta-skill that builds and improves all your skills, including itself.**
 
