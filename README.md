@@ -57,6 +57,7 @@ If you try it on another platform, please open an issue and tell me.
 2. Add it to your skills:
    - **Cowork / Claude.ai:** Upload as a custom skill via Settings → Capabilities → Skills
    - **Claude Code:** Place in your skills directory (e.g., `~/.claude/skills/task-observer/SKILL.md`)
+   - **Via the skills CLI:** `npx skills add rebelytics/one-skill-to-rule-them-all`
 3. Work normally. The observer activates automatically during task-oriented sessions
 4. Review the observation log at the end of your session
 5. Apply the improvements you agree with to your other skills
