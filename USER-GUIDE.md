@@ -62,6 +62,8 @@ The task observer distinguishes between two types of skills:
 
 This distinction matters because the open-source/internal boundary is also a confidentiality boundary. The skill has built-in safeguards across multiple layers to prevent confidential data from leaking into open-source skills. If you work with clients or handle sensitive information, the system is designed to protect that: but it's worth knowing the distinction exists so you can tag observations correctly when prompted.
 
+It is always your own decision if you want to open-source any of your skills at all, or if you prefer to keep them all to yourself.
+
 ## The weekly review
 
 The skill has a built-in weekly review cycle. If more than 7 days have passed since the last review and there are open observations waiting, Claude will trigger a comprehensive review at the start of your next task-oriented session.
@@ -72,7 +74,7 @@ I've never actually reached this threshold, because I normally update skills mor
 
 ## The skill-creator
 
-Claude has a built-in skill called `skill-creator` that handles the actual building and restructuring of skills. The task observer and the skill creator work hand in hand: the observer identifies what to build or improve, and the skill creator handles how.
+Claude has a built-in skill called `skill-creator` that handles the actual building and restructuring of skills. The task observer and the skill creator work hand in hand: the observer identifies what to build or improve, and the creator handles how.
 
 Every time I feel like there are enough observations to act on, I start a quick skill improvement session in a Cowork task. I just tell Claude that I think it's time to improve a certain skill, or all skills that have observations waiting. Claude then creates updated versions that I can review before uploading them via Settings → Capabilities.
 
@@ -90,10 +92,10 @@ A great candidate for everyone is a personal writing style skill. Ask Claude to 
 
 But the writing style skill is really just a very basic example. Over time, you will realise how the meta-skill can help you turn even your most complex processes and workflows into repeatable tasks.
 
-I hope you have a lot of fun and that this approach has as much impact on your work as on mine. If you have any questions or comments whatsoever, I'm looking forward to hearing from you.
+I hope you have a lot of fun and that this approach has as much impact on your work as it has on mine. If you have any questions or comments whatsoever, I'm looking forward to hearing from you.
 
 You know where to find me.
 
 Thanks for reading,
 
-Eoghan
+Eoghan (rebelytics.com)
