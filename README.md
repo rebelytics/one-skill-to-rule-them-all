@@ -58,9 +58,10 @@ If you try it on another platform, please open an issue and tell me.
    - **Cowork / Claude.ai:** Upload as a custom skill via Settings → Capabilities → Skills
    - **Claude Code:** Place in your skills directory (e.g., `~/.claude/skills/task-observer/SKILL.md`)
    - **Via the skills CLI:** `npx skills add rebelytics/one-skill-to-rule-them-all`
-3. Work normally. The observer activates automatically during task-oriented sessions
-4. Review the observation log at the end of your session
-5. Apply the improvements you agree with to your other skills
+3. Read the user guide at [https://github.com/rebelytics/one-skill-to-rule-them-all/blob/main/USER-GUIDE.md](https://github.com/rebelytics/one-skill-to-rule-them-all/blob/main/USER-GUIDE.md)
+4. Work normally. The observer activates automatically during task-oriented sessions
+5. Review the observation log at the end of your session
+6. Apply the improvements you agree with to your other skills
 
 ## The self-improving part
 
