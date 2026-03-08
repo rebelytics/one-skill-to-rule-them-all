@@ -1,8 +1,12 @@
 # Getting Started with the task-observer meta-skill (aka "One skill to rule them all")
 
-This guide includes practical tips for getting value out of the meta-skill. It's based on my own daily usage of the skill across Cowork, the web interface, and the mobile app.
+This guide includes practical tips for getting value out of the meta-skill. It's based on my own daily usage of the skill across Claude Cowork, the web interface, and the mobile app.
+
+The best way to get started with this new work setup in any environment is probably to grab the skill, the user guide and the readme file and feed them to the AI of your choice. It should then be able to guide you towards best equivalent of this setup for your particular environment, no matter which system you use. As long as skills are supported, this approach should work with any AI system, with some adjustments.
 
 The meta-skill was primarily designed for Cowork, so these tips focus on that environment. If you use the skill in other environments, I expect most of the ideas to still apply. Please just adapt them where needed. And if you could report back to me your experience in other environments, that would be amazing.
+
+The rest of this user guide focusses on Claude and specifically Claude Cowork, but again, most of this should be applicable to other environments.
 
 ## Where the skill runs
 
@@ -44,6 +48,8 @@ Be aware that this means the skill won't always push skill creation and improvem
 
 One thing I do frequently is ask towards the end of a session: "Any observations logged?" Claude then gives me an overview of everything it captured. You can also prompt Claude to do a deeper analysis of the session to find observations it might have missed.
 
+Over time, I got used to just asking about the logged observations every time I archive a task. I like to keep my task list clean, so I archive all tasks that are done and just do a quick check on the logged observations at the same time. This has proven to be the most reliable way to log as many relevant observations as possible.
+
 If you want to browse the observation log yourself, you can find it at `[your shared folder]/skill-observations/log.md`. You don't normally need to look at it directly (Claude handles that), but it's there if you're curious.
 
 ## The cross-cutting principles file
@@ -64,13 +70,15 @@ This distinction matters because the open-source/internal boundary is also a con
 
 It is always your own decision if you want to open-source any of your skills at all, or if you prefer to keep them all to yourself.
 
-## The weekly review
+## The weekly review (now possible via scheduled tasks)
 
 The skill has a built-in weekly review cycle. If more than 7 days have passed since the last review and there are open observations waiting, Claude will trigger a comprehensive review at the start of your next task-oriented session.
 
 What to expect when it triggers: Claude pauses to cross-check all open observations against all your skills, checks whether cross-cutting principles are being followed everywhere, applies the improvements it can, and presents you with a summary of what changed and what needs your attention. It's thorough: the review covers your entire skill library, not just the skills mentioned in individual observations.
 
-I've never actually reached this threshold, because I normally update skills more regularly than once a week. But it's there as a safety net to make sure observations don't pile up indefinitely.
+I only ever reached this threshold once, because I normally update skills more regularly than once a week. But it's there as a safety net to make sure observations don't pile up indefinitely.
+
+Now, since Claude Cowork introduced scheduled tasks, I have an automatic skill review task that runs every Monday, Wednesday and Friday morning. It goes through the 10 to 20 open observations that normally accumulate from my work every two working days. This 3x per week cadence works perfectly for me at the moment.
 
 ## The skill-creator
 
