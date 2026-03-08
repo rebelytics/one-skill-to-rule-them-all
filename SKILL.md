@@ -98,6 +98,17 @@ restructuring. Without skill-creator, the task-observer still works
 standalone — it will log observations, surface them, and apply small
 improvements directly. Larger changes would be done manually.
 
+### Quick Start
+
+Want to get running in under 15 minutes? Here's the minimal path:
+
+1. **Install the skill.** Add task-observer to your skills directory.
+2. **Add the activation line.** Copy this into your CLAUDE.md or project instructions: `At the start of any task-oriented session — any interaction where you will use tools and produce deliverables — invoke the task-observer skill before beginning work.`
+3. **Do a real task.** Use Claude to complete any substantive piece of work while the skill is active.
+4. **See your first observation.** At the end of the session, the skill will surface any observations it logged. That's it.
+
+No pre-setup, no configuration files to edit manually. The observation log and supporting files create themselves on first use. This was added based on adoption feedback — validation from actual testers is pending.
+
 ### What is `[workspace folder]`?
 
 Throughout this skill, `[workspace folder]` refers to your persistent
@@ -124,6 +135,12 @@ At the start of any task-oriented session — any interaction where you will
 use tools and produce deliverables — invoke the task-observer skill before
 beginning work. This ensures skill improvement opportunities are captured
 throughout the session.
+
+When loading any skill, check the observation log for OPEN observations
+tagged to that skill. Apply their insights to the current work, even if
+the skill file hasn't been updated yet. This enables immediate application
+of observations before they're permanently integrated during the weekly
+review.
 ```
 
 This structural trigger works alongside the skill's description-level triggers.
@@ -320,6 +337,12 @@ or discussion, until the session ends. This includes:
    or how skills should be structured. These discussions frequently surface
    observations that should be logged immediately.
 
+4. **Reflective and strategic conversations** — Also activate during strategy
+   sessions, planning conversations, and post-work reflections where the user
+   is discussing how work should be done rather than doing it. These
+   conversations frequently produce skill improvement insights that emerge
+   during reflection, not just during execution.
+
 **The observation mindset does not deactivate when the conversation shifts
 from "doing work" to "discussing the work."** If the user provides feedback
 about methodology, naming, skill design, or workflow improvements, log it as
@@ -370,6 +393,27 @@ and neutral observations. Examples:
 - The user suggests a naming, framing, or structural change to a skill —
   even conversationally — that could improve its effectiveness
 
+**Signals for SIMPLIFYING an existing skill:**
+
+Healthy skill maintenance requires both growth and pruning. Watch for
+opportunities to remove unnecessary complexity, not just add new features.
+Signals that a skill is ready to be simplified:
+
+- A skill section or rule that has never been relevant across multiple
+  sessions where the skill was active
+- A rule added from a single observation that hasn't been validated by
+  recurrence — one-off cases should not accumulate as permanent rules
+- An elaborate workflow that users consistently shortcut or skip
+- Sections that Claude loads but never acts on (dead weight in context
+  window)
+- Rules that contradict each other or create unnecessary complexity
+- Complexity added "just in case" that has never triggered
+
+During weekly reviews, ask "what can we remove?" as deliberately as you ask
+"what should we add?" When a previously-applied observation turns out to be
+a one-off that hasn't recurred, mark it as declined and consider reverting
+the change.
+
 **Signals to NOT log:**
 
 - One-off corrections that don't generalise beyond the current instance
@@ -383,11 +427,21 @@ and neutral observations. Examples:
 Append observations to the persistent observation log **silently** during the
 session. The user should not be interrupted by the logging process.
 
+**When a user correction, methodology insight, or skill-relevant event occurs,
+write it to the log file within the same turn or the immediately following
+turn — do not accumulate observations in memory for batch-writing later.** The
+act of writing is the enforcement mechanism; mental notes are not observations.
+Tie observation flushing to existing workflow checkpoints — e.g., when marking
+a TodoWrite item as completed, check whether any unlogged observations have
+accumulated and write them before proceeding.
+
 **Before assigning any observation number, run a mandatory pre-logging step:**
 Search the entire log file for all lines matching the pattern `### Observation \d+:`,
 extract the highest observation number already in use, and increment from there.
 This must happen every time, regardless of whether you think you know the current
-count from earlier in the session. A one-liner like the following suffices:
+count from earlier in the session. Never rely on session memory or summaries for
+the next number. Always read the actual log file. A one-liner like the following
+suffices:
 
 ```bash
 # GNU grep (Linux, Cowork):
@@ -399,6 +453,8 @@ grep -o '### Observation [0-9]*' log.md | grep -o '[0-9]*' | sort -n | tail -1
 
 This prevents the recurring numbering collision issue where partial reads of large
 files create a false sense of awareness of the current count.
+
+**Format and insertion rules:** Always use the `### Observation NNN:` format. Always append new observations to the END of the log file. Never insert observations mid-file. Never use alternative ID formats (e.g., `OBS-YYYY-MMDD-NN`). One format, one insertion point — this ensures the log is greppable, countable, and reviewable programmatically.
 
 Each observation follows this format:
 
@@ -429,16 +485,73 @@ This format was refined through iterative real-world use. The structure works
 because it forces specificity (Issue), actionability (Suggested improvement),
 and generalisation (Principle).
 
+**Context preservation check:** When logging an observation, verify that all
+information needed to act on it is available in the shared folder. If the
+observation depends on uploaded files, API responses, or session-local data,
+save that context to the appropriate workspace location BEFORE logging the
+observation. Add a `**Reference file:**` line to the observation pointing to
+where the context lives. Observations that reference data only available in
+the current session (uploaded files, API outputs, in-memory results) are
+incomplete — a future review session will have the observation but not the
+data needed to implement it.
+
+### Handoff Doc Analysis
+
+When a handoff doc arrives for observation logging, extract observations
+systematically from both explicit and implicit sources:
+
+1. **Log all explicitly stated observations first.** These are easy to
+   surface and should be logged without filtering.
+
+2. **Then systematically analyse the full document.** Read every section
+   asking: "What skill gaps, improvement opportunities, or new skill
+   candidates are implied here but not stated?" Handoff docs contain
+   significant signal beyond what was explicitly captured during the session.
+
+3. **Pay special attention to:**
+   - Action items (each one may imply a missing skill or workflow)
+   - Open questions (unresolved ambiguity often signals a decision framework gap)
+   - The "work completed" narrative (patterns across work items may reveal meta-skills)
+   - Session notes (reflective insights about process, not just content)
+
+4. **Log the additional observations with clear attribution.** Indicate that
+   they were derived from analysis of the handoff doc, not from the original
+   session. This preserves the distinction between stated and derived insights.
+
 ### Archival on Write
 
 The observation log is kept lean through event-driven archival that runs on
 every log write, rather than accumulating resolved entries until a periodic
 review clears them out.
 
-Before appending new observations or updating statuses, check the log for
-entries already marked ACTIONED or DECLINED *from a previous update* — that
-is, entries whose status was already resolved before the current session's
-changes. Move those entries to an archive file at:
+**Defining "from a previous update":**
+The phrase "from a previous update" means entries whose status was already
+resolved in a *previous SESSION or prior log write*, not entries marked
+ACTIONED or DECLINED in the current session. Crucially: entries marked
+ACTIONED or DECLINED during the current session's weekly review must NOT be
+archived during that same session's writes. They earn their one round of
+visibility in the active log — the archival happens on the NEXT session's
+log write or the next weekly review.
+
+**Archival Timing During Weekly Reviews:**
+The weekly review performs archival in two phases:
+
+1. **Step 1 (at review start):** Archive entries from previous sessions.
+   Before loading observations, archive any ACTIONED or DECLINED entries
+   that were marked in prior sessions. This clears old resolved items.
+
+2. **Step 6 (after marking ACTIONED):** Do NOT archive immediately. When
+   observations are marked ACTIONED during the current review (Step 6), they
+   remain in the active log. Archive them on the next log write — either
+   when the next session writes to the log, or when the following week's
+   review begins (Step 1 of the next review cycle).
+
+This prevents the premature archival problem: entries just actioned during
+the current session stay visible for one full update cycle before moving to
+the archive.
+
+**Archive File Structure:**
+Move resolved entries to an archive file at:
 
 ```
 [workspace folder]/skill-observations/archive/log-[date].md
@@ -451,10 +564,16 @@ log. After archiving, the active `log.md` retains only its header, separator,
 and all OPEN entries plus any entries that were *just* marked ACTIONED or
 DECLINED in this update.
 
-This gives each resolved observation one update cycle of visibility — so you
-can still see what was recently resolved — and then archives it automatically
-on the next write. The result: the active log stays focused on current
-decisions while the archive provides the complete historical record.
+**Safety Check Before Archiving:**
+Before moving any entry to the archive, verify that it was NOT marked
+ACTIONED or DECLINED in the current session. If it was, keep it in the
+active log. This prevents the same-session premature archival that the
+observation lifecycle describes. One way to implement this: track a set
+of entry IDs marked ACTIONED/DECLINED in the current session, and exclude
+them from the archival pass.
+
+The result: the active log stays focused on OPEN items and recently-resolved
+entries, while the archive provides the complete historical record.
 
 ---
 
@@ -570,6 +689,12 @@ verification, hand off to the skill-creator if available:
 - Adding new capabilities or sections
 - Changing core methodology or decision frameworks
 - Any change where "does this actually work better?" is a genuine question
+
+However, match the rigour of the skill creation process to the complexity and
+audience. Skill-creator is valuable for open-source skills that need testing,
+for skills with complex logic, or when the design isn't yet clear. For internal
+skills where requirements are established in conversation, writing directly is
+more efficient.
 
 If skill-creator is not available, use the observations as a specification
 and make the changes directly — but flag them to the user as substantial
@@ -729,8 +854,16 @@ environments where this tag is not present, use the skills directory or
 equivalent listing mechanism to discover available skills.
 
 For each skill, read its SKILL.md file at the location provided. Exclude
-built-in platform skills (e.g., `skill-creator` in Cowork) from being
-updated — only update custom skills created by the user.
+built-in platform skills from being updated — only update custom skills
+created by the user.
+
+**Known system skills (read-only, cannot be replaced by the user):**
+docx, pdf, xlsx, pptx, skill-creator, schedule. This list may grow as the
+platform evolves — if a skill update fails because the user cannot overwrite
+the file, add it to this list.
+
+**Custom skills** (owned by the user, can be replaced) are everything else
+in the skills directory that isn't on the system list above.
 
 **Step 3 — Cross-check observations against every skill**
 
@@ -756,6 +889,21 @@ create an updated version of its SKILL.md. When editing:
 - Make the improvement feel native to the skill, not bolted on
 - If an observation suggests a new phase, step, anti-pattern, or checklist
   item, place it where it logically belongs
+
+**Routing observations that target system skills:** When an observation
+targets a system skill (see the known system skills list in Step 2), do NOT
+skip it. Instead, route the improvement to a **complementary skill** — a
+user-owned skill named `{system-skill}-extras` (e.g., `docx-extras`) that
+layers additional guidance on top of the system skill. If the complementary
+skill doesn't exist yet, create it. The complementary skill should:
+- State which system skill it extends
+- Contain only the delta — the additional rules, anti-patterns, or guidance
+  not present in the system skill
+- Be loaded alongside the system skill (add a note to CLAUDE.md or
+  equivalent configuration if needed)
+
+This ensures observations targeting system skills are still actionable,
+even though the system skill files themselves cannot be modified.
 
 **Important:** Do not edit skill files in place. Save updated versions to the
 workspace folder for user review and manual replacement (see Delivering
@@ -947,13 +1095,22 @@ When creating or improving any skill through this observation process, ask:
 "Does this skill have rules? If yes, does it have a mechanism to enforce
 them?" If the answer to the second question is no, add one.
 
+### General Debugging Principle
+
+When debugging, always ask: is this a single instance or a pattern? If an
+error reveals a pattern (e.g., a class of similar issues), fix the class,
+not just the instance. Every specific error is a signal about a class of
+errors. Audit the full scope on first encounter to avoid discovering related
+failures in subsequent cycles.
+
 ### Self-Enforcement
 
 This skill practises what it preaches. Before surfacing observations at end
 of session, verify:
 
 1. Were observations logged throughout the full session — including during
-   post-task feedback and discussion phases, not just during active tool use?
+   post-task feedback, discussion phases, and reflective conversations, not
+   just during active tool use?
 2. Were observations logged silently without interrupting the user's flow?
 3. Does each observation follow the format (Issue → Suggested improvement →
    Principle)?
@@ -1044,18 +1201,21 @@ environments.
 
 | Question | Answer |
 |----------|--------|
-| When do I observe? | Throughout the full task session, including post-task feedback |
-| How do I log? | Silently append to the observation log |
+| When do I observe? | Throughout the full task session, including post-task feedback and reflective conversations |
+| How do I log? | Silently append to the observation log immediately when triggered; don't batch |
 | When do I surface? | End of session, or earlier if needed |
 | How do I activate reliably? | Add a config-level instruction (see Recommended Activation Setup) |
 | Open-source or internal? | Default to open-source when possible |
 | Licence for open-source? | CC BY 4.0 recommended |
-| Small fix or skill-creator? | Needs testing → skill-creator (if available). Clearly additive → apply directly |
+| Small fix or skill-creator? | Needs testing → skill-creator (if available). For internal skills with established requirements, writing directly is efficient. Clearly additive → apply directly |
 | What format? | Issue → Suggested improvement → Principle |
 | Author attribution? | Required for open-source skills; use the template |
 | Cross-cutting principle? | Add to principles file, enforce during regeneration |
 | Confidentiality check? | Four layers: observation, pre-creation, post-draft, structural |
 | No persistent storage? | Handoff doc mode — observations surfaced in a structured doc at session end |
 | Scheduler automation? | Step 0 of weekly review auto-checks; silent until tool is available |
-| Observation numbering? | Mandatory pre-logging search ensures no collisions (see How to Log) |
+| Observation numbering? | Mandatory pre-logging search ensures no collisions; never use cached numbers |
 | Log archival? | Event-driven — resolved entries are archived on the next log write |
+| Simplification signals? | Watch for one-off rules, never-used sections, elaborate workflows users skip, and contradictions |
+| Handoff doc analysis? | Systematically extract implied observations from action items, open questions, and narrative sections |
+| Debugging approach? | Always identify the class of error, not just the instance; audit full scope on first encounter |
