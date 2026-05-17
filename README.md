@@ -53,8 +53,11 @@ The observer doesn't modify your skills directly. It produces recommendations th
 **Expected to work but untested:**
 - Claude Code without desktop app — the methodology and format should translate directly, but I haven't verified it in practice
 
+**Versions for other environments created by users:**
+- Codex version by AllstarGER: [https://github.com/AllstarGER/one-skill-to-rule-them-all](https://github.com/AllstarGER/one-skill-to-rule-them-all)
+
 **Potentially compatible with caveats:**
-- Other Agent Skills-compatible platforms (ChatGPT, Codex CLI, Gemini CLI, Cursor, etc.) — the skill uses Claude-centric concepts like `<available_skills>` and skill-creator references that other systems would need to interpret or adapt. The SKILL.md format is cross-platform, but the content assumes Claude's architecture.
+- Other Agent Skills-compatible platforms (ChatGPT, Gemini CLI, Cursor, etc.) — the skill uses Claude-centric concepts like `<available_skills>` and skill-creator references that other systems would need to interpret or adapt. The SKILL.md format is cross-platform, but the content assumes Claude's architecture.
 
 If you try it on another platform, please let me know how it goes. Issues and pull requests welcome.
 
