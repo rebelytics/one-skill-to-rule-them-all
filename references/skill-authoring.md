@@ -97,9 +97,10 @@ in layers so any one catches what others miss:
 ## Editing skills — always start from the live file
 
 1. The live file is the authoritative source: in Claude Code,
-   `~/.claude/skills/{skill}/SKILL.md` (user-owned, writable); in Cowork, a
-   read-only mount at `.claude/skills/{skill}/SKILL.md` (writes fail with
-   EROFS by design).
+   `~/.claude/skills/{skill}/SKILL.md`; in Cowork, a read-only mount at
+   `.claude/skills/{skill}/SKILL.md` (writes fail with EROFS by design).
+   Do not edit skill files in place, in any environment — staging-only is
+   what keeps the autonomous review safe.
 2. Always base edits on a fresh read of the live file — never a workspace
    copy, prior draft, or memory.
 3. Before overwriting any staged/workspace copy, diff it against the live
@@ -107,9 +108,10 @@ in layers so any one catches what others miss:
    failure: an update built on a stale snapshot silently dropped two
    sections added to the live skill the same day; only a pre-merge diff
    caught it.)
-4. Where in-place editing isn't possible or the change needs review, stage
-   to `[workspace folder]/skill-updates/[date]/[skill-name]/SKILL.md` and
-   present for installation.
+4. Stage every update to
+   `[workspace folder]/skill-updates/[date]/[skill-name]/SKILL.md` and
+   present it for review and installation — nothing goes live until the
+   user installs it.
 5. Match process rigour to the change: complex/open-source/uncertain design
    → use the skill-creator if available; internal skills with requirements
    already established in conversation → write directly, flagging

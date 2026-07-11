@@ -113,8 +113,7 @@ Wait for the user to acknowledge before other work.
 
 Save each updated file to
 `[workspace folder]/skill-updates/[date]/[skill-name]/SKILL.md` and present
-it for review/installation (in Cowork, via `present_files` and its upload
-button; in Claude Code, user-owned skills under `~/.claude/skills/` may be
-edited in place with the user's approval, with git or the config-sync repo
-as the rollback). **Keep-two rule:** for any skill, keep only the two most
+it for review and installation (in Cowork, via `present_files` and its
+upload button). Do not edit skill files in place — nothing goes live until
+the user installs it. **Keep-two rule:** for any skill, keep only the two most
 recent date directories under `skill-updates/`; delete older ones.
