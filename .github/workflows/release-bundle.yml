@@ -1,0 +1,23 @@
+name: Release bundle
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build .skill bundle
+        run: |
+          mkdir -p /tmp/bundle/task-observer/references
+          cp SKILL.md /tmp/bundle/task-observer/
+          cp references/*.md /tmp/bundle/task-observer/references/
+          cd /tmp/bundle && zip -r task-observer.skill task-observer
+      - name: Attach to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.event.release.tag_name }}" /tmp/bundle/task-observer.skill --clobber --repo "$GITHUB_REPOSITORY"
