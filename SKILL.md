@@ -33,8 +33,13 @@ Skills improve best from friction noticed during real work, not from sitting
 down to "improve a skill." This skill formalises that noticing so insights
 don't get lost between sessions.
 
-`[workspace folder]` = the persistent workspace (project root in Claude
-Code). The observation log lives at
+`[workspace folder]` = the persistent workspace, anchored on a STABLE path
+that outlives individual sessions: in Cowork, the shared folder; in Claude
+Code, the stable project identity (e.g.
+`~/.claude/projects/<project-id>/`), NOT the current working directory. A
+cwd inside an ephemeral checkout — a git worktree under
+`.claude/worktrees/`, a temporary clone — is torn down with the checkout
+and takes the observation log with it. The observation log lives at
 `[workspace folder]/skill-observations/log.md` unless the user's
 configuration pins it elsewhere.
 
@@ -71,7 +76,11 @@ above).
    `references/skill-authoring.md`). Also create
    `skill-observations/last-review-date.txt` containing the literal value
    `never` if it doesn't exist — never write a date into it at setup; a
-   date means a review actually ran.
+   date means a review actually ran. Before creating or writing anything:
+   if the resolved workspace folder sits under an ephemeral path (e.g.
+   `.claude/worktrees/`, a temporary clone), warn the user and re-anchor
+   on the stable project path first — state written to an ephemeral
+   checkout is lost at teardown.
 2. Scan OPEN observations and active principles; hold them in awareness,
    don't surface unprompted.
 3. Read `skill-observations/last-review-date.txt`. The value carries the
