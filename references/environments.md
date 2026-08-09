@@ -53,10 +53,12 @@ governance-tracked config — many setups gate exactly those files.
 
 When context compacts mid-task, the CLAUDE.md structural trigger re-invokes
 this skill on the resumed session automatically (the resumed session reads
-CLAUDE.md anew). Observations before and after compaction append to the
-same log with continuous numbering. This is the main reason the structural
-trigger exists — a resumed session's opening message may not match the
-description triggers.
+CLAUDE.md anew). Observations before and after compaction are written as
+separate files under the same `observations/` directory, each with its own
+id (the id counter is derived from existing filenames, so it continues
+seamlessly across the compaction boundary). This is the main reason the
+structural trigger exists — a resumed session's opening message may not
+match the description triggers.
 
 ## User-facing documentation
 
@@ -87,7 +89,8 @@ work.
 [numbered]
 
 ## Observations Logged
-[full entries in standard format]
+[each observation in the frontmatter format from SKILL.md → How to Log; the
+next session writes each as its own file in `observations/`]
 
 ## Cross-Cutting Principles (current)
 [active or newly added]

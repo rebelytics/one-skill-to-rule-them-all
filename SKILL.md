@@ -39,9 +39,10 @@ Code, the stable project identity (e.g.
 `~/.claude/projects/<project-id>/`), NOT the current working directory. A
 cwd inside an ephemeral checkout — a git worktree under
 `.claude/worktrees/`, a temporary clone — is torn down with the checkout
-and takes the observation log with it. The observation log lives at
-`[workspace folder]/skill-observations/log.md` unless the user's
-configuration pins it elsewhere.
+and takes the observations with it. Each observation is its own file under
+`[workspace folder]/skill-observations/observations/` — one Markdown file
+with a YAML frontmatter header per observation — unless the user's
+configuration pins the directory elsewhere.
 
 ## Reference files — load on demand, not up front
 
@@ -71,18 +72,36 @@ above).
 
 ## Session Start Protocol
 
-1. If `skill-observations/log.md` or `cross-cutting-principles.md` don't
-   exist, create them (templates below / in the principles section of
-   `references/skill-authoring.md`). Also create
+1. If `skill-observations/observations/` or `cross-cutting-principles.md`
+   don't exist, create them (`observations/` is the directory where the
+   per-observation files live; the principles template is in the principles
+   section of `references/skill-authoring.md`). Also create
    `skill-observations/last-review-date.txt` containing the literal value
    `never` if it doesn't exist — never write a date into it at setup; a
-   date means a review actually ran. Before creating or writing anything:
+   date means a review actually ran. If a legacy single-file
+   `skill-observations/log.md` exists but `observations/` is empty, offer
+   the one-time conversion in "Migrating a legacy log.md" below before
+   proceeding. Before creating or writing anything:
    if the resolved workspace folder sits under an ephemeral path (e.g.
    `.claude/worktrees/`, a temporary clone), warn the user and re-anchor
    on the stable project path first — state written to an ephemeral
    checkout is lost at teardown.
-2. Scan OPEN observations and active principles; hold them in awareness,
-   don't surface unprompted.
+2. Scan OPEN observations by reading only the frontmatter of each file in
+   `observations/` — the header block between the first two `---` lines,
+   never the bodies. Build awareness from the `status`, `skill`, and
+   `title` fields; also read active principles. Hold them in awareness,
+   don't surface unprompted. Reading frontmatter only is the whole point of
+   the per-file format: it keeps this always-on scan cheap even once
+   hundreds of observations have accumulated.
+
+   ```bash
+   # Frontmatter-only scan — print each observation's header, skip the body
+   for f in skill-observations/observations/*.md; do
+     awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
+          fm && /^---[[:space:]]*$/ {print "---"; exit}
+          fm' "$f"
+   done
+   ```
 3. Read `skill-observations/last-review-date.txt`. The value carries the
    truth: a date = when the last review actually ran; `never` = no review
    has run yet. A missing file is abnormal (step 1 creates it) — recreate
@@ -96,9 +115,11 @@ above).
 4. Once per session: if no CLAUDE.md (or equivalent) activation instruction
    for this skill exists, briefly suggest adding one (see
    `references/environments.md`). Skip if already configured.
-5. Note the log's modification time. If modified in the last few hours,
-   another session may be writing to it — re-read immediately before every
-   append, never trust a remembered "current number".
+5. There is no shared log file to guard: each observation is its own file,
+   so creating a new one never collides with or overwrites another
+   session's entry. Before writing a *status change* to an existing
+   observation, re-read that one file first (a parallel review may have
+   resolved it); creating a new observation needs no such guard.
 
 ## When to Observe
 
@@ -145,21 +166,23 @@ an open-source skill (unless an internal skill is the right home).
 
 ## How to Log
 
-Append to the log **silently, within the same turn or the next** — never
-batch mentally for later; the act of writing is the enforcement mechanism.
+Write the observation file **silently, within the same turn or the next** —
+never batch mentally for later; the act of writing is the enforcement
+mechanism.
 
 **Mandatory observation checkpoint after every 3rd TodoWrite completion:** After
 marking the 3rd, 6th, 9th (etc.) TodoWrite item as completed in a session, you
-must **write to the log** — not merely pause to ask yourself a question. Either
-append any pending observations, or, if genuinely none have accumulated, append
-an explicit acknowledgement marker (a one-line `no observations` note for that
-checkpoint). The required action is a concrete log write; a remembered "ask
-whether" is not enforcement. This is a hard checkpoint, not a suggestion — the
+must **write to disk** — not merely pause to ask yourself a question. Either
+write any pending observation files, or, if genuinely none have accumulated,
+append a one-line `no observations` acknowledgement marker to
+`skill-observations/checkpoints.log` for that checkpoint. The required action
+is a concrete write; a remembered "ask whether" is not enforcement. This is a
+hard checkpoint, not a suggestion — the
 skill has demonstrated that softer "check when completing items" or "pause and
 ask" guidance gets lost during cognitively demanding analytical work, exactly
 when the most observations accumulate. The count doesn't need to be precise;
-the rule is: roughly every third completion, write to the log (observations or
-the acknowledgement marker). The write itself is the enforcement mechanism: it
+the rule is: roughly every third completion, write to disk (an observation file
+or the acknowledgement marker). The write itself is the enforcement mechanism: it
 forces the mental check to surface as a recorded action, and it prevents the
 common failure mode where the skill is loaded but no observations are written
 until the user explicitly asks.
@@ -170,122 +193,67 @@ don't survive cognitive load during long substantive sessions (when the most
 insights surface). So tie observation-flushing to deliverable and workflow events
 that already involve a tool call. Whenever you present or render a major
 deliverable — `present_files`, a deck or PDF render, a staged skill file handed
-to the user — or complete a task/todo batch, flush any pending observations to
-the log at that moment, before moving on. These are natural, already-occurring
+to the user — or complete a task/todo batch, write any pending observation
+files at that moment, before moving on. These are natural, already-occurring
 checkpoints; piggy-backing the flush onto them means the write happens as a
 side effect of work you were doing anyway, rather than depending on a separate
 act of memory.
 
-**Numbering discipline (mandatory, every append):**
+**Assigning an id (lightweight — no shared-file dance):** each observation
+is its own file named `NNNN-short-slug.md` (zero-padded id + a kebab-case
+slug from the title). Compute the id as the highest numeric filename prefix
+across `observations/` and `archive/`, plus one:
 
-1. *Pre-check:* read the actual log and find the highest existing number —
-   never trust session memory:
+```bash
+hi=$(ls skill-observations/observations skill-observations/archive 2>/dev/null \
+     | grep -oE '^[0-9]+' | sort -n | tail -1); : "${hi:=0}"
+next_id=$(( hi + 1 ))
+```
 
-   ```bash
-   # GNU grep:
-   grep -oP '### Observation \K\d+' log.md | sort -n | tail -1
-   # macOS / POSIX:
-   grep -o '### Observation [0-9]*' log.md | grep -o '[0-9]*' | sort -n | tail -1
-   ```
+Then write `observations/$(printf '%04d' "$next_id")-<slug>.md`. Because
+every observation lives in its own file, the elaborate
+check-then-act-then-verify numbering ritual the single-file log required is
+gone: a new observation never touches another entry's bytes, so it cannot
+truncate, overwrite, or renumber anyone else's work. In the rare case two
+parallel sessions pick the same id, the result is two files sharing a
+number — harmless (distinct files, nothing lost); the next review renumbers
+one and logs a meta-observation. That benign outcome is the entire
+concurrency story now.
 
-2. *Pre-write assertion:* immediately before appending, confirm the proposed
-   number doesn't already exist:
+**Editing an existing observation's file safely:** status changes and
+archival touch exactly one file. Re-read that file immediately before
+editing it (a parallel review may have resolved it), then edit only the
+frontmatter fields you're changing (`status`, `resolved`, `resolution`).
+Never rewrite a file you don't own, and never batch-rewrite the whole
+directory: the single-file log's DOTALL/greedy truncation hazard — which
+once overwrote 16 entries from a single Status line to end-of-file in one
+substitution — is structurally impossible when each observation is isolated
+in its own file. For the same reason, the old backup / re-read-and-merge /
+structural-invariant / survival-check sequence is no longer needed; one file
+cannot be erased by another session writing elsewhere. Archival is a plain
+`mv` into `archive/`, not a read-filter-rewrite (see "Archival on Write").
 
-   ```bash
-   PROPOSED=$(( $(grep -oP '### Observation \K\d+' log.md | sort -n | tail -1) + 1 ))
-   grep -qE "^### Observation ${PROPOSED}:" log.md && {
-     echo "COLLISION on #${PROPOSED}"; exit 1; }
-   ```
-
-   If it fires, increment past all existing numbers and re-check (and log a
-   meta-observation — it signals a parallel-session collision).
-
-3. *Post-write verification:* after appending, count occurrences of the
-   number; if >1, a parallel writer collided between check and write —
-   renumber YOUR entry to max+1. Identify your entry from your own append
-   operation (capture the file's line count immediately before and after
-   your `>>`; your entry starts at the old line count + 1) — do NOT
-   re-grep and take the last occurrence, which may be a colliding writer's
-   entry appended after yours. After any `sed` renumber, re-read the
-   affected line to confirm the substitution actually took effect — a
-   line-addressed `s///` whose target shifted finds no match and still
-   exits 0. Pre-write catches stale reads; only a post-write check catches
-   the race. The pattern for shared logs written by parallel agents is
-   check-then-act-then-verify.
-
-**Log-write safety — never let a mutation span entry boundaries:** When
-mutating the log programmatically (marking entries ACTIONED/DECLINED,
-archiving, renumbering), a greedy or DOTALL pattern over the whole file can
-silently swallow everything from one match to EOF. This has happened: a
-`.*$` under `re.S` over the multi-entry file captured from one entry's
-Status line to end-of-file and overwrote 16 later entries in a single
-substitution. The log is shared state across many entries; mutate it one
-bounded entry at a time and verify every mutation.
-
-1. **Re-read and merge immediately before any write-back.** Any full-file
-   rewrite (archival, renumbering, reassembly from chunks) built from a
-   snapshot destroys whatever concurrent sessions appended after that
-   snapshot — the write-back succeeds, the victim gets no error, and the
-   loss is invisible. This has happened in production: a parallel session's
-   write-back erased two entries appended minutes earlier, hours after the
-   exact failure mode had been documented. So: take the snapshot, prepare
-   the mutation, then — immediately before writing — re-read the live log
-   and diff against the snapshot. If new entries appeared, merge them into
-   the write-back (or rebuild from the fresh read). Never write back a
-   stale snapshot.
-
-2. **Isolate the target entry, or anchor to a single line.** Either split
-   the log on `### Observation N:` headers, edit the TARGET entry's chunk in
-   isolation, and reassemble — OR, for a status-only edit, use a strictly
-   line-anchored multiline substitution that cannot cross a newline, e.g.
-   `re.sub(r'(?m)^(\s*-?\s*)\*\*Status:\*\*.*$', ...)` (multiline `^...$`
-   bounds the match to one line). NEVER use a DOTALL/greedy pattern across
-   the multi-entry file.
-
-3. **Assert a structural invariant against the LIVE pre-write file.** Count
-   `### Observation` headers in the live file immediately before writing and
-   again after. For a status-only edit the count MUST be unchanged; for
-   archival or append it must change by exactly the expected number. The
-   baseline must be the live file at write time, NOT your session's earlier
-   snapshot — an invariant computed against a stale snapshot validates that
-   you wrote what you intended while still destroying what others wrote in
-   between. Fail loudly if the count is off.
-
-4. **Keep the pre-write backup.** Copy `log.md` before any programmatic
-   mutation. This is what made full recovery trivial when the truncation
-   above occurred — it turned a destructive bug into a non-event.
-
-5. **Verify your entries SURVIVED, not just that they were written.** A
-   successful append proves nothing an hour later — a concurrent session's
-   write-back can silently delete it, and only the destroying session gets
-   any signal (none). Before surfacing observations at session end, grep
-   the log for every entry number this session wrote and confirm each still
-   exists exactly once; re-append any that are missing (with fresh numbers)
-   and log a meta-observation about the collision.
-
-Principle: a log shared across many entries must be mutated one bounded
-entry at a time; every rewrite must be based on a fresh read, verified by a
-structural invariant against the live pre-write file, and backed up. Writers
-must verify survival, not just successful writes — in a concurrent erase,
-the victim gets no error.
-
-**Format and insertion:** always `### Observation NNN:`, always appended to
-the END of the log, never mid-file, never alternative ID formats. One
-format, one insertion point. **Every new observation MUST include
-`**Status:** OPEN` as its first field — this is mandatory at write time, not
-optional.** Reviews classify entries by their Status line; an observation
-written without one is invisible to any status-filtered pass and risks being
-silently skipped instead of triaged.
+**File format:** every observation file is YAML frontmatter (the metadata
+the scan reads) followed by the Issue → Improvement → Principle body. **The
+frontmatter is mandatory and drives every status-filtered pass; an
+observation written without a `status` field is treated as OPEN by reviews,
+never as nonexistent** — so always write `status: open` at creation time.
 
 ```markdown
-### Observation [N]: [Short descriptive title]
-
-**Status:** OPEN
-**Date:** [date]
-**Session context:** [what task was being worked on]
-**Skill:** [existing skill name, or "New skill candidate: [working name]"]
-**Type:** [open-source | internal]
-**Phase/Area:** [which part of the skill or workflow]
+---
+id: [N]
+title: [Short descriptive title]
+status: open            # open | actioned | declined
+type: open-source       # open-source | internal
+skill: [existing skill name, or "new-skill-candidate"]
+new_skill: [working name — only when skill is "new-skill-candidate"]
+area: [which part of the skill or workflow]
+date: [YYYY-MM-DD]
+session_context: [what task was being worked on]
+resolved:               # date resolved; leave empty while OPEN
+resolution:             # what was done — set only when actioned/declined
+reference:              # optional: path to saved session-local evidence
+---
 
 **Issue:** [What happened — specific enough to understand weeks later
 without the original conversation.]
@@ -297,9 +265,9 @@ section or rule; for new skills, scope and key components.]
 ```
 
 **Context preservation:** if an observation depends on session-local data
-(uploads, API output), save that context into the workspace first and add a
-`**Reference file:**` line — an observation whose evidence dies with the
-session is incomplete.
+(uploads, API output), save that context into the workspace first and set
+the `reference:` frontmatter field to its path — an observation whose
+evidence dies with the session is incomplete.
 
 **Confidentiality at logging time:** for `type: open-source` observations,
 the Issue/Improvement fields may reference specifics for context, but the
@@ -309,24 +277,13 @@ authoring: `references/skill-authoring.md`.
 
 ## Referencing Observations
 
-When citing an observation by number — in conversation, in a review report,
-or from within another observation — the number must come from the entry's
-literal `### Observation N:` header line. Never cite an observation number
-that wasn't read from that header.
-
-- **Search-tool line numbers are positional metadata, not IDs.** `grep -n`
-  prefixes every match with a line number; when a match lands mid-entry
-  (e.g., on a Session context or Principle line rather than the header),
-  that line number is NOT the observation number. Resolve to the owning
-  header first — scan backwards from the matched line to the nearest
-  preceding `### Observation N:` header and take the number from there
-  (e.g., an awk backwards-scan, or re-grep for `^### Observation` and pick
-  the last header line before the match).
-- **Plausibility check (cheap second layer):** before quoting any
-  observation number, compare it against the known counter range — the
-  highest `### Observation N:` header in the log. A number outside that
-  range (e.g., citing #1365 when the log's counter is at #766) is almost
-  certainly a line number or other positional artefact misread as an ID.
+Cite an observation by the `id` field in its frontmatter, which matches the
+`NNNN-` prefix of its filename. Never cite a `grep -n` line number as if it
+were the id — search-tool line numbers are positional metadata, not
+identifiers. Cheap plausibility check: a cited id should fall within the
+range of ids that actually exist across `observations/` and `archive/`; a
+number far outside that range (e.g. citing #1365 when the highest id is
+#766) is almost certainly a line number misread as an id.
 
 The general rule: IDs must come from the record's own identifier field,
 never from the positional metadata of the search tool that found it.
@@ -341,45 +298,66 @@ requirements (attribution, licensing, structure): `references/skill-authoring.md
 
 ## Archival on Write
 
-On every log write, first move already-resolved entries to
-`skill-observations/archive/log-[YYYY-MM-DD].md` (preserving the log header
-in the archive). "Already resolved" is decided by date, read from the file:
-a resolved status MUST record its date — `ACTIONED (YYYY-MM-DD) — [what was
-done]` / `DECLINED (YYYY-MM-DD) — [reason]` — and archival moves only
-entries whose recorded date is before today. Entries resolved today stay in
-the active log until the next day, no matter which session resolved them:
+On every write, first move already-resolved observation files from
+`observations/` to `skill-observations/archive/` (a flat directory; the
+resolution date lives in each file's `resolved:` field, so no dated archive
+filename is needed). "Already resolved" is decided by the file's own
+frontmatter: a resolved observation MUST carry `status: actioned` or
+`status: declined` AND a `resolved:` date, and archival moves only files
+whose `resolved:` date is before today. Entries resolved today stay in
+`observations/` until the next day, no matter which session resolved them:
 the grace period lives in the file, never in session memory, so it holds
-across parallel and subsequent sessions. A resolved entry with no readable
-date gets today's date added instead of being archived. The active log
-keeps its header, status key, all OPEN entries, and the same-day-resolved
-ones.
+across parallel and subsequent sessions. A resolved file with no readable
+`resolved:` date gets today's date written to that field instead of being
+archived.
 
-Archival is a read-filter-rewrite — the highest-risk mutation the log
-undergoes, and the one that has destroyed concurrent appends in production.
-It MUST follow the full Log-write safety sequence above: backup, re-read
-the live log immediately before writing back and merge any entries that
-appeared since the snapshot, then verify the post-write header count equals
-the live pre-write count minus exactly the number of archived entries.
+Archival is now a set of plain `mv` operations, one file at a time — not the
+read-filter-rewrite of a shared multi-entry file that once destroyed
+concurrent appends in production. Moving one resolved file cannot affect any
+other observation, so the old backup / re-read-and-merge / structural-
+invariant sequence no longer applies. Compare a `resolved:` date to today
+portably (ISO dates sort lexically):
 
-## Log Structure
-
-```markdown
-# Skill Observation Log
-
-Observations captured during task-oriented work.
-
-**Status key:** OPEN = not yet actioned | ACTIONED (YYYY-MM-DD) = skill
-updated/created | DECLINED (YYYY-MM-DD) = user decided not to pursue —
-resolved statuses always carry their resolution date
-
----
-
-## [Date]
-
-### Observation 1: [Title]
-**Status:** OPEN
-[... full format ...]
+```bash
+older_than_today() {   # $1 = a YYYY-MM-DD date
+  today=$(date +%F)
+  [ "$(printf '%s\n%s\n' "$1" "$today" | sort | head -1)" = "$1" ] \
+    && [ "$1" != "$today" ]
+}
 ```
+
+## Storage Layout
+
+```
+skill-observations/
+  observations/          # active observations, one Markdown file each
+    0001-short-slug.md
+    0002-short-slug.md
+  archive/               # resolved observations, moved here after the grace period
+  cross-cutting-principles.md
+  last-review-date.txt
+  checkpoints.log        # append-only acknowledgement markers (optional)
+```
+
+Each file in `observations/` follows the frontmatter format under "How to
+Log". There is no central index to keep in sync: the directory listing is
+the index, and the frontmatter is the metadata.
+
+## Migrating a legacy log.md
+
+If a single-file `skill-observations/log.md` exists from an earlier version,
+convert it once. For each `### Observation N:` block, create
+`observations/NNNN-<slug>.md` mapping the old fields to frontmatter: `N` →
+`id`, the header title → `title`, `**Status:**` → `status` (`OPEN` →
+`open`; `ACTIONED (date) — note` → `status: actioned` + `resolved: date` +
+`resolution: note`; likewise for `DECLINED`), `**Date:**` → `date`,
+`**Skill:**` → `skill` (`New skill candidate: X` → `skill: new-skill-candidate`
++ `new_skill: X`), `**Type:**` → `type`, `**Phase/Area:**` → `area`, and
+keep the Issue/Improvement/Principle body plus any `**Session context:**` in
+`session_context`. Do this as a bounded, one-file-at-a-time pass; verify the
+file count matches the number of `### Observation` headers; spot-check a few
+results; then rename the old file to `log.md.migrated` so it is no longer
+scanned.
 
 ## Surfacing Protocol
 
@@ -406,13 +384,12 @@ preference to always defer to the next review, suppress the in-session
 whole session (including discussion phases); logged silently; each follows
 Issue → Improvement → Principle; each is typed; existing-skill items name
 the section; no open-source Principle contains client-identifying info;
-every appended observation carries a Status line (`**Status:** OPEN` at
-write time) — a statusless entry is invisible to any status-filtered review
-pass, so if any observation lacks one, add it now. Finally, run the
-survival check (Log-write safety rule 5): grep the log for every entry
-number this session wrote and confirm each still exists exactly once — a
-concurrent session's write-back deletes silently. Fix failures before
-surfacing.
+every observation file carries a `status:` frontmatter field (`status: open`
+at write time) — a statusless entry is invisible to any status-filtered
+review pass, so if any observation lacks one, add it now. (The single-file
+log's survival check — confirming a concurrent write-back didn't silently
+delete your entries — is no longer needed: a per-file observation cannot be
+erased by another session writing elsewhere.)
 
 ## Acting on Observations
 
@@ -435,12 +412,12 @@ same reference).
 | Question | Answer |
 |----------|--------|
 | When do I observe? | The whole session, including feedback and reflection phases |
-| How do I log? | Silently, immediately, appended to the end, with the 3-step numbering discipline |
+| How do I log? | Silently, immediately, as one file per observation named `NNNN-slug.md`; id = highest existing prefix + 1 |
 | When do I surface? | End of session, or earlier if needed |
-| Status line? | Mandatory `**Status:** OPEN` as the first field of every new observation; reviews treat statusless entries as OPEN, never as nonexistent |
-| Citing an observation number? | Only from its literal `### Observation N:` header — `grep -n` line numbers are positional metadata, not IDs; sanity-check against the known counter range |
+| Status field? | Mandatory `status: open` frontmatter on every new observation; reviews treat a missing status as OPEN, never as nonexistent |
+| Citing an observation number? | From the `id:` frontmatter field (matches the `NNNN-` filename prefix); never a `grep -n` line number; sanity-check against the known id range |
 | Open-source or internal? | Default open-source; the boundary is confidential |
 | Small fix or substantial? | Additive → apply directly; restructuring/new skill → `references/skill-authoring.md` |
-| Rewriting the log (archival/renumber/status)? | Backup → re-read live and merge → bounded mutation → verify count against live pre-write file → confirm own entries survived |
+| Changing an observation (status/archival)? | Re-read that one file, edit only its frontmatter, or `mv` it to `archive/` — no shared-file rewrite, no survival check |
 | Weekly review? | Trigger check at session start; procedure in `references/weekly-review.md` |
 | No filesystem? | Handoff-doc mode — `references/environments.md` |

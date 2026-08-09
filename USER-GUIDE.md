@@ -32,7 +32,7 @@ I started with an empty folder just for Claude Cowork, and it turned into a thri
 
 The meta-skill writes only to its own subdirectories of your shared folder:
 
-- `[your shared folder]/skill-observations/` — the observation log, the cross-cutting principles file, and an archive of resolved observations
+- `[your shared folder]/skill-observations/` — the observation files (one per observation, under `observations/`), the cross-cutting principles file, and an archive of resolved observations
 - `[your shared folder]/skill-updates/` — staged versions of skill updates that are waiting for you to install them
 
 Existing files in your shared folder are not modified by the observer. If you point the meta-skill at a folder that already contains client work or personal documents, those files stay where they are; the observer only reads from them when you ask Claude to use them in a task. Skill updates are also never installed automatically — they're staged in `skill-updates/` for you to review and install yourself.
@@ -59,7 +59,7 @@ One thing I do frequently is ask towards the end of a session: "Any observations
 
 Over time, I got used to just asking about the logged observations every time I archive a task. I like to keep my task list clean, so I archive all tasks that are done and just do a quick check on the logged observations at the same time. This has proven to be the most reliable way to log as many relevant observations as possible.
 
-If you want to browse the observation log yourself, you can find it at `[your shared folder]/skill-observations/log.md`. You don't normally need to look at it directly (Claude handles that), but it's there if you're curious.
+If you want to browse the observations yourself, you'll find them at `[your shared folder]/skill-observations/observations/` — one small Markdown file per observation, each starting with a frontmatter header (status, skill, type, date) followed by the issue, the suggested improvement, and the principle. Resolved observations move to `skill-observations/archive/`. You don't normally need to look at these directly (Claude handles that), but they're there if you're curious. Storing one file per observation, with the metadata in frontmatter, lets Claude scan just the headers to find what's open instead of re-reading the whole backlog — which keeps token usage low as observations pile up.
 
 ## The cross-cutting principles file
 
