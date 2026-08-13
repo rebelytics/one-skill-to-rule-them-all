@@ -58,6 +58,20 @@ same log with continuous numbering. This is the main reason the structural
 trigger exists — a resumed session's opening message may not match the
 description triggers.
 
+## Scheduled runs
+
+Scheduled or autonomous sessions (for example Cowork scheduled tasks) may
+fire while the workspace's persistence layer is unreachable — the log can
+live on a machine that is offline at fire time. Define the policy up
+front:
+
+1. Check workspace reachability before anything else.
+2. If unreachable, end gracefully with a one-line "review skipped — device
+   offline" note. No retries: the next firing or the 7-day in-session
+   fallback catches up.
+3. When setting up a scheduled review, bake this policy into the scheduled
+   task's prompt, so fresh sessions inherit it without rediscovery.
+
 ## User-facing documentation
 
 Installation, shared-folder setup, expected behaviour, and the cadence
