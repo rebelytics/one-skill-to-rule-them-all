@@ -132,7 +132,14 @@ in layers so any one catches what others miss:
    `~/.claude/skills/{skill}/SKILL.md`; in Cowork, a read-only mount at
    `.claude/skills/{skill}/SKILL.md` (writes fail with EROFS by design).
    Do not edit skill files in place, in any environment — staging-only is
-   what keeps the autonomous review safe.
+   what keeps the autonomous review safe. Scope and precedence: staging-only
+   governs autonomous and review-loop contexts and every substantial change.
+   For a small, clearly-additive, low-risk edit in an interactive session —
+   explicitly requested by the user, or an in-session correction surfaced to
+   them — the direct-apply clause in SKILL.md ("Acting on Observations")
+   takes precedence: the explicit request is the review. A direct apply
+   still requires a fresh read of the live file first and a structural
+   verification of the file immediately after the edit.
 2. Always base edits on a fresh read of the live file — never a workspace
    copy, prior draft, or memory.
 3. Before overwriting any staged/workspace copy, diff it against the live

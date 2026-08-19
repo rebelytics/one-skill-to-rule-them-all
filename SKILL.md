@@ -423,7 +423,12 @@ producing wrong output the user should know about. Otherwise: log, don't
 act.
 
 When acting: small, clearly-additive, low-risk changes (a new rule, a
-clarification, a factual fix) may be applied directly. Substantial changes
+clarification, a factual fix) may be applied directly in interactive
+contexts — an explicit user request, or an in-session correction surfaced
+to the user. For exactly that case this clause takes precedence over the
+staging-only rule in `references/skill-authoring.md`; base the edit on a
+fresh read of the live file and verify the file's structure right after.
+In autonomous or review-loop runs, stage even small edits. Substantial changes
 (restructuring, new capabilities, changed methodology) and all new-skill
 creation: load `references/skill-authoring.md` first and follow its editing
 and staging rules. If an observation reveals a principle that applies to
