@@ -40,6 +40,12 @@ scheduler runs somewhere that can reach it. Three regimes:
 **Interactive (user present):** always present observations grouped by
 skill (number, title, one-sentence summary), flag judgment calls as "needs
 your input", and wait for blanket or selective approval before applying.
+A declined or dismissed approval prompt is NOT approval — and it is not a
+request to skip the asking and proceed either. Treat it as a stop signal
+for the gated actions: halt, then ask in plain chat text what the user
+wants. Only an explicit go (blanket or per-item) authorizes applying;
+"apply the observations" as the review's trigger phrase still gates each
+application on this policy, it does not pre-approve the changes.
 
 **Scheduled autonomous (user absent):** apply non-escalated observations by
 default — safety comes from the staging-plus-review pattern (nothing is
