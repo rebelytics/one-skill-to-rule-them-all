@@ -39,7 +39,14 @@ Code, the stable project identity (e.g.
 `~/.claude/projects/<project-id>/`), NOT the current working directory. A
 cwd inside an ephemeral checkout — a git worktree under
 `.claude/worktrees/`, a temporary clone — is torn down with the checkout
-and takes the observation log with it. The observation log lives at
+and takes the observation log with it. "Stable" alone does not pick a
+single anchor: when the environment provides a managed persistence
+directory under the project identity (e.g. a memory directory it loads
+every session), that directory and the identity root are BOTH stable, and
+two sessions can each resolve a different one — producing two logs for
+one project. Resolve deterministically: anchor inside the
+environment-managed persistence directory when one exists, otherwise on
+the project identity root — never both. The observation log lives at
 `[workspace folder]/skill-observations/log.md` unless the user's
 configuration pins it elsewhere.
 
@@ -80,7 +87,16 @@ above).
    if the resolved workspace folder sits under an ephemeral path (e.g.
    `.claude/worktrees/`, a temporary clone), warn the user and re-anchor
    on the stable project path first — state written to an ephemeral
-   checkout is lost at teardown.
+   checkout is lost at teardown. And before CREATING a log: search the
+   other plausible anchor candidates for an existing `skill-observations/`
+   workspace (the project identity root, the environment-managed
+   persistence directory, the shared folder); if one exists, adopt it — or
+   consolidate deliberately with the user — instead of creating a second
+   log. A fresh empty log beside a populated one is a silent fork: both
+   grow independently, numbering collides, and each session sees only half
+   the history. When consolidating, leave a pointer file at the abandoned
+   location so sessions anchored there get redirected instead of
+   re-creating the fork.
 2. Scan OPEN observations and active principles; hold them in awareness,
    don't surface unprompted.
 3. Read `skill-observations/last-review-date.txt`. The value carries the
