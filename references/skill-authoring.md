@@ -98,6 +98,20 @@ time. When an open-source skill is distributed privately (shared directly
 with a client rather than published), keep the direct-author-contact
 routing — a public-repo reference is wrong for that channel.
 
+**Feedback pre-flight — run before drafting any issue or PR.** Routing
+feedback to a fixed channel skips the two questions that decide whether it
+is welcome at all: is it already known, and how does this maintainer want
+to receive it? Before drafting: (1) search the repository's existing
+issues AND pull requests for the same problem — if a report is adjacent
+but distinct, reference it and delineate scope instead of duplicating it;
+(2) read the maintainer's stated contribution preference
+(README/CONTRIBUTING; merged community PRs are evidence that PRs are
+welcome) and use the preferred channel — a concrete fix travels as a PR
+where PRs are welcome, otherwise as an issue; (3) when the local install
+is modified or may have drifted, verify the problem still exists at
+upstream HEAD before reporting it; (4) match the repository's house style
+for reports.
+
 ## Confidentiality layers
 
 The open-source/internal boundary is a confidentiality boundary; enforce it
