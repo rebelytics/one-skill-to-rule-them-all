@@ -224,6 +224,27 @@ tool call; piggy-backing the flush onto them makes the write a side effect
 of work you were doing anyway. (Why both checkpoints are writes rather than
 questions: `references/observation-log.md`.)
 
+**Two gaps this pairing still leaves — both observed across full working days
+in which nothing was logged at all.**
+
+1. *A session can contain no todo items whatsoever.* The 3rd-completion
+   checkpoint is bound to ONE tool; work driven entirely through direct tool
+   calls and shell commands never trips it. It is armed only in sessions that
+   happen to use todos, so it is not a safety net that is always present. When
+   a session runs without them, the deliverable flush is the only enforcement
+   left and must be applied deliberately.
+2. *"Is this a major deliverable?" is a self-assessment, and self-assessment is
+   what fails under load.* Prefer triggers unmistakable in the tool record over
+   ones needing a judgement call. In particular, treat any **project-completing
+   command** — a deploy, release, publish, or push — as a flush point: it is a
+   concrete tool call, as hard a trigger as a completed todo, and it reliably
+   marks the end of a unit of work where insights have accumulated.
+
+The rule behind both: an enforcement trigger must hang on an event objectively
+visible in the tool record, never on the agent noticing that a moment qualifies.
+And a counter bound to a single tool is silently inert in every session that does
+not use it — such triggers always need a second, independent path.
+
 **Id and filename.** Each observation is `NNNN-short-slug.md` (zero-padded
 id + a kebab-case slug from the title). The id is the highest of three
 values, plus one: the highest numeric prefix in `observation-log/`, the
