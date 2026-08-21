@@ -210,10 +210,13 @@ when the active directory is empty):
 d=skill-observations/observation-log
 hi=$( { ls "$d" "$d/archive" 2>/dev/null | grep -oE '^[0-9]+'; cat "$d/archive/.id-floor" 2>/dev/null; } \
      | sort -n | tail -1); : "${hi:=0}"
+[ "$hi" -eq 0 ] && [ -n "$(ls "$d"/*.md 2>/dev/null)" ] && { echo "ID COMMAND BROKEN — log is non-empty but no ids extracted"; exit 1; }
 next_id=$(( hi + 1 )); echo "$next_id" > "$d/archive/.id-floor"
 ```
 
-A new file never touches another entry's bytes, so it cannot truncate,
+The guard line distinguishes "the log says zero" from "I could not read
+the log": a command that fails to empty rather than to error would
+otherwise propose id 1 in a populated log. A new file never touches another entry's bytes, so it cannot truncate,
 overwrite or renumber anyone else's work. If two parallel sessions pick the
 same id, two files share a number — harmless; the next review renumbers one
 and logs a meta-observation.

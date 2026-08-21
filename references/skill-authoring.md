@@ -380,8 +380,12 @@ a two-tier check:
 
 1. Enumerate every added/moved line via `diff` of the old base vs the new
    base.
-2. Exact-match each non-empty line against the restructured file set
-   (`grep -F`).
+2. Exact-match each non-empty line against the restructured file set:
+   `grep -qF -- "$line" "$file"` — the `--` is required, because markdown
+   lines starting with `-` are otherwise parsed as options, `grep` errors
+   out, and the line is scored as missing (31 false losses beside 35 real
+   ones in one run). The same applies to every embedded snippet that
+   interpolates file content into an argument position.
 3. For misses, substance-check via a distinctive mid-line substring before
    concluding loss — most misses are container artifacts (heading-level
    changes, list-to-prose adaptation, re-wrapped lines splitting a phrase
@@ -389,7 +393,14 @@ a two-tier check:
 4. Word-count sanity check per file.
 
 One tier alone either misses losses (substance-only) or cries wolf
-(exact-only). Additionally, inventory the original's enforcement
+(exact-only). **The checker is code too, and the least-tested code in the
+pipeline** — written once, for one run, never exercised against a fixture.
+Count record headers by matching per line (split, then anchor), not with a
+`^`-anchored regex over whole-file text, whose multiline-flag semantics
+vary by language and fail silently to "1". Before trusting any checker's
+verdict, calibrate it: assert that it reproduces a KNOWN count on the
+untouched original. A checker that fails calibration is a false alarm
+today and a silent pass tomorrow. Additionally, inventory the original's enforcement
 mechanisms (checkpoints, assertions, invariants, mandatory-write rules,
 defaults) as an explicit checklist — compression preferentially destroys
 enforcement machinery because it reads as redundancy — and sweep any "pure

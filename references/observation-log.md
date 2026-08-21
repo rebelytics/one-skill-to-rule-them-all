@@ -75,12 +75,18 @@ it whenever you issue an id above it.
 d=skill-observations/observation-log
 hi=$( { ls "$d" "$d/archive" 2>/dev/null | grep -oE '^[0-9]+'; cat "$d/archive/.id-floor" 2>/dev/null; } \
      | sort -n | tail -1); : "${hi:=0}"
+[ "$hi" -eq 0 ] && [ -n "$(ls "$d"/*.md 2>/dev/null)" ] && { echo "ID COMMAND BROKEN — log is non-empty but no ids extracted"; exit 1; }
 next_id=$(( hi + 1 )); echo "$next_id" > "$d/archive/.id-floor"
 printf '%04d\n' "$next_id"     # filename prefix
 ```
 
 `ls`, `grep -oE`, `sort -n` and `printf` are POSIX; the snippet runs
-unchanged on macOS, Linux and Git Bash.
+unchanged on macOS, Linux and Git Bash. A skill that hands the agent a
+shell command owns that command's portability: lead with the portable
+form, never offer it as a footnote the agent reaches for after the primary
+has failed — and make any command that derives a number from a file fail
+loudly on an empty result, because a command that fails to empty rather
+than to error may never announce that it failed at all.
 
 ### Why this is the entire concurrency story
 
@@ -111,6 +117,29 @@ different ways. A handoff that splits work must therefore carry an
 ownership fence: an explicit in-scope list by id, an explicit out-of-scope
 list, and the instruction that each session edits status only on its own
 ids.
+
+## When the workspace is under version control
+
+Versioning the workspace folder is good practice — it gives the rollback
+the skill cares about — and it adds a mutation surface that does not look
+like one. `git checkout -- <path>`, `git stash`, `git reset --hard`, a
+branch switch carrying local modifications, a rebase that drops a hunk,
+and above all `git clean -fd` destroy observation files as thoroughly as
+any edit; the newest files are the most exposed, because a just-written
+observation is an *untracked* file until someone commits it, and
+`git clean` exists to delete exactly those. These commands get run
+reflexively as housekeeping ("make the tree clean enough to switch
+branches"), and a continuously written log is almost always what makes the
+tree dirty.
+
+Rules: before any git operation that can discard working-tree state, copy
+`observation-log/` somewhere outside the repository, and afterwards
+confirm every file this session wrote still exists, re-creating from the
+copy if not. **Prefer committing pending observations over reverting
+them** — when the dirt in the tree is the log, a commit is always the
+cheaper way to get clean. Scope any dirty-tree guard to exclude
+`skill-observations/` rather than teaching sessions to clear it, and never
+run `git clean` with that directory in scope.
 
 ## Archival
 
