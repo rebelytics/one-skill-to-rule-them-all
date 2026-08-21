@@ -103,7 +103,7 @@ If you try it in another environment, please let me know how it goes. Issues and
 
 This is an open-source project for the community. If you use it, I would love to hear from you:
 
-- **Bug reports and feature requests:** Open an issue
+- **Bug reports and feature requests:** Open an issue or a pull request, whichever you prefer — you are credited either way. See [CONTRIBUTING.md](CONTRIBUTING.md) for how reports become changes and how credit works.
 - **Platform compatibility reports:** Tried it somewhere other than Claude? Tell me what happened
 - **Interesting use cases:** Have you come up with a creative way of using or improving the task observer?
 - **Integrations with other systems:** One user told me that they connected task observer to Obsidian. Do you have a similar story?
