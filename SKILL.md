@@ -1,19 +1,21 @@
 ---
 name: task-observer
 description: >
-  Monitors task execution for skill improvement opportunities. Use this skill
-  during ANY multi-step task, agentic workflow, or substantive work session where
-  the agent is using tools and producing deliverables. It captures patterns, user
-  corrections, workflow insights, and methodology worth preserving as reusable
-  skills. Also triggers during post-task feedback discussions and when the user
-  explicitly mentions skill observations, improvements, the observation log,
-  skill taxonomy, or asks the agent to watch for skill opportunities. Also known
-  as "One Skill to Rule Them All" — trigger on this phrase too. IMPORTANT:
-  this skill should be invoked at the start of every task-oriented session — if
-  you are about to use tools to produce deliverables, invoke this skill first.
-  For reliable activation, pair this description with a CLAUDE.md instruction
-  or harness-level session-start hook (see Recommended Activation Setup) —
-  description-level matching alone is not enforceable.
+  Monitors task execution for skill improvement opportunities. Use during ANY
+  multi-step task, agentic workflow, or work session where the agent uses
+  tools and produces deliverables. Captures patterns, user corrections,
+  workflow insights, and methodology worth preserving as reusable skills.
+  Also triggers in post-task feedback discussions and when the user mentions
+  skill observations, improvements, the observation log, skill taxonomy, or
+  asks the agent to watch for skill opportunities.
+  Also known as "One Skill to Rule Them All" — trigger on this phrase too.
+  IMPORTANT: invoke this skill before the FIRST tool call of any session and
+  before writing or proposing a plan — any turn that will involve a tool call
+  counts, however simple the opener looks. This sentence is the
+  session-start trigger and the only activation layer that survives an
+  unreachable config file; pair it with a CLAUDE.md instruction or a harness
+  session-start hook (references/environments.md) — description matching
+  alone is not enforceable.
 ---
 
 # Task Observer — Continuous Skill Discovery & Improvement
@@ -33,13 +35,20 @@ Skills improve best from friction noticed during real work, not from sitting
 down to "improve a skill." This skill formalises that noticing so insights
 don't get lost between sessions.
 
-`[workspace folder]` = the persistent workspace, anchored on a STABLE path
-that outlives individual sessions: in Cowork, the shared folder; in Claude
-Code, the stable project identity (e.g.
+`[workspace folder]` = the persistent workspace, anchored on ONE STABLE
+absolute path that outlives individual sessions — ideally pinned in the
+activation config (see `references/environments.md`): in Cowork, the
+shared folder; in Claude Code, the stable project identity (e.g.
 `~/.claude/projects/<project-id>/`), NOT the current working directory. A
 cwd inside an ephemeral checkout — a git worktree under
 `.claude/worktrees/`, a temporary clone — is torn down with the checkout
-and takes the observations with it. **The observation log is a directory:**
+and takes the observations with it. Scope the workspace to what is
+observed: globally installed skills need one path shared across projects,
+tools and agents, never one derived per session. Never place it inside a
+skills-discovery directory. Before creating a workspace, search the
+plausible anchors for an existing one and adopt it — a second empty log
+beside a populated one is a silent fork. **The observation log is a
+directory:**
 `[workspace folder]/skill-observations/observation-log/`, one Markdown file
 with a YAML frontmatter header per observation, with resolved entries under
 `observation-log/archive/` — unless the user's configuration pins it

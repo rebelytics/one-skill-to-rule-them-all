@@ -5,49 +5,167 @@ in an environment without filesystem access.
 
 ## Recommended activation setup
 
-Description-level matching alone can miss invocation when the agent is
-focused on the task, so pair the skill with a configuration-level
-instruction (CLAUDE.md, project instructions, or equivalent):
+Three activation tiers exist, and only the strongest is enforced. Pick one
+knowingly; do not assume the middle one is a guarantee.
+
+1. **Description matching** (weakest). The skill's frontmatter description
+   competes with every other skill's for relevance to the opening message.
+   It loses most often on short, tool-using requests that read like
+   questions ("list the files in this repo"), on sessions that open with a
+   small well-scoped request and grow, and whenever a domain skill matches
+   the opening message strongly — topically matched skills have loaded in
+   the same turn that the always-load ones were skipped. On platforms with
+   no hook mechanism this is the only tier that survives an unmounted or
+   unreachable config file, which is why the description itself carries a
+   session-start trigger.
+2. **Configuration instruction** (better, still probabilistic). A CLAUDE.md
+   or project-instruction block, shown below. Empirically skippable under
+   the same conditions as tier 1, and silently absent when the file it
+   lives in is not in context (no workspace folder mounted, a session
+   started outside the project). If `allow_cowork_file_delete` or a similar
+   local-filesystem permission tool is present in the tool surface, the
+   session runs on the user's machine and the config is reachable; treat
+   "this session runs in the cloud, so the config was not loaded" as
+   unverified until the tool surface has been inventoried.
+3. **Harness hook** (the only enforced option). A session-start hook that
+   injects the instruction — and ideally the log state — into context on
+   every session, e.g. Claude Code's `SessionStart` hook returning
+   `hookSpecificOutput.additionalContext`. Even a hook can only inject a
+   prompt; choosing to invoke a skill remains a model decision. Cowork has
+   no hook mechanism; there, tiers 1 and 2 are all there is.
+
+**Word the trigger mechanically, not judgementally.** "Task-oriented
+session" asks the agent to classify the session at its first turn, before
+it knows how the session will develop, and short factual-looking requests
+get classified out. The block below keys on tool use instead: any turn
+that will involve a tool call counts. And activation must precede
+*planning*, not merely execution — where a workflow proposes a plan for
+approval first, a plan written without the relevant skills carries
+uninformed decisions past the review gate, and approval locks them in.
+Load skills before exploring, researching or drafting the plan: both,
+skill first.
+
+### The activation block
 
 ```
-At the start of any task-oriented session — any interaction where you will
-use tools and produce deliverables — invoke the task-observer skill before
-beginning work. This ensures skill improvement opportunities are captured
-throughout the session.
+Before the first tool call of any session — and before writing or
+proposing a plan, not merely before executing one — invoke the
+task-observer skill. Any turn that will involve a tool call counts; do not
+classify the session as "too simple" from its opening message.
 
 When loading any skill, check the observation log for OPEN observations
 tagged to that skill. Apply their insights to the current work, even if
-the skill file hasn't been updated yet. This enables immediate application
-of observations before they're permanently integrated during the weekly
-review.
+the skill file hasn't been updated yet.
+
+The observation log for this project lives at:
+  [ABSOLUTE PATH]/skill-observations/observation-log/
+Use that path. Never resolve the workspace from the current working
+directory — a cwd inside an ephemeral checkout (a git worktree, a temporary
+clone) is torn down and takes the log with it. Never place the workspace
+inside a skills-discovery directory or any path linked into one. If this
+environment mints a separate project identity per checkout, or more than
+one agent works this project, the pinned path above is the single shared
+location; do not derive one per session, tool or project.
 ```
+
+Fill in the path when installing. Pinning turns anchoring into a one-time
+decision instead of one the agent re-litigates every session with a fresh
+chance to get it wrong. Scope the workspace to what is being observed:
+skills installed globally are observed from every project, so their log
+must be one absolute path shared across projects and tools — a per-project
+or per-tool workspace scatters observations about global skills across
+every project the user touches, and a review run in one never sees the
+others. Where the environment provides a managed persistence directory
+under the project identity (a memory directory it loads every session),
+that directory and the identity root are both "stable"; anchor inside the
+managed directory when one exists, otherwise on the identity root — never
+both.
+
+**Before creating a log, search for one.** Check the plausible anchor
+candidates — the pinned path, the project identity root, the
+environment-managed persistence directory, the shared folder, the other
+agent's equivalent — for an existing `skill-observations/` workspace. If
+one exists, adopt it, or consolidate deliberately with the user. A fresh
+empty log beside a populated one is a silent fork: both grow
+independently, ids collide, and each session sees only half the history.
+When consolidating, leave a pointer file at the abandoned location so
+sessions anchored there get redirected instead of re-creating the fork.
 
 **Config detection (once per session):** with filesystem access, check the
 workspace root's CLAUDE.md (or equivalent) for a task-observer activation
 instruction — suggest adding it if absent, creating the file if none
 exists. Without filesystem access, check the system prompt / project
 instructions and suggest the user add the instruction there. Keep the
-suggestion to a sentence or two.
+suggestion to a sentence or two. The block above is the propagated
+artefact: suggest it whole, including the anchoring paragraph, because
+constraints that live only in SKILL.md arrive after the decision they were
+meant to govern.
 
 **Anti-pattern:** don't chain activation through another skill — load
 task-observer and related skills independently from configuration; a broken
 chain silences all observation activity.
 
-**If CLAUDE.md (or the equivalent config) is governance-protected:** some
-setups guard shared config files with hooks or file-protection rules that
-deny agent edits. If an edit to the config is denied, never retry the same
-edit blindly and never attempt to bypass the guard — a denial is the
+### A session-start hook (Claude Code and similar harnesses)
+
+Capture is hard-enforced by checkpoints hooked onto tool calls; the review
+trigger in the Session Start Protocol is a soft step — read a file, compare
+a date — and it is skipped the same way activation is. The failure is
+self-concealing: capture keeps producing, the log looks healthy and
+growing, and the only artefact recording the miss is a file reading
+`never` that nobody reads. Treat "is the review trigger structurally
+enforced?" as an install-completeness check, and where the harness offers
+a session-start hook, have it compute the state and inject it rather than
+asking the agent to go and look:
+
+```bash
+#!/bin/sh
+# SessionStart hook: inject activation + review state as additionalContext.
+d="$OBS_WORKSPACE/skill-observations"      # the pinned absolute path
+open=$(ls "$d/observation-log"/*.md 2>/dev/null | wc -l | tr -d ' ')
+last=$(cat "$d/last-review-date.txt" 2>/dev/null || echo never)
+msg="Invoke the task-observer skill before the first tool call."
+if [ "$open" -gt 0 ]; then
+  msg="$msg $open open observations; last review: $last."
+  case "$last" in never) msg="$msg Offer the review." ;; esac
+fi
+printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$msg"
+```
+
+Adapt the date comparison to the harness's shell (ISO dates sort
+lexically, so `[ "$last" \< "$(date -d '-7 days' +%F)" ]` or the BSD
+equivalent). Two details that matter when building one: `grep -c` exits 1
+on zero matches while still printing `0`, so `$(grep -c … || echo 0)`
+yields two values — capture the output and ignore the exit code; and prove
+the reminder branch fires by running the hook against fixtures at `never`,
+30 days stale and 2 days stale, confirming the third stays silent. A nag
+that never fires and a nag that is correctly silent look identical from a
+passing run.
+
+### If CLAUDE.md (or the equivalent config) is governance-protected
+
+Some setups guard shared config files with hooks or file-protection rules
+that deny agent edits. If an edit to the config is denied, never retry the
+same edit blindly and never attempt to bypass the guard — a denial is the
 governance system working as intended, and a silent skip is just as bad
 (the user believes activation is set up when only description-level
 matching is active). Surface the denial to the user and offer these
-fallbacks: (a) ask the user to paste the activation block into the file
-themselves; (b) if the user's environment provides its own
-temporary-authorization mechanism (a marker file, an environment variable,
-or similar), ask the user to authorize the edit through that mechanism and
-revoke it afterwards; (c) where the platform supports unguarded
-project-level instruction files, add the activation instruction there
-instead. Never assume unrestricted edit access to shared or
-governance-tracked config — many setups gate exactly those files.
+fallbacks, lightest first: (a) if the denial came from an interactive
+permission system rather than a hard guard — the denial message offers an
+approval path, names a permission rule, or otherwise indicates consent
+would clear it — ask the user to approve a retry of the same edit; one
+confirmation resolves it, and escalating past this step spends user effort
+on something already recoverable; (b) ask the user to paste the activation
+block into the file themselves; (c) if the user's environment provides its
+own temporary-authorization mechanism (a marker file, an environment
+variable, or similar), ask the user to authorize the edit through that
+mechanism and revoke it afterwards; (d) where the platform supports
+unguarded project-level instruction files, add the activation instruction
+there instead. Branch on whether the denial is retryable-with-consent or
+categorical: an interactive permission prompt is cleared by asking, a hook
+or file-protection rule is not, and collapsing both into "hand the task
+back to the user" is safe but consistently over-escalates. Never assume
+unrestricted edit access to shared or governance-tracked config — many
+setups gate exactly those files.
 
 ## Bundle manifest
 
