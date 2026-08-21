@@ -341,12 +341,25 @@ often the refinement, not the echo. Apparent agreement suppresses
 verification more effectively than disagreement does, so this rule binds
 hardest exactly where it feels least necessary.
 
-When acting: small, clearly-additive, low-risk changes may be applied
-directly. Substantial changes (restructuring, new capabilities, changed
-methodology) and all new-skill creation: load
+When acting: small, clearly-additive, low-risk changes (a new rule, a
+clarification, a factual fix) may be applied without waiting for the next
+review — "directly" means *now*, not *in place*: the edit is still made on
+a staged copy based on a fresh read of the live file and handed to the user
+to install, in every environment and every context. Staging-only has no
+interactive exception; an exception the user has to remember is a gate
+that eventually gets left open. Substantial changes (restructuring, new
+capabilities, changed methodology) and all new-skill creation: load
 `references/skill-authoring.md` first and follow its editing and staging
 rules. A principle that applies to skills generally goes to the
 cross-cutting principles file (same reference).
+
+**Set the status in the same turn you act.** An observation acted on
+in-session must have its frontmatter updated — `status: actioned`,
+`resolved: YYYY-MM-DD`, `resolution: what was done` — before the turn
+ends. The work and the bookkeeping are two acts, and the second is the one
+that gets dropped; a stale `open` entry then invites redoing finished work
+over a section that has since moved on. The write is the enforcement,
+exactly as it is for logging.
 
 ## Quick Reference
 

@@ -288,7 +288,11 @@ capture is the point.)
    safe, and the way to make it hold where no guard exists is to begin
    every edit with the copy (`mkdir -p` the staging dir, `cp` the live
    file in, `diff -q` to prove it matches), so the live path is never the
-   one in hand.
+   one in hand. Scope and precedence: staging-only governs every context
+   and every size of change. The direct-apply clause in SKILL.md ("Acting
+   on Observations") decides *when* a small change is made — now, rather
+   than at the next review — never *where*; it does not license an
+   in-place edit.
 2. Always base edits on a fresh read of the live file — never a workspace
    copy, prior draft, or memory.
 3. Before overwriting any staged/workspace copy, diff it against the live
