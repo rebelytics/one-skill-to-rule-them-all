@@ -49,6 +49,17 @@ project-level instruction files, add the activation instruction there
 instead. Never assume unrestricted edit access to shared or
 governance-tracked config — many setups gate exactly those files.
 
+## Bundle manifest
+
+This skill consists of `SKILL.md`, the reference files it lists
+(`weekly-review.md`, `skill-authoring.md`, `environments.md`,
+`observation-log.md`, `signals.md`, `migration.md`) and
+`scripts/migrate-log.py`. If a referenced file is missing, the install is
+incomplete: proceed using the rules in `SKILL.md`, tell the user which
+files are missing, and point them to the full bundle at the canonical
+source (for the published version, the repository named in the attribution
+block).
+
 ## Compaction behaviour
 
 When context compacts mid-task, the CLAUDE.md structural trigger re-invokes

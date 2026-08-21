@@ -39,134 +39,120 @@ Code, the stable project identity (e.g.
 `~/.claude/projects/<project-id>/`), NOT the current working directory. A
 cwd inside an ephemeral checkout — a git worktree under
 `.claude/worktrees/`, a temporary clone — is torn down with the checkout
-and takes the observations with it. The observation log is a directory:
+and takes the observations with it. **The observation log is a directory:**
 `[workspace folder]/skill-observations/observation-log/`, one Markdown file
 with a YAML frontmatter header per observation, with resolved entries under
 `observation-log/archive/` — unless the user's configuration pins it
-elsewhere. "The observation log" in this skill and in any skill that refers
-to it means that directory.
+elsewhere. "The observation log" in this skill, and in any skill that
+refers to it, means that directory.
 
 ## Reference files — load on demand, not up front
 
-- `references/weekly-review.md` — the comprehensive review procedure
-  (scheduled or 7-day fallback), approval policy, delivery/staging of
-  updated skills. Load when a review triggers or the user asks for one.
-- `references/skill-authoring.md` — taxonomy details, structure defaults
-  (progressive disclosure, documenting external tool surfaces), licensing,
-  attribution template, lean-content rule, confidentiality layers 2–5,
-  principle propagation, live-file editing rules. Load before creating or
-  editing any skill.
-- `references/environments.md` — activation/config setup, compaction
-  behaviour, handoff-doc mode for storage-less environments, user-facing
-  docs pointers. Load for setup questions or when there's no filesystem.
+Each pointer names its trigger. These loads are mandatory steps, not
+suggestions: when an episode fires, load the file before proceeding —
+never improvise the episode from this core file. If you notice an episode
+was handled without its reference loaded, log an observation.
 
-These loads are mandatory steps, not suggestions: when an episode fires
-(review triggers → weekly-review; creating/editing a skill →
-skill-authoring; setup/no-filesystem → environments), load the file before
-proceeding — never improvise the episode from this core file. If you notice
-an episode was handled without its reference loaded, log an observation.
-
-**Bundle manifest:** this skill consists of `SKILL.md` plus the three
-reference files listed above. If a referenced file is missing, the install
-is incomplete: proceed using the rules in this file, tell the user which
-files are missing, and point them to the full bundle at the canonical
-source (for the published version, the repository in the attribution
-above).
+- `references/weekly-review.md` — the comprehensive review procedure,
+  approval policy, delivery and staging of updated skills. **Load when a
+  review triggers or the user asks for one.**
+- `references/skill-authoring.md` — taxonomy in full, structure defaults,
+  licensing, attribution, confidentiality layers, live-file editing and
+  relocation-verification rules. **Load before creating or editing any
+  skill.**
+- `references/observation-log.md` — storage layout, frontmatter fields,
+  helper snippets, archival details, and the reasoning behind the rules.
+  **Load when setting up the log for the first time, when archiving, when
+  an id or frontmatter looks wrong, or before changing how anything reads
+  the log.**
+- `references/signals.md` — the full catalogue of what is and isn't worth
+  logging. **Load when unsure whether something is an observation, or when
+  sorting many candidates.**
+- `references/environments.md` — activation and config setup, compaction
+  behaviour, bundle manifest, handoff-doc mode for storage-less
+  environments. **Load for setup questions, after compaction, or when
+  there is no filesystem.**
+- `references/migration.md` — the one-time scripted conversion of a
+  pre-3.0 single-file `log.md`. **Load only when the Session Start
+  Protocol detects a legacy log.** Fresh installs never read it.
 
 ## Session Start Protocol
 
-1. If `skill-observations/observation-log/` (with its `archive/`
-   subdirectory) or `cross-cutting-principles.md` don't exist, create them
-   (the principles template is in the principles section of
-   `references/skill-authoring.md`). Also create
-   `skill-observations/last-review-date.txt` containing the literal value
-   `never` if it doesn't exist — never write a date into it at setup; a
-   date means a review actually ran. If a legacy single-file
+1. **Storage.** If `skill-observations/observation-log/` (with its
+   `archive/` subdirectory) or `cross-cutting-principles.md` don't exist,
+   create them (principles template: `references/skill-authoring.md`).
+   Create `skill-observations/last-review-date.txt` containing the literal
+   value `never` if it doesn't exist — never write a date into it at setup;
+   a date means a review actually ran. If a legacy single-file
    `skill-observations/log.md` exists and `observation-log/` does not, this
    is an upgrade from a pre-3.0 install: load `references/migration.md` and
-   run the scripted conversion before writing anything else. Before creating
-   or writing anything:
-   if the resolved workspace folder sits under an ephemeral path (e.g.
-   `.claude/worktrees/`, a temporary clone), warn the user and re-anchor
-   on the stable project path first — state written to an ephemeral
-   checkout is lost at teardown.
-2. Scan OPEN observations by reading only the frontmatter of each file in
-   `observation-log/` — the header block between the first two `---` lines,
-   never the bodies. Build awareness from the `status`, `skill`, and
-   `title` fields; also read active principles. Hold them in awareness,
-   don't surface unprompted. Reading frontmatter only is the whole point of
-   the per-file format: it keeps this always-on scan cheap even once
-   hundreds of observations have accumulated.
+   run the scripted conversion before writing anything else. Before
+   creating or writing anything: if the resolved workspace folder sits
+   under an ephemeral path (e.g. `.claude/worktrees/`, a temporary clone),
+   warn the user and re-anchor on the stable project path first — state
+   written to an ephemeral checkout is lost at teardown.
+2. **Scan.** Read only the frontmatter of each file in `observation-log/`
+   — the header block between the first two `---` lines, never the bodies
+   — and build awareness from `status`, `skill`, `proposes_skill` and
+   `title`; also read the active principles. Hold them in awareness, don't
+   surface unprompted. Frontmatter-only is the whole point of the per-file
+   format: the scan stays cheap once hundreds of observations exist.
 
    ```bash
-   # Frontmatter-only scan — print each observation's header, skip the body
    for f in skill-observations/observation-log/*.md; do
      awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
           fm && /^---[[:space:]]*$/ {print "---"; exit}
           fm' "$f"
    done
    ```
-3. Read `skill-observations/last-review-date.txt`. The value carries the
-   truth: a date = when the last review actually ran; `never` = no review
-   has run yet. A missing file is abnormal (step 1 creates it) — recreate
-   it with `never`, don't invent a date. If the value is `never` or older
-   than 7 days AND there are OPEN observations: in an interactive session,
-   offer the review in one line ("the observation backlog hasn't been
-   reviewed [in N days / yet] — run it now, or carry on with your task?")
-   and proceed with the user's task unless they opt in; never gate their
-   work on the review. Only a scheduled/autonomous run loads
-   `references/weekly-review.md` and runs the review unprompted.
-4. Once per session: if no CLAUDE.md (or equivalent) activation instruction
-   for this skill exists, briefly suggest adding one (see
-   `references/environments.md`). Skip if already configured.
-5. There is no shared log file to guard: each observation is its own file,
-   so creating a new one never collides with or overwrites another
-   session's entry. Before writing a *status change* to an existing
+3. **Review trigger.** Read `skill-observations/last-review-date.txt`. The
+   value carries the truth: a date = when the last review actually ran;
+   `never` = no review has run yet. A missing file is abnormal (step 1
+   creates it) — recreate it with `never`, don't invent a date. If the
+   value is `never` or older than 7 days AND there are OPEN observations:
+   in an interactive session, offer the review in one line ("the
+   observation backlog hasn't been reviewed [in N days / yet] — run it now,
+   or carry on with your task?") and proceed with the user's task unless
+   they opt in; never gate their work on the review. Only a
+   scheduled/autonomous run loads `references/weekly-review.md` and runs
+   the review unprompted.
+4. **Activation.** Once per session: if no CLAUDE.md (or equivalent)
+   activation instruction for this skill exists, briefly suggest adding one
+   (see `references/environments.md`). Skip if already configured.
+5. **Concurrency.** There is no shared log file to guard: each observation
+   is its own file, so creating one never collides with or overwrites
+   another session's entry. Before changing the *status* of an existing
    observation, re-read that one file first (a parallel review may have
-   resolved it); creating a new observation needs no such guard.
+   resolved it).
 
 ## When to Observe
 
-Active for the entire task session: execution, post-task feedback and
-review discussion, meta-discussion about skills or methodology, and
-reflective/strategy conversations about how work should be done. **The
-observation mindset does not deactivate when the conversation shifts from
-doing the work to discussing it** — user feedback in review phases is often
-the highest-signal input. Inactive only for casual conversation and quick
-factual questions with no tools or deliverables involved.
+Active for the entire task session — execution, post-task feedback, review
+discussion, meta-discussion about skills or methodology, and strategy
+conversations about how work should be done. **The observation mindset
+does not deactivate when the conversation shifts from doing the work to
+discussing it**; review-phase feedback is often the highest-signal input.
+Inactive only for casual conversation and quick factual questions with no
+tools or deliverables involved.
 
 ## What to Watch For
 
-**Signals for a NEW skill:** a reusable multi-step workflow; a methodology
-the user explains that no existing skill captures; a recurring task type
-with similar structure; a process with clear inputs, phases, outputs; the
-user describing a refined process ("I always do it this way"); a structured
-approach emerging naturally during work.
-
-**Signals for IMPROVING an existing skill:** anything from a task that used
-a skill and could make it better — problems, positive signals, or neutral
-gaps. Examples: the agent violates a documented rule (the skill needs
-enforcement, not louder rules); a user correction reveals a missing rule or
-edge case; a better workflow emerges than the skill recommends; a technique
-works well enough to promote from incidental to recommended; an undocumented
-use case; feedback that generalises; a wrong assumption; new tooling
-obsoletes a step; corrections forming a pattern; a principle that applies to
-other skills too; a naming/framing/structural suggestion, even
-conversational.
-
-**Signals for SIMPLIFYING a skill:** a section never relevant across many
-sessions; a rule from a single unvalidated observation; workflows users
-consistently shortcut; sections loaded but never acted on; contradictory
-rules; "just in case" complexity that never triggered; a rule the agent
-consistently fails to follow (convert to structural enforcement — checklist,
-verification step, unskippable tool call — or remove it). Treat these as a
-review checklist; ask "what can we remove?" as deliberately as "what should
-we add?"
+**New skill:** a reusable multi-step workflow, a methodology the user
+explains that no skill captures, a recurring task type, a process the user
+describes as "I always do it this way". **Improve a skill:** the agent
+violates a documented rule (the skill needs enforcement, not louder rules);
+a user correction reveals a missing rule or edge case; a better workflow or
+technique emerges than the skill recommends; a wrong assumption; new
+tooling obsoletes a step; a principle that applies to other skills too.
+**Simplify a skill:** a section never relevant across many sessions, a rule
+from a single unvalidated observation, contradictory rules, a rule the
+agent consistently fails to follow — convert to structural enforcement or
+remove. Full catalogue with examples: `references/signals.md`.
 
 **Do NOT log:** one-off corrections that don't generalise; preferences
 already captured in a skill; tool bugs unrelated to methodology;
-observations that would need proprietary client information to be useful in
-an open-source skill (unless an internal skill is the right home).
+observations that would need proprietary client information to be useful
+in an open-source skill (unless an internal skill is the right home).
 
 ## How to Log
 
@@ -174,43 +160,30 @@ Write the observation file **silently, within the same turn or the next** —
 never batch mentally for later; the act of writing is the enforcement
 mechanism.
 
-**Mandatory observation checkpoint after every 3rd TodoWrite completion:** After
-marking the 3rd, 6th, 9th (etc.) TodoWrite item as completed in a session, you
-must **write to disk** — not merely pause to ask yourself a question. Either
-write any pending observation files, or, if genuinely none have accumulated,
-append a one-line `no observations` acknowledgement marker to
-`skill-observations/checkpoints.log` for that checkpoint. The required action
-is a concrete write; a remembered "ask whether" is not enforcement. This is a
-hard checkpoint, not a suggestion — the
-skill has demonstrated that softer "check when completing items" or "pause and
-ask" guidance gets lost during cognitively demanding analytical work, exactly
-when the most observations accumulate. The count doesn't need to be precise;
-the rule is: roughly every third completion, write to disk (an observation file
-or the acknowledgement marker). The write itself is the enforcement mechanism: it
-forces the mental check to surface as a recorded action, and it prevents the
-common failure mode where the skill is loaded but no observations are written
-until the user explicitly asks.
+**Mandatory checkpoint after every 3rd completed todo item.** After marking
+the 3rd, 6th, 9th (etc.) item complete, you must **write to disk** — not
+merely ask yourself whether anything is pending. Either write any pending
+observation files, or, if genuinely none have accumulated, append a
+one-line `no observations` acknowledgement to
+`skill-observations/checkpoints.log`. The required action is a concrete
+write; a remembered "ask whether" is not enforcement. The count need not be
+precise; roughly every third completion is the rule.
 
-**Deliverable-event flush:** Hard enforcement that hooks onto tool calls you are
-already making is the only reliable mechanism; soft prompts that rely on memory
-don't survive cognitive load during long substantive sessions (when the most
-insights surface). So tie observation-flushing to deliverable and workflow events
-that already involve a tool call. Whenever you present or render a major
-deliverable — `present_files`, a deck or PDF render, a staged skill file handed
-to the user — or complete a task/todo batch, write any pending observation
-files at that moment, before moving on. These are natural, already-occurring
-checkpoints; piggy-backing the flush onto them means the write happens as a
-side effect of work you were doing anyway, rather than depending on a separate
-act of memory.
+**Deliverable-event flush.** Whenever you present or render a major
+deliverable — a file handed to the user, a deck or PDF render, a staged
+skill file — or complete a task/todo batch, write any pending observation
+files at that moment, before moving on. These checkpoints already involve a
+tool call; piggy-backing the flush onto them makes the write a side effect
+of work you were doing anyway. (Why both checkpoints are writes rather than
+questions: `references/observation-log.md`.)
 
-**Assigning an id (lightweight — no shared-file dance):** each observation
-is its own file named `NNNN-short-slug.md` (zero-padded id + a kebab-case
-slug from the title). Compute the id as the highest of three values, plus
-one: the highest numeric filename prefix in `observation-log/`, the highest
-in `observation-log/archive/`, and the number in
-`observation-log/archive/.id-floor` — a one-line file holding the highest id
-ever issued, so the counter can never restart from 1 when the active
-directory happens to be empty (update it whenever you issue an id above it):
+**Id and filename.** Each observation is `NNNN-short-slug.md` (zero-padded
+id + a kebab-case slug from the title). The id is the highest of three
+values, plus one: the highest numeric prefix in `observation-log/`, the
+highest in `observation-log/archive/`, and the number in
+`observation-log/archive/.id-floor` (the highest id ever issued — update it
+whenever you issue an id above it, so the counter can never restart from 1
+when the active directory is empty):
 
 ```bash
 d=skill-observations/observation-log
@@ -219,34 +192,15 @@ hi=$( { ls "$d" "$d/archive" 2>/dev/null | grep -oE '^[0-9]+'; cat "$d/archive/.
 next_id=$(( hi + 1 )); echo "$next_id" > "$d/archive/.id-floor"
 ```
 
-Then write `observation-log/$(printf '%04d' "$next_id")-<slug>.md`. Because
-every observation lives in its own file, the elaborate
-check-then-act-then-verify numbering ritual the single-file log required is
-gone: a new observation never touches another entry's bytes, so it cannot
-truncate, overwrite, or renumber anyone else's work. In the rare case two
-parallel sessions pick the same id, the result is two files sharing a
-number — harmless (distinct files, nothing lost); the next review renumbers
-one and logs a meta-observation. That benign outcome is the entire
-concurrency story now.
+A new file never touches another entry's bytes, so it cannot truncate,
+overwrite or renumber anyone else's work. If two parallel sessions pick the
+same id, two files share a number — harmless; the next review renumbers one
+and logs a meta-observation.
 
-**Editing an existing observation's file safely:** status changes and
-archival touch exactly one file. Re-read that file immediately before
-editing it (a parallel review may have resolved it), then edit only the
-frontmatter fields you're changing (`status`, `resolved`, `resolution`).
-Never rewrite a file you don't own, and never batch-rewrite the whole
-directory: the single-file log's DOTALL/greedy truncation hazard — which
-once overwrote 16 entries from a single Status line to end-of-file in one
-substitution — is structurally impossible when each observation is isolated
-in its own file. For the same reason, the old backup / re-read-and-merge /
-structural-invariant / survival-check sequence is no longer needed; one file
-cannot be erased by another session writing elsewhere. Archival is a plain
-`mv` into `archive/`, not a read-filter-rewrite (see "Archival on Write").
-
-**File format:** every observation file is YAML frontmatter (the metadata
-the scan reads) followed by the Issue → Improvement → Principle body. **The
-frontmatter is mandatory and drives every status-filtered pass; an
-observation written without a `status` field is treated as OPEN by reviews,
-never as nonexistent** — so always write `status: open` at creation time.
+**File format.** YAML frontmatter (the metadata every scan reads) followed
+by the Issue → Improvement → Principle body. **The frontmatter is mandatory;
+always write `status: open` at creation time** — an observation without a
+`status` field is treated as OPEN by reviews, never as nonexistent.
 
 ```markdown
 ---
@@ -277,28 +231,27 @@ section or rule; for new skills, scope and key components.]
 
 **Context preservation:** if an observation depends on session-local data
 (uploads, API output), save that context into the workspace first and set
-the `reference:` frontmatter field to its path — an observation whose
-evidence dies with the session is incomplete.
+`reference:` to its path — an observation whose evidence dies with the
+session is incomplete.
 
 **Confidentiality at logging time:** for `type: open-source` observations,
 the Issue/Improvement fields may reference specifics for context, but the
 Principle must be fully generalised — no client names, domains, or details
-traceable to a real project. Full confidentiality layers for skill
-authoring: `references/skill-authoring.md`.
+traceable to a real project. Full confidentiality layers:
+`references/skill-authoring.md`.
+
+**Changing an existing observation:** re-read that one file, edit only the
+frontmatter fields you are changing (`status`, `resolved`, `resolution`),
+never batch-rewrite the directory. Archival is a plain `mv` (below).
 
 ## Referencing Observations
 
-Cite an observation by the `id` field in its frontmatter, which matches the
-`NNNN-` prefix of its filename. Never cite a `grep -n` line number as if it
-were the id — search-tool line numbers are positional metadata, not
-identifiers. Cheap plausibility check: a cited id should fall within the
-range of ids that actually exist across `observation-log/`, its `archive/`
-and `.id-floor`; a
-number far outside that range (e.g. citing #1365 when the highest id is
-#766) is almost certainly a line number misread as an id.
-
-The general rule: IDs must come from the record's own identifier field,
-never from the positional metadata of the search tool that found it.
+Cite an observation by the `id` field in its frontmatter (= the `NNNN-`
+filename prefix). Never cite a `grep -n` line number as if it were the id —
+search-tool line numbers are positional metadata, not identifiers. A cited
+id must fall within the range that exists across `observation-log/`,
+`archive/` and `.id-floor`; a number far outside it is almost certainly a
+line number misread as an id.
 
 ## Taxonomy (quick version)
 
@@ -310,59 +263,15 @@ requirements (attribution, licensing, structure): `references/skill-authoring.md
 
 ## Archival on Write
 
-On every write, first move already-resolved observation files from
-`observation-log/` to `observation-log/archive/` (a flat directory; the
-resolution date lives in each file's `resolved:` field, so no dated archive
-filename is needed). "Already resolved" is decided by the file's own
-frontmatter: a resolved observation MUST carry `status: actioned` or
-`status: declined` AND a `resolved:` date, and archival moves only files
-whose `resolved:` date is before today. Entries resolved today stay in
-`observation-log/` until the next day, no matter which session resolved them:
-the grace period lives in the file, never in session memory, so it holds
-across parallel and subsequent sessions. A resolved file with no readable
-`resolved:` date gets today's date written to that field instead of being
-archived.
-
-Archival is now a set of plain `mv` operations, one file at a time — not the
-read-filter-rewrite of a shared multi-entry file that once destroyed
-concurrent appends in production. Moving one resolved file cannot affect any
-other observation, so the old backup / re-read-and-merge / structural-
-invariant sequence no longer applies. Compare a `resolved:` date to today
-portably (ISO dates sort lexically):
-
-```bash
-older_than_today() {   # $1 = a YYYY-MM-DD date
-  today=$(date +%F)
-  [ "$(printf '%s\n%s\n' "$1" "$today" | sort | head -1)" = "$1" ] \
-    && [ "$1" != "$today" ]
-}
-```
-
-## Storage Layout
-
-```
-skill-observations/
-  observation-log/       # the log IS this directory: one file per observation
-    0001-short-slug.md
-    0002-short-slug.md
-    archive/             # resolved observations, moved here after the grace period
-      .id-floor          # highest id ever issued; the counter never drops below it
-      log-YYYY-MM-DD.md  # legacy monolithic archives from pre-3.0 installs, if any
-  cross-cutting-principles.md
-  last-review-date.txt
-  checkpoints.log        # append-only acknowledgement markers (optional)
-```
-
-Each file in `observation-log/` follows the frontmatter format under "How
-to Log". There is no central index to keep in sync: the directory listing
-is the index, and the frontmatter is the metadata.
-
-## Migrating a legacy log.md
-
-Installs upgrading from a pre-3.0 version convert their single-file
-`skill-observations/log.md` once, with the bundled script
-`scripts/migrate-log.py` — see `references/migration.md`. Fresh installs
-never need this section.
+On every write, first `mv` already-resolved files from `observation-log/`
+to `observation-log/archive/`. "Already resolved" is read from the file's
+own frontmatter: `status: actioned` or `status: declined` AND a
+`resolved:` date **before today**. Files resolved today stay until the next
+day, whichever session resolved them — the grace period lives in the file,
+never in session memory. A resolved file with no readable `resolved:` date
+gets today's date written to that field instead of being archived. One
+file per `mv`; no rewrite of anything else. Helper and rationale:
+`references/observation-log.md`.
 
 ## Surfacing Protocol
 
@@ -373,28 +282,18 @@ needs user input to be complete, when a skill is actively producing wrong
 output, or when observations cluster on one skill.
 
 **Default to log-and-defer.** Surfacing an observation is not an invitation
-to act on it. The default is log-and-defer: state that the observation is
-logged for the next review, and stop. Reserve in-session application
-strictly for the two triggers already defined under "Acting on
-Observations" — an explicit user request that names the action, or
-correcting a skill that is producing wrong output in the current session.
-
-Do NOT routinely offer a binary "apply now vs leave for next review" choice
-when surfacing observations. For users who run regular reviews, that offer is
-unwanted friction repeated every session. If a user has expressed a standing
-preference to always defer to the next review, suppress the in-session
-"act now?" offer entirely rather than asking each time.
+to act on it: state that it is logged for the next review, and stop.
+Reserve in-session application strictly for the triggers under "Acting on
+Observations". Do NOT routinely offer a binary "apply now vs leave for next
+review" choice; for users who run regular reviews that offer is unwanted
+friction, and if a user has said they always defer, suppress it entirely.
 
 **Self-check before surfacing:** observations were logged throughout the
 whole session (including discussion phases); logged silently; each follows
 Issue → Improvement → Principle; each is typed; existing-skill items name
 the section; no open-source Principle contains client-identifying info;
-every observation file carries a `status:` frontmatter field (`status: open`
-at write time) — a statusless entry is invisible to any status-filtered
-review pass, so if any observation lacks one, add it now. (The single-file
-log's survival check — confirming a concurrent write-back didn't silently
-delete your entries — is no longer needed: a per-file observation cannot be
-erased by another session writing elsewhere.)
+every observation file carries `status:` (`status: open` at write time) —
+if any lacks one, add it now.
 
 ## Acting on Observations
 
@@ -407,42 +306,36 @@ act.
 **Read the full body before resolving, dismissing, fixing, or citing.** A
 tracked item's title (observation, GitHub issue, ticket) is an index entry,
 not its content — it compresses away the failure story, the reporter's
-context, and often the proposed fix. Before (a) claiming an item is
-resolved, (b) dismissing it as a duplicate or as irrelevant, (c) designing
-a fix in its area, or (d) citing it as overlapping other work, read its
-full body. Dismissal is the path with no downstream checkpoint: a resolved
-or cited item gets reviewed later, a dismissed one silently disappears.
-Harvest fix designs from issue bodies — reporters frequently include the
-correct solution, which also settles attribution. Two reports about the
-same mechanism can require opposite treatments; a fix designed from one
-title can worsen the other case. When a parallel agent logs a finding that
-appears to duplicate your own, diff the two bodies — do not match the
-titles. Two entries about the same mechanism can carry opposite
-operational conclusions, and the second is often the refinement, not the
-echo (one says a wall exists; the other says the wall has a door). Apparent
-agreement suppresses verification more effectively than disagreement does,
-so this rule binds hardest exactly where it feels least necessary.
+context, and often the proposed fix. Dismissal is the path with no
+downstream checkpoint: a resolved or cited item gets reviewed later, a
+dismissed one silently disappears. Harvest fix designs from issue bodies —
+reporters frequently include the correct solution, which also settles
+attribution. When a parallel agent logs a finding that appears to duplicate
+your own, diff the two bodies, not the titles: two entries about the same
+mechanism can carry opposite operational conclusions, and the second is
+often the refinement, not the echo. Apparent agreement suppresses
+verification more effectively than disagreement does, so this rule binds
+hardest exactly where it feels least necessary.
 
-When acting: small, clearly-additive, low-risk changes (a new rule, a
-clarification, a factual fix) may be applied directly. Substantial changes
-(restructuring, new capabilities, changed methodology) and all new-skill
-creation: load `references/skill-authoring.md` first and follow its editing
-and staging rules. If an observation reveals a principle that applies to
-skills generally, propose it for the cross-cutting principles file (see the
-same reference).
+When acting: small, clearly-additive, low-risk changes may be applied
+directly. Substantial changes (restructuring, new capabilities, changed
+methodology) and all new-skill creation: load
+`references/skill-authoring.md` first and follow its editing and staging
+rules. A principle that applies to skills generally goes to the
+cross-cutting principles file (same reference).
 
 ## Quick Reference
 
 | Question | Answer |
 |----------|--------|
 | When do I observe? | The whole session, including feedback and reflection phases |
-| How do I log? | Silently, immediately, as one file per observation named `NNNN-slug.md`; id = highest existing prefix + 1 |
+| How do I log? | Silently, immediately, as one file per observation named `NNNN-slug.md`; id = max(active, archive, `.id-floor`) + 1 |
 | When do I surface? | End of session, or earlier if needed |
 | Status field? | Mandatory `status: open` frontmatter on every new observation; reviews treat a missing status as OPEN, never as nonexistent |
-| Citing an observation number? | From the `id:` frontmatter field (matches the `NNNN-` filename prefix); never a `grep -n` line number; sanity-check against the known id range |
+| Citing an observation number? | From the `id:` frontmatter field (= the `NNNN-` filename prefix); never a `grep -n` line number; sanity-check against the known id range |
 | Open-source or internal? | Default open-source; the boundary is confidential |
 | Small fix or substantial? | Additive → apply directly; restructuring/new skill → `references/skill-authoring.md` |
-| Changing an observation (status/archival)? | Re-read that one file, edit only its frontmatter, or `mv` it to `observation-log/archive/` — no shared-file rewrite, no survival check |
+| Changing an observation (status/archival)? | Re-read that one file, edit only its frontmatter, or `mv` it to `observation-log/archive/` — no shared-file rewrite |
 | Upgrading from a single-file `log.md`? | Scripted, once — `references/migration.md` |
 | Weekly review? | Trigger check at session start; procedure in `references/weekly-review.md` |
 | No filesystem? | Handoff-doc mode — `references/environments.md` |
