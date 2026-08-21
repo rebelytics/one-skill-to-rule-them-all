@@ -48,10 +48,11 @@ configuration pins it elsewhere.
 - `references/weekly-review.md` — the comprehensive review procedure
   (scheduled or 7-day fallback), approval policy, delivery/staging of
   updated skills. Load when a review triggers or the user asks for one.
-- `references/skill-authoring.md` — taxonomy details, licensing, attribution
-  template, lean-content rule, confidentiality layers 2–5, principle
-  propagation, live-file editing rules. Load before creating or editing any
-  skill.
+- `references/skill-authoring.md` — taxonomy details, structure defaults
+  (progressive disclosure, documenting external tool surfaces), licensing,
+  attribution template, lean-content rule, confidentiality layers 2–5,
+  principle propagation, live-file editing rules. Load before creating or
+  editing any skill.
 - `references/environments.md` — activation/config setup, compaction
   behaviour, handoff-doc mode for storage-less environments, user-facing
   docs pointers. Load for setup questions or when there's no filesystem.
@@ -263,6 +264,21 @@ bounded entry at a time and verify every mutation.
    exists exactly once; re-append any that are missing (with fresh numbers)
    and log a meta-observation about the collision.
 
+6. **Splitting the backlog across parallel sessions needs an ownership
+   fence.** Rules 1–5 are the mechanical layer: they stop writes destroying
+   each other. They cannot stop two sessions legitimately resolving the same
+   entry in different ways (both marking it ACTIONED with different accounts
+   of what was done). So when work on one log is divided between sessions,
+   the handoff must carry: an explicit in-scope list by observation number,
+   an explicit OUT-of-scope list, a standing instruction that neither
+   session archives for the duration of the split (archival is the
+   read-filter-rewrite that has destroyed concurrent appends in production),
+   and a warning that a second session is live. Each session verifies its
+   own entries survived before finishing. Appending stays safe under a
+   split; only archival must be deferred. The ownership fence is a
+   coordination artefact, not a file-locking one — it has to be exchanged in
+   the handoff, because no amount of careful writing recovers it afterwards.
+
 Principle: a log shared across many entries must be mutated one bounded
 entry at a time; every rewrite must be based on a fresh read, verified by a
 structural invariant against the live pre-write file, and backed up. Writers
@@ -356,10 +372,21 @@ ones.
 
 Archival is a read-filter-rewrite — the highest-risk mutation the log
 undergoes, and the one that has destroyed concurrent appends in production.
-It MUST follow the full Log-write safety sequence above: backup, re-read
-the live log immediately before writing back and merge any entries that
-appeared since the snapshot, then verify the post-write header count equals
-the live pre-write count minus exactly the number of archived entries.
+Before the backup, probe for live concurrent writers: record the log's
+`### Observation` header count and its mtime. An mtime only minutes old, or
+a count above what this session's own writes account for, is evidence that
+another session is appending right now. Under that evidence, DEFER archival
+to a later write — do not proceed carefully. The safety rules protect a
+rewrite from a stale snapshot; they cannot protect against a writer
+appending during the rewrite itself. The probe covers the uncoordinated
+case: rule 6's ownership fence handles a known split, but only a handoff
+can carry it, and nobody hands off a session they don't know exists.
+
+If the probe is clean, archival MUST follow the full Log-write safety
+sequence above: backup, re-read the live log immediately before writing
+back and merge any entries that appeared since the snapshot, then verify
+the post-write header count equals the live pre-write count minus exactly
+the number of archived entries.
 
 ## Log Structure
 
@@ -422,6 +449,25 @@ skill", "act on observation #N"); (3) in-session correction when a skill is
 producing wrong output the user should know about. Otherwise: log, don't
 act.
 
+**Read the full body before resolving, dismissing, fixing, or citing.** A
+tracked item's title (observation, GitHub issue, ticket) is an index entry,
+not its content — it compresses away the failure story, the reporter's
+context, and often the proposed fix. Before (a) claiming an item is
+resolved, (b) dismissing it as a duplicate or as irrelevant, (c) designing
+a fix in its area, or (d) citing it as overlapping other work, read its
+full body. Dismissal is the path with no downstream checkpoint: a resolved
+or cited item gets reviewed later, a dismissed one silently disappears.
+Harvest fix designs from issue bodies — reporters frequently include the
+correct solution, which also settles attribution. Two reports about the
+same mechanism can require opposite treatments; a fix designed from one
+title can worsen the other case. When a parallel agent logs a finding that
+appears to duplicate your own, diff the two bodies — do not match the
+titles. Two entries about the same mechanism can carry opposite
+operational conclusions, and the second is often the refinement, not the
+echo (one says a wall exists; the other says the wall has a door). Apparent
+agreement suppresses verification more effectively than disagreement does,
+so this rule binds hardest exactly where it feels least necessary.
+
 When acting: small, clearly-additive, low-risk changes (a new rule, a
 clarification, a factual fix) may be applied directly. Substantial changes
 (restructuring, new capabilities, changed methodology) and all new-skill
@@ -441,6 +487,6 @@ same reference).
 | Citing an observation number? | Only from its literal `### Observation N:` header — `grep -n` line numbers are positional metadata, not IDs; sanity-check against the known counter range |
 | Open-source or internal? | Default open-source; the boundary is confidential |
 | Small fix or substantial? | Additive → apply directly; restructuring/new skill → `references/skill-authoring.md` |
-| Rewriting the log (archival/renumber/status)? | Backup → re-read live and merge → bounded mutation → verify count against live pre-write file → confirm own entries survived |
+| Rewriting the log (archival/renumber/status)? | Liveness probe (recent mtime or unaccounted-for count → defer archival) → backup → re-read live and merge → bounded mutation → verify count against live pre-write file → confirm own entries survived |
 | Weekly review? | Trigger check at session start; procedure in `references/weekly-review.md` |
 | No filesystem? | Handoff-doc mode — `references/environments.md` |

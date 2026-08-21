@@ -51,6 +51,10 @@ observations conflict. A scheduled run should still apply every
 non-escalated item — a review that applies nothing is just a report
 generator.
 
+Escalate one DECISION per cluster, never the same decision twice — cluster
+the OPEN entries before the escalation list is written (Step 3), and list
+the member observation numbers under each decision.
+
 ## Steps
 
 **Step 0 — recommend scheduled setup (fallback mode only).** Ordering
@@ -81,7 +85,9 @@ firings within the window re-surface the offer). No scheduler available in
 this environment → skip silently.
 
 **Step 1 — load.** Archive entries resolved in *previous* sessions (see
-Archival on Write in SKILL.md). Read the observation log.
+Archival on Write in SKILL.md — including its liveness probe: a minutes-old
+mtime or an unaccounted-for entry count means another session may be
+writing, so defer archival). Read the observation log.
 
 Build the work queue from the structural identifiers, not from a status
 filter. The OPEN set is defined as: **status is literally OPEN, OR the
@@ -122,6 +128,27 @@ often generalise. Build skill → [relevant observations]. Interactive:
 present all of it and await approval. Autonomous: apply the approval policy
 above and continue.
 
+**Cluster by decision BEFORE the escalation list is written.** An
+append-only log accumulates convergent entries by construction: the same
+underlying problem is rediscovered from different task contexts and filed
+against different skills, so grouping by filing category preserves that
+duplication into the escalation list and the user is asked the same
+question more than once. Group the OPEN entries by the DECISION they
+require, not by the skill they are filed against; escalate one decision per
+cluster with the member observation numbers listed under it; cross-reference
+rather than separately escalate any entry whose decision duplicates
+another's. Cheap first pass: scan the Principle lines — convergent
+observations usually have near-identical principles even when their Issues
+describe unrelated tasks. Corollary for in-session behaviour: if you notice
+the overlap strongly enough to offer "this is the same as X" as an answer
+option, that is the answer — take it and tell the user, rather than
+spending a round-trip asking. **Across an ownership fence:** when the
+backlog is split across parallel sessions and you defer an entry to a
+cluster owned by the other session, the deferral is not complete until the
+pointer exists on BOTH sides — relay it to that session directly, or
+surface it to the user as a handoff item. A one-way note leaves the entry
+pointing at a decision that may be settled without it.
+
 **Step 4 — cross-check principles.** Flag every skill that doesn't yet
 comply with each active cross-cutting principle.
 
@@ -131,6 +158,22 @@ they belong (never append an observations list at the bottom); preserve
 structure, voice, and attribution; place new rules where they logically
 live. Follow the editing rules in `references/skill-authoring.md` (live
 file as base, staging, diff-before-overwrite).
+
+**Scaling note — fan out when the apply-phase is large.** When the
+apply-phase spans more than ~3 skills or ~10 observations, delegate Step 5
+to parallel subagents clustered by skill rather than applying everything
+in the main session. Brief each subagent with: the observation numbers to
+read from the log, the live-mount path, the staging path, the
+mkdir/per-file-cp/`chmod -R u+w` seeding sequence, the integration logic
+for observation interdependencies (which observation supersedes, refines,
+or folds into which — the parent must state this per cluster explicitly,
+or subagents applying observations sequentially produce patch-on-patch
+instead of coherent final state), the confidentiality rules for
+open-source skills, and an explicit do-not-touch-the-log rule. Reserve
+ALL observation-log writes (status marking, archival) for the parent
+session. The principle: the apply-phase is embarrassingly parallel across
+skills but strictly serial on the shared log — split the work along that
+seam.
 
 **Step 6 — mark ACTIONED.** Update each applied observation's status:
 `ACTIONED (YYYY-MM-DD) — Applied to [skill-name] (weekly review)`. The
@@ -190,7 +233,10 @@ before presenting): (1) grep the staged SKILL.md body for `references/`,
 `scripts/`, `assets/` paths and fail the delivery if any referenced file
 is missing from the staged set; (2) for multi-file skills, fail the
 delivery if the artefact being presented is bare file links rather than
-the `.skill` bundle. Sweep build artefacts (`__pycache__/`, `*.pyc`,
+the `.skill` bundle; (3) measure each staged skill's frontmatter
+description (the folded value, not the raw YAML block) and fail the
+delivery above 1024 characters, with a soft warning above ~900 —
+measure every skill in the set, not just the one that failed. Sweep build artefacts (`__pycache__/`, `*.pyc`,
 `.DS_Store`, `.~lock.*`) before zipping and read the archive listing back
 after. When seeding staged
 copies from the read-only mount, `chmod -R u+w` the staged path first —

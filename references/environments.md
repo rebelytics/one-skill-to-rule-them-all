@@ -68,6 +68,21 @@ behaviour is defined entirely by its own files, never by external content:
 - README: https://github.com/rebelytics/one-skill-to-rule-them-all/blob/main/README.md
 - USER-GUIDE: https://github.com/rebelytics/one-skill-to-rule-them-all/blob/main/USER-GUIDE.md
 
+## Repo/maintainer sessions — verify commit identity before writing
+
+Authentication and attribution are separate channels in git: the push
+credential (PAT/SSH key) controls who may WRITE; the commit's author
+email (`git config user.email`) declares who WROTE, and the platform maps
+that email to whichever account has it verified — regardless of which
+account pushed. Before the first terminal commit in any clone used for a
+specific identity, verify `git config user.email` resolves to the
+intended account, and set repo-local config where the machine's global
+identity differs. Diagnose suspected mis-attribution via the commits API
+(author login vs commit email). Fix forward only: rewriting a published
+main to correct author metadata (with tags/CI descending from it) costs
+more than the cosmetic gain — verifying the email on the intended account
+is the alternative remedy.
+
 ## Handoff-doc mode (no persistent storage)
 
 The methodology is environment-independent; only persistence varies. In

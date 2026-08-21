@@ -1,6 +1,14 @@
-# Skill Authoring — taxonomy, licensing, confidentiality, editing rules
+# Skill Authoring — structure, taxonomy, licensing, confidentiality, editing rules
 
 Load this before creating any skill or making substantial changes to one.
+
+**Contents:** Taxonomy in full · The Pre-Flight Principle · Lean Content
+(including progressive disclosure, the default structure above ~500 lines)
+· Documenting an external tool surface · Licensing · Versioning releases ·
+Author Attribution Template · Confidentiality layers · Timelessness ·
+Editing skills — always start from the live file · Verifying relocations
+and restructures · Trial design · New skills · Retiring skills · Principle
+Propagation.
 
 ## Taxonomy in full
 
@@ -51,6 +59,74 @@ per-session rules in the skill body and episodic material in reference
 files loaded on demand (progressive disclosure) — a skill loaded every
 session is fixed overhead and should be audited like one.
 
+**Progressive disclosure is the DEFAULT, not an option.** Loading happens
+in three levels: frontmatter metadata is always in context, the SKILL.md
+body loads whenever the skill triggers, and bundled resources load only
+when something reads them. The body is therefore a per-invocation tax and
+the reference files are not, so content belongs in the body only if it
+changes behaviour every time the skill fires. Any NEW or SUBSTANTIALLY
+REVISED skill whose body would run past roughly 500 lines is split — this
+is the target structure, not a suggestion to weigh up. Concretely:
+
+- **SKILL.md keeps** the mental model, the small number of rules that
+  change behaviour on every invocation, and a pointer list to the
+  reference files.
+- **`references/` takes** tool inventories, recipes, taxonomies,
+  per-variant detail and long gotcha catalogues — anything consulted
+  during one kind of episode rather than on every trigger.
+- **Each reference file gets a table of contents** once it passes roughly
+  300 lines, so a reader can load it and jump rather than read it whole.
+- **Every pointer states its load trigger explicitly** — "read before the
+  first export", "read when choosing a tool", "read when a review
+  triggers" — because a pointer without a trigger reads as optional and
+  gets skipped. An unconditioned list of filenames is not progressive
+  disclosure, it is a bibliography.
+
+Splitting also creates the seams that make a large skill maintainable: a
+monolithic body has no natural edit boundary, so every change touches the
+whole file and every edit risks the rest. Retrofitting existing large
+skills is a separate, lower-priority job — the default binds immediately
+for new work and for any revision substantial enough that the body is
+being rewritten anyway.
+
+## Documenting an external tool surface
+
+Applies to any skill that documents a surface someone else owns — an MCP
+server's tools, an API's endpoints, a platform's interface. The value of
+such a skill is that its claims were OBSERVED rather than inferred from
+the vendor's own descriptions, and the first version is almost always
+written after exercising only part of the surface. Documenting the
+untested majority in the same voice as the tested minority silently
+promotes vendor copy into apparent field findings, and a later reader has
+no way to tell which claims carry evidence. Dropping the untested items
+isn't the fix either — they still need listing so the agent knows they
+exist.
+
+1. **Mark every item, not just the exceptions.** Give each documented
+   tool, endpoint or screen a visible per-item marker for verified-in-
+   practice versus unexercised, and state the key near the top of the
+   inventory so the distinction can't be missed. Marking only the
+   unexercised ones fails: an unmarked item reads as absence of
+   information rather than as evidence.
+2. **Write unexercised items in a different voice.** What the vendor says,
+   plus what can be safely inferred about risk — "the docs describe X";
+   "assume this evicts current state" — never as observed behaviour. No
+   worked examples, no timing or quota claims, no gotchas for something
+   nobody has run.
+3. **Make the marker a work queue.** Add an explicit instruction that when
+   an unexercised item is used, the agent reports back what it actually
+   did so the entry can be rewritten and its marker promoted. Without
+   that, the markers ossify into a permanent disclaimer and the skill
+   never converges on evidence.
+4. **Promote on revision.** Any substantial edit to the skill re-checks
+   the markers against what has been exercised since — promotion is part
+   of the edit, not a separate project.
+
+Principle: documentation that covers less but says which claims are tested
+is more useful than documentation that blends the two, because the
+reader's decision — trust it, or verify first — depends entirely on that
+distinction, and it is unrecoverable once blurred.
+
 ## Licensing
 
 Include a licence statement in the preamble and a LICENSE file with full
@@ -70,6 +146,19 @@ must not leak even when the recipient is a known client. Do not treat "not
 internal" as "therefore open source": distribution channel determines the
 rights framing, not just the feedback routing (see the distribution-channel
 note below).
+
+## Versioning releases
+
+A version number is a claim about history and compatibility, not a
+counter of tags. Number from the consumer's perspective: what era did
+they install, and does their install path still work? When tagging a
+FIRST release for an artefact with prior distribution history: (1) treat
+the pre-tag era as effective v1, not 0.x; (2) any restructure that breaks
+the established install/consumption path (e.g. single-file install →
+directory install) is a MAJOR version bump regardless of content
+compatibility; (3) align secondary version surfaces (registry/plugin
+manifests etc.) with the release number in the same push, before the tag
+is created, so the tagged snapshot is internally consistent.
 
 ## Author Attribution Template
 
@@ -125,6 +214,34 @@ in layers so any one catches what others miss:
    blurring counts, widening verticals, using illustrative ranges, or
    consolidating into composites. Run this mechanically — the author is the
    least reliable judge because they know the ground truth.
+6. **Recipient-perspective pass (client-shared artifacts)** — the layers
+   above guard one direction only: other parties' information leaking IN.
+   An artifact prepared FOR a specific recipient also leaks the author's
+   own workspace OUT: references to internal working files (analysis
+   workbook filenames, private docs) that the recipient never received are
+   both confusing (citing sources the reader can't open) and factual
+   errors (e.g. describing them as "delivered"). Check: every referenced
+   file, document, or source must be either included in the share or
+   actually in the recipient's possession; replace internal-artifact
+   citations with a plain description of the analysis they came from.
+   Test: "can the recipient open or verify every reference in this
+   document?"
+
+## Timelessness — shared skills must not capture current state
+
+Any skill leaving the author's own maintenance loop (published, or shared
+with a client for ongoing use) has no update cadence — undated
+present-tense claims become silently wrong, and an agent will act on
+them. "A recommendation on how it should be is timeless; a capture of the
+current state is not." Rules: (a) recommendations and rules — keep; (b)
+dated historical facts ("in June 2026 the share was ~50%") — keep, they
+stay true as history; (c) undated/present-tense current-state claims
+("X is currently blocked", "the site now does Y") — replace with a check
+instruction ("verify the current state of X before acting"). Sweep
+pattern: grep for "currently", "right now", "as of", "now", and
+present-tense state verbs near infrastructure nouns. (Internal client
+dossiers are exempt: they live in a maintenance loop where current-state
+capture is the point.)
 
 ## Editing skills — always start from the live file
 
@@ -140,7 +257,17 @@ in layers so any one catches what others miss:
    failure: an update built on a stale snapshot silently dropped two
    sections added to the live skill the same day; only a pre-merge diff
    caught it.)
-4. Stage every update to
+4. Before any cross-copy sync or publish work (live install, workspace
+   copies, published repo/branch), enumerate all copies of the artefact
+   and establish freshness PER COPY from evidence — mtime, content
+   probes, hashes — never from role ("the repo", "the live version");
+   then pick the base explicitly. During multi-pass work in interactive
+   sessions, re-verify the baseline before interpreting any diff: a diff
+   that SHRINKS against a supposedly-fixed baseline means the baseline
+   absorbed earlier changes (e.g. the user installed a staged update
+   mid-session), not that edits vanished. Treat unexpected diff-stat
+   direction as a baseline-moved signal, not an error in the edits.
+5. Stage every update to
    `[workspace folder]/skill-updates/[date]/[skill-name]/` — the FULL
    skill directory (SKILL.md plus references/, scripts/, assets/ where
    present), never SKILL.md alone — and present it for review and
@@ -154,23 +281,42 @@ in layers so any one catches what others miss:
    delivery convention applied to a multi-file skill truncates it
    silently (the install succeeds, the skill loads, and the missing
    pieces only surface when a reference load or script call fails
-   mid-task). **Pre-delivery gate — two items, checked at the moment of
+   mid-task). **Pre-delivery gate — three items, checked at the moment of
    delivery, not just at drafting time:** (1) every `references/`,
    `scripts/`, `assets/` path in the staged SKILL.md body has its file in
    the staged set; (2) if the skill is multi-file, the delivery artefact
    is the `.skill` bundle — bare file links fail this gate even when all
-   files are staged. (Reading this rule while drafting does not enforce
+   files are staged; (3) frontmatter constraints — measure the description
+   (the FOLDED value, not the raw YAML block) and fail the delivery above
+   1024 characters, with a soft warning above ~900 so a near-boundary
+   description gets tightened before it becomes someone else's install
+   error. Trigger coverage survives compression: the fix is tightening
+   phrasing, not dropping triggers. Measure every skill in the delivery
+   set, not just the one that failed — the pressure toward trigger-rich
+   descriptions puts others near the boundary too, and only measuring the
+   set reveals it. Generally: any hard limit the consuming platform imposes
+   belongs in this gate as a measurement, not as a rule the author is
+   expected to remember; otherwise the user discovers it at install time.
+   (Reading this rule while drafting does not enforce
    it at delivery; run the gate as the last step before presenting.)
    Packaging hygiene: before zipping, sweep the staged tree for build
    artefacts (`__pycache__/`, `*.pyc`, `.DS_Store`, `.~lock.*`) left by
    in-session checks, and read the archive listing back after zipping —
    the listing is the cheap verification that catches leaked artefacts.
-5. When seeding a staged copy by copying from the read-only mount, reset
-   write permissions immediately (`chmod -R u+w` on the staged path, or
-   `cp --no-preserve=mode`) — the mount's read-only mode travels with
+6. When seeding a staged copy by copying from the read-only mount, reset
+   write permissions immediately — the mount's read-only mode travels with
    the copy, for directories as well as files, and the follow-up edit
-   otherwise fails with a permission error.
-6. Match process rigour to the change: complex/open-source/uncertain design
+   otherwise fails with a permission error. For a SINGLE FILE, `cp`
+   followed by `chmod u+w` (or `cp --no-preserve=mode`) works. For a
+   DIRECTORY TREE, `cp --no-preserve=mode` is NOT reliable in this
+   environment: it has failed with "Permission denied" while creating
+   files inside copied subdirectories (`references/`, `scripts/`) even
+   though top-level files copied. The only verified sequence for trees is:
+   `mkdir -p` the directory structure first, then per-file `cp`, then
+   `chmod -R u+w` on the staged path. A workaround documented as
+   equivalent to another must be re-verified per failure surface — an
+   option that works for single files can still fail for directory trees.
+7. Match process rigour to the change: complex/open-source/uncertain design
    → use the skill-creator if available; internal skills with requirements
    already established in conversation → write directly, flagging
    substantial changes for review.
@@ -199,12 +345,47 @@ enforcement machinery because it reads as redundancy — and sweep any "pure
 restructuring" change for net-new behaviour, which hides well in a large
 rewording diff.
 
+## Trial design — measuring whether a behaviour fires unprompted
+
+When a change is on trial and what's being measured is whether the agent
+does something ORGANICALLY (loads a reference file because the work called
+for it, applies a rule without being told), record the trial's trigger
+condition somewhere the agent under test does not read — a maintainer note
+or the review report, never a task file, CLAUDE.md, or a handoff prompt.
+Add an explicit invalidation clause to the trial's definition: any session
+whose priming text names the trigger condition, or instructs the behaviour
+directly, is discarded rather than counted either way. And instrument the
+negative case deliberately — log "substantive work in scope, no organic
+load" as its own data point. Principle: an instruction that names what is
+being measured is an intervention, not a description; priming text and
+measurement apparatus must live in separate channels, or the trial measures
+compliance with the prompt. Corollary: null results need active recording,
+or the trial cannot distinguish "not yet observed" from "not happening".
+
 ## New skills
 
 Use the skill-creator when available, passing the observation(s) as the
 brief. Determine type early: open-source → strip and generalise; internal →
 include specifics freely; uncertain → default open-source and let the user
 add internal detail afterwards.
+
+## Retiring skills — harvest before you retire
+
+An ending engagement is a harvest trigger, not only a cleanup trigger.
+Before retiring any operational skill tied to that engagement, assess each
+section as either transferable methodology or client-specific
+configuration. If the transferable share is substantial, extract a
+client-agnostic skill FIRST and retire the original afterwards, keeping the
+client dossier for reference. The extraction pattern that works: keep the
+platform mechanics concrete — real interface quirks, DOM patterns, layered
+diagnostics, everything earned through real runs and real corrections — and
+replace the client's answers (account IDs, domains, source rosters,
+criteria) with the intake questions that produced them. The resulting skill
+tells the next agent what to ask, rather than what the previous client
+happened to say. Principle: the methodology in an operational skill and the
+client configuration wrapped around it have very different shelf lives.
+Retiring them together discards the durable half at the moment its cost is
+already sunk, and the loss is invisible because nothing errors.
 
 ## Principle Propagation
 
