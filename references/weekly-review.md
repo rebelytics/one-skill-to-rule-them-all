@@ -35,6 +35,19 @@ scheduler runs somewhere that can reach it. Three regimes:
    a terminal-resident loop): works, but the user must keep the local
    agent runnable.
 
+**Offline-workspace policy for scheduled runs.** A scheduled or autonomous
+session may fire while the workspace's persistence layer is unreachable —
+the log can live on a machine that is asleep or offline at fire time.
+Define the policy up front: (1) check workspace reachability before
+anything else; (2) if unreachable, end gracefully with a one-line "review
+skipped — workspace offline" note, no retries — the next firing or the
+7-day in-session fallback catches up; (3) when setting up a scheduled
+review, bake this policy into the scheduled task's prompt, so fresh
+sessions inherit it without rediscovery. A permission failure mid-run is
+handled the same way: skip the gated step, record it as a manual
+follow-up, and still emit the final report — a blocked step N must never
+cost the report for steps 1 through N-1.
+
 ## Approval policy
 
 **Interactive (user present):** always present observations grouped by
@@ -70,8 +83,9 @@ offering, check reachability (see the regimes above): if the platform's
 scheduler runs where it cannot reach the workspace folder (regime 2), do
 NOT offer registration — recommend the calendar-reminder-plus-manual-
 trigger pattern instead, and skip the rest of this step. Otherwise
-offer to set one up. Yes → register via the platform scheduler (Cowork:
-`create-shortcut` / `set_scheduled_task`; terminal: cron), name it
+offer to set one up. Yes → register it through whatever scheduler the
+environment provides (see the environment table in
+`references/environments.md`), name it
 `weekly-skill-review`, use the draft prompt at
 `skill-observations/scheduled-task-draft.md` if present, then verify the
 registration actually succeeded (the scheduler lists the task, or the
@@ -113,14 +127,27 @@ Also read all active cross-cutting principles. If there are no OPEN
 observations and no outstanding principles: report "no open observations
 or outstanding principles", update the timestamp, and stop.
 
-**Step 2 — inventory skills.** List all skills (system prompt
-`<available_skills>` or the skills directory). Only user-owned custom
-skills can be updated. Known read-only system skills: docx, pdf, xlsx,
-pptx, skill-creator, schedule (grow this list when an update fails for
-permissions). Observations targeting a system skill are NOT skipped — route
-them to a complementary user-owned `{system-skill}-extras` skill containing
-only the delta, creating it if needed and noting the pairing in
-configuration.
+**Step 2 — inventory skills and classify each write target by whether
+an edit SURVIVES, not by whether it succeeds.** List all skills (system
+prompt `<available_skills>` or the skills directory) and put each into one
+of three categories:
+
+| Category | Detection | Action |
+|---|---|---|
+| (a) User-owned, no upstream | in the user's skills directory; not a git checkout; not refreshed from anywhere | normal staging flow |
+| (b) Writable but volatile | path contains a plugin cache or version-pinned directory; or the skill is refreshed from an upstream by clone/copy or `git pull` | never edit in place — the next update silently discards it, and no permission error ever fires |
+| (c) No on-disk file, or read-only | built-in / harness-provided skills (e.g. docx, pdf, xlsx, pptx, skill-creator); a mount that rejects writes | cannot be edited |
+
+Observations targeting (b) or (c) are NOT skipped — the destination must
+be one that survives and that something actually loads. Offer both routes
+and let the user choose: a complementary user-owned `{skill}-extras` skill
+holding only the delta **plus** a routing entry in the user's instruction
+file (state plainly that without the routing entry nothing ever loads the
+companion — a fix routed somewhere nothing loads is not a fix); or routing
+the content straight into the instruction file, which loads
+unconditionally. For (b) with an upstream, also offer an upstream issue or
+PR per the attribution block. Grow the (c) list when an update fails for
+permissions; grow the (b) list when a change you made has vanished.
 
 **Step 3 — cross-check observations.** Evaluate every OPEN observation
 against every skill — not just the skills named in its `skill:` list;
@@ -156,7 +183,19 @@ pointing at a decision that may be settled without it.
 **Step 4 — cross-check principles.** Flag every skill that doesn't yet
 comply with each active cross-cutting principle.
 
-**Step 5 — apply.** For each skill with approved/non-escalated items,
+**Step 5 — apply.** Begin with the copy, not the edit: for each skill
+with approved/non-escalated items,
+
+```bash
+mkdir -p "[workspace folder]/skill-updates/[today]/[skill-name]"
+cp "<live>/SKILL.md" "[workspace folder]/skill-updates/[today]/[skill-name]/SKILL.md"
+diff -q "<live>/SKILL.md" "[workspace folder]/skill-updates/[today]/[skill-name]/SKILL.md"
+# then make EVERY edit against the staged path
+```
+
+so the live path is never the target of an edit, the staged copy provably
+starts from live, and a stale staged copy from an earlier date cannot be
+picked up by accident. Then
 produce an updated SKILL.md: integrate insights into the sections where
 they belong (never append an observations list at the bottom); preserve
 structure, voice, and attribution; place new rules where they logically
@@ -223,10 +262,11 @@ Wait for the user to acknowledge before other work.
 Save each updated skill to
 `[workspace folder]/skill-updates/[date]/[skill-name]/` — the FULL skill
 directory (SKILL.md plus references/, scripts/, assets/ where present),
-never SKILL.md alone — and present it for review and installation. In
-Cowork: via `present_files` and its upload button. In environments without
-a presentation tool (e.g. Claude Code CLI): report the staged path and a
-change summary in chat and let the user review and install from there.
+never SKILL.md alone — and present it for review and installation using
+whatever file-presentation capability the environment offers (see the
+environment table in `references/environments.md`); where there is none,
+report the staged path and a change summary in chat and let the user
+review and install from there.
 Never write to the live skill directly, even where the skills directory is
 writable — staging-only is a deliberate safety property of the review loop
 (nothing goes live without the user's sign-off), not a filesystem

@@ -248,8 +248,16 @@ capture is the point.)
 1. The live file is the authoritative source: in Claude Code,
    `~/.claude/skills/{skill}/SKILL.md`; in Cowork, a read-only mount at
    `.claude/skills/{skill}/SKILL.md` (writes fail with EROFS by design).
-   Do not edit skill files in place, in any environment — staging-only is
-   what keeps the autonomous review safe.
+   **That guard exists in Cowork only.** In Claude Code and most
+   local-filesystem environments the same files are ordinary writable
+   files and nothing stops the write — the discipline is the only thing
+   preventing the overwrite. Assume you are in the unprotected case unless
+   you have seen an EROFS yourself. Do not edit skill files in place, in
+   any environment — staging-only is what keeps the autonomous review
+   safe, and the way to make it hold where no guard exists is to begin
+   every edit with the copy (`mkdir -p` the staging dir, `cp` the live
+   file in, `diff -q` to prove it matches), so the live path is never the
+   one in hand.
 2. Always base edits on a fresh read of the live file — never a workspace
    copy, prior draft, or memory.
 3. Before overwriting any staged/workspace copy, diff it against the live

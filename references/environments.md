@@ -167,6 +167,45 @@ back to the user" is safe but consistently over-escalates. Never assume
 unrestricted edit access to shared or governance-tracked config — many
 setups gate exactly those files.
 
+## Environment mappings
+
+The procedures in this skill are written as capabilities. This table is
+the only place product-specific names live; when a step says "present the
+staged file" or "register the review", look up the current environment
+here rather than guessing a tool name.
+
+| Capability | Claude Cowork | Claude Code | Web chat / no filesystem |
+|---|---|---|---|
+| Persistent workspace | the shared folder | pinned absolute path (see activation block) | none — handoff-doc mode below |
+| Live skill files | `.claude/skills/{skill}/` on a read-only mount (writes fail with EROFS) | `~/.claude/skills/{skill}/`, ordinary writable files — no guard | n/a |
+| Present a staged file for install | the file-presentation tool (`present_files`) with its upload button | none — report the staged path and a change summary in chat | paste into the handoff doc |
+| Scheduled review | the app's scheduled tasks (runs on the user's machine, only while it is on) | cron / a harness `SessionStart` hook / an account-level scheduler that can reach the workspace | calendar reminder + manual trigger |
+| Session-start hook | none | `SessionStart` hook (`hookSpecificOutput.additionalContext`) | none |
+| Local-vs-cloud tell | `allow_cowork_file_delete` present ⇒ local session | n/a | n/a |
+
+Grow the table when a new environment appears; do not scatter its tool
+names through the procedure files.
+
+## Storage regimes
+
+Persistence is one axis; the *price* of a write is another. Three
+regimes:
+
+1. **Local filesystem** — appends are free. Write the checkpoint markers
+   exactly as SKILL.md specifies; they are the only evidence the check
+   happened.
+2. **Shared or hosted document store** (the workspace resolves to a
+   hosted knowledge base or project, where each "file" is a document and
+   every write is a mutation that invalidates cached context for every
+   other session in that workspace). Keep the mandatory *check* at every
+   checkpoint but suppress *empty* markers: enforce the check by hanging
+   it on writes that were going to happen anyway — deliverable events and
+   task completions — and write only when there is an observation to
+   record. An enforcement mechanism has to be priced against its
+   environment; a rule that makes writes mandatory-even-when-empty is
+   only free where writes are free.
+3. **No persistence** — handoff-doc mode, below.
+
 ## Bundle manifest
 
 This skill consists of `SKILL.md`, the reference files it lists
