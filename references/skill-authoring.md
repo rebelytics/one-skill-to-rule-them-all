@@ -48,6 +48,24 @@ with its output inspected for plausibility, before the skill file is
 saved. An unverified snippet is among the highest-risk lines in a skill:
 it ships bugs that no re-read can catch.
 
+**Run the literal string, from a clean shell.** Verifying a command by
+running something *equivalent* verifies your paraphrase, not the
+artefact. Copy the command out of the skill file and execute that exact
+text — from a separately spawned shell, not the session you did the work
+in: a working session accumulates environment variables, interpreter
+flags, security-policy overrides, PATH entries and a working directory
+that the eventual reader will not have, and a command that passes there
+can fail on first real use from a normal terminal. Where two shells are
+available, pre-flight in the one NOT used for setup. **When the command
+under test is a guard, assert on the mechanism, not the outcome.** A
+negative test passes only when the failure occurs for the intended reason;
+with several guards over one operation, "it was rejected" is satisfied by
+any of them. Match the error text or exit code to the guard under test,
+choose inputs clearly past the threshold, and test the boundary value
+separately. **Confirm a dry-run path exists before pre-flighting anything
+with side effects**; where none exists, add one first — a test of a guard
+rail must not become the incident the guard rail exists to prevent.
+
 **A verification command that AGREES with you is the one to distrust.**
 Executing a snippet once, as above, does not catch this class: the command
 runs cleanly and returns a plausible number. A check that contradicts a
@@ -315,15 +333,27 @@ capture is the point.)
    phrasing, not dropping triggers. Measure every skill in the delivery
    set, not just the one that failed — the pressure toward trigger-rich
    descriptions puts others near the boundary too, and only measuring the
-   set reveals it. Generally: any hard limit the consuming platform imposes
-   belongs in this gate as a measurement, not as a rule the author is
-   expected to remember; otherwise the user discovers it at install time.
-   (Reading this rule while drafting does not enforce
-   it at delivery; run the gate as the last step before presenting.)
+   set reveals it; (4) `name` is kebab-case and matches the containing
+   directory; the frontmatter parses as YAML with both required keys;
+   (5) the packed archive's member paths contain no backslash — read as
+   RAW central-directory bytes, because CPython's `zipfile` normalises
+   `0x5C` to `/` on read and reports a malformed archive as clean; Windows
+   `Compress-Archive` produces exactly this defect for any skill with a
+   subdirectory. `scripts/validate-skill-bundle.py` implements all five as
+   assertions and packs a well-formed bundle on any platform; run it where
+   Python is available. Generally: any hard limit the consuming platform
+   imposes belongs in this gate as a measurement compared to a bound in
+   the same step, not as a rule the author is expected to remember — an
+   unasserted metric does not merely miss defects, it manufactures
+   confidence that none exist. State limits as numbers and label them as
+   the consumer's. (Reading this rule while drafting does not enforce it
+   at delivery; run the gate as the last step before presenting.)
    Packaging hygiene: before zipping, sweep the staged tree for build
    artefacts (`__pycache__/`, `*.pyc`, `.DS_Store`, `.~lock.*`) left by
    in-session checks, and read the archive listing back after zipping —
-   the listing is the cheap verification that catches leaked artefacts.
+   the listing catches two defect classes, leaked artefacts AND wrong
+   path separators, and it gets read only for the one you name, so check
+   for both explicitly.
 6. When seeding a staged copy by copying from the read-only mount, reset
    write permissions immediately — the mount's read-only mode travels with
    the copy, for directories as well as files, and the follow-up edit

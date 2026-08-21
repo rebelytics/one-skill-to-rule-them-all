@@ -281,9 +281,14 @@ delivery if the artefact being presented is bare file links rather than
 the `.skill` bundle; (3) measure each staged skill's frontmatter
 description (the folded value, not the raw YAML block) and fail the
 delivery above 1024 characters, with a soft warning above ~900 —
-measure every skill in the set, not just the one that failed. Sweep build artefacts (`__pycache__/`, `*.pyc`,
-`.DS_Store`, `.~lock.*`) before zipping and read the archive listing back
-after. When seeding staged
+measure every skill in the set, not just the one that failed; (4) `name`
+is kebab-case, matches the directory, and the frontmatter parses; (5) the
+bundle's member paths use `/`, checked on raw bytes (Windows packers write
+`\`, and normalising readers hide it). `scripts/validate-skill-bundle.py`
+asserts all five and packs a well-formed bundle — run it where Python is
+available. Sweep build artefacts (`__pycache__/`, `*.pyc`, `.DS_Store`,
+`.~lock.*`) before zipping and read the archive listing back after, for
+leaked artefacts and for path separators. When seeding staged
 copies from the read-only mount, `chmod -R u+w` the staged path first —
 the mount's read-only mode travels with the copy, for directories as
 well as files. Do not edit skill files in place — nothing goes live
