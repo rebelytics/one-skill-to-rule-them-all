@@ -136,6 +136,20 @@ was handled without its reference loaded, log an observation.
    another session's entry. Before changing the *status* of an existing
    observation, re-read that one file first (a parallel review may have
    resolved it).
+6. **Targets and staged work.** Resolve each distinct `skill:` value in
+   the scanned frontmatter against the installed skill set and mention, in
+   one line, any that no longer resolve — a deleted skill can accumulate
+   dozens of observations before a review discovers the target is gone.
+   If `skill-updates/PENDING.md` lists staged updates, say "N staged
+   updates awaiting review" in one line.
+7. **First run.** If the log is empty and the project has history
+   (handover or decision docs, commit history, test scripts, an existing
+   CLAUDE.md — which is largely a record of corrections nobody logged),
+   offer a one-off backfill pass over those artefacts. Backfilled entries
+   cite the durable artefact (file and section) in `session_context`
+   instead of a session, and the same-turn immediacy rule is satisfied by
+   one batched write. The pass is one-off; the scheduled review takes
+   over afterwards.
 
 ## When to Observe
 
@@ -164,7 +178,17 @@ remove. Full catalogue with examples: `references/signals.md`.
 **Do NOT log:** one-off corrections that don't generalise; preferences
 already captured in a skill; tool bugs unrelated to methodology;
 observations that would need proprietary client information to be useful
-in an open-source skill (unless an internal skill is the right home).
+in an open-source skill (unless an internal skill is the right home). The
+generalisability test, when unsure: would this still make sense in another
+project, and for another task using the same skill? Does it name a missing
+rule, step or principle rather than fix this task? Is it likely to recur?
+Mostly no → task context, not an observation. Before minting a
+`proposes_skill` name, check the existing candidates and reuse a fitting
+one — independently logged proposals for one skill rarely share a name.
+
+**Validate the target at write time.** A name in `skill:` must be a skill
+that exists now; if it doesn't, the observation proposes a skill instead.
+Checking is cheap at write time and expensive forty entries later.
 
 ## How to Log
 
@@ -232,7 +256,7 @@ always write `status: open` at creation time** — an observation without a
 ---
 id: [N]
 title: [Short descriptive title]
-status: open            # open | actioned | declined
+status: open            # open | actioned | declined | superseded
 type: open-source       # open-source | internal
 skill: [list of existing skills this improves — always a list, even with
        one entry; first entry is primary; may be empty]
@@ -284,14 +308,17 @@ line number misread as an id.
 **Open-source** — client-agnostic, methodology-driven, useful to other
 practitioners. **Internal** — contains user/client/project specifics or
 personal preferences. Default to open-source when it could go either way,
-stripping specifics. The boundary is also a confidentiality boundary. Full
-requirements (attribution, licensing, structure): `references/skill-authoring.md`.
+stripping specifics. The boundary is also a confidentiality boundary, and
+the two errors are not symmetric: over-classifying as internal costs only
+reach, under-classifying can leak — when genuinely uncertain, prefer
+internal and promote later. Full requirements (attribution, licensing,
+structure): `references/skill-authoring.md`.
 
 ## Archival on Write
 
 On every write, first `mv` already-resolved files from `observation-log/`
 to `observation-log/archive/`. "Already resolved" is read from the file's
-own frontmatter: `status: actioned` or `status: declined` AND a
+own frontmatter: `status: actioned`, `declined` or `superseded` AND a
 `resolved:` date **before today**. Files resolved today stay until the next
 day, whichever session resolved them — the grace period lives in the file,
 never in session memory. A resolved file with no readable `resolved:` date

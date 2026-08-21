@@ -34,7 +34,7 @@ means this directory.
 |---|---|
 | `id` | Integer; matches the `NNNN-` filename prefix. Never reused. |
 | `title` | Short descriptive title. |
-| `status` | `open`, `actioned` or `declined`. A missing status is read as `open`, never as nonexistent. |
+| `status` | `open`, `actioned`, `declined` or `superseded` (a later observation found this one's mitigation does not work; `resolution` names it). A missing status is read as `open`, never as nonexistent. |
 | `type` | `open-source` or `internal` (see Taxonomy in the core skill). |
 | `skill` | **Always a list**, even with one entry, so no consumer ever branches on string-vs-list. First entry is primary. May be empty. |
 | `proposes_skill` | List of new-skill candidates by working name. Independent of `skill`; either may be empty, both may be filled. |
@@ -145,7 +145,7 @@ run `git clean` with that directory in scope.
 
 On every write, first move already-resolved files from `observation-log/`
 to `observation-log/archive/`. "Already resolved" is decided by the file's
-own frontmatter: `status: actioned` or `status: declined` AND a
+own frontmatter: `status: actioned`, `declined` or `superseded` AND a
 `resolved:` date before today. Files resolved today stay until the next
 day, no matter which session resolved them — the grace period lives in the
 file, never in session memory, so it holds across parallel and subsequent

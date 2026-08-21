@@ -186,6 +186,32 @@ here rather than guessing a tool name.
 Grow the table when a new environment appears; do not scatter its tool
 names through the procedure files.
 
+## Git as an optional staging medium
+
+Staging a skill update as a branch or commit the user merges gives the
+same guarantee as the `skill-updates/` directory — nothing goes live
+without a user action — plus diffs, history and rollback, and it suits a
+multi-device setup that syncs skills through a private repository. It is
+an option, not a change to the default: the review still writes the
+staging manifest, still never edits the live install, and still presents
+the change for a decision. Treat the version-control commands as a
+mutation surface for the observation log (see
+`references/observation-log.md`).
+
+## First-run backfill
+
+The skill is least valuable at the moment it is adopted: the log is empty,
+a review correctly reports nothing to do, and the largest pile of
+uncaptured insight — the project's own history — is never touched because
+no procedure says to touch it. Session Start step 7 offers a one-off
+mining pass over handover, architecture and decision docs, commit history
+since the last release, test and verification scripts (which encode
+hard-won discipline densely), and existing agent-instruction files, which
+are largely a record of corrections the user already had to make. One
+such pass over seven weeks of history produced twenty-three actionable
+observations, eleven of them factual corrections to an existing skill.
+Backfilled entries cite the durable artefact; the pass runs once.
+
 ## Storage regimes
 
 Persistence is one axis; the *price* of a write is another. Three

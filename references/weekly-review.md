@@ -53,6 +53,20 @@ cost the report for steps 1 through N-1.
 **Interactive (user present):** always present observations grouped by
 skill (number, title, one-sentence summary), flag judgment calls as "needs
 your input", and wait for blanket or selective approval before applying.
+**Classify before you ask.** Any *disposition* option offered to the user
+(fold in, decline, revive, route to skill X) must be derived from the
+entries' bodies, never from their titles and `skill:` fields — a
+title-level summary is exactly what can be produced without reading, and
+it licenses the wrong split. Read and bucket first, then present the
+routing decision with the real counts attached ("15 → skill A, 25 → skill
+B, 2 dead"). The trigger to watch for is a target skill that no longer
+exists: "revive / fold in / decline" looks like a disposition question and
+is really a classification task, because a corpus filed against one dead
+skill routinely splits across several live ones. Where a bulk question
+genuinely must come first (very large backlog, a session budget that will
+not cover reading everything), say so in the question, mark the proposed
+split as provisional, and re-present it if the contents disagree. The
+order is `read → bucket → present counts → ask`, never `ask → read`.
 A declined or dismissed approval prompt is NOT approval — and it is not a
 request to skip the asking and proceed either. Treat it as a stop signal
 for the gated actions: halt, then ask in plain chat text what the user
@@ -117,9 +131,11 @@ no `status` field at all.** Concretely:
 1. Enumerate every file in `observation-log/` — the directory listing is the
    authoritative list of entries.
 2. For each file, read the `status` field from its frontmatter. Treat a
-   missing, blank, or any non-`actioned` / non-`declined` status as OPEN.
+   missing, blank, or any status other than `actioned`, `declined` or
+   `superseded` as OPEN.
 3. Never derive the work queue from a `grep 'status: open'` alone. Derive
-   it from the file list minus the resolved (`actioned` / `declined`)
+   it from the file list minus the resolved (`actioned` / `declined` /
+   `superseded`)
    files. A grep on an optional field silently drops every file missing
    that field — the review then confidently reports a clean backlog while
    untriaged observations are skipped.
@@ -161,9 +177,25 @@ Principles often generalise. Build skill → [relevant observations], seeding
 it from the frontmatter: every entry in an observation's `skill:` list puts
 it in that skill's bucket (the first entry is primary), and every entry in
 `proposes_skill:` puts it under a new-skill candidate of that name. An
-observation may appear in both. Interactive:
-present all of it and await approval. Autonomous: apply the approval policy
-above and continue.
+observation may appear in both. Then, before anything is presented:
+
+- **Consolidate new-skill candidates by the problem they solve, not by
+  name.** Independently logged proposals for the same skill will not look
+  alike, because each is named after the task that surfaced it; eleven
+  working names have collapsed to four skills on reading. Present merged
+  clusters with their constituent observation ids.
+- **Supersession check.** Where a later observation's finding is that an
+  earlier one's mitigation does not work, mark the earlier one
+  `status: superseded`, `resolution: "by #N"`, and carry only the later
+  one forward.
+- **Confidentiality pass over the log itself.** For every OPEN
+  `open-source` observation, check the Issue and Improvement fields for
+  client-identifying specifics no longer needed for context and strip
+  them. The log is the artefact most likely to be shared casually, and
+  the authoring-time sweeps never see it.
+
+Interactive: present all of it and await approval. Autonomous: apply the
+approval policy above and continue.
 
 **Cluster by decision BEFORE the escalation list is written.** An
 append-only log accumulates convergent entries by construction: the same
@@ -201,7 +233,14 @@ diff -q "<live>/SKILL.md" "[workspace folder]/skill-updates/[today]/[skill-name]
 
 so the live path is never the target of an edit, the staged copy provably
 starts from live, and a stale staged copy from an earlier date cannot be
-picked up by accident. Then
+picked up by accident. **Presence check before writing anything:** grep
+the staged copy for the substance of each suggested improvement and
+classify it as already-applied / partially-applied / outstanding — an
+`open` status is not evidence the work is outstanding, and applying an
+already-applied observation over a section that has since been refined
+regresses the skill in the name of improving it. Mark already-applied
+entries `actioned` with a resolution noting that a prior session applied
+them, and leave the section alone. Then
 produce an updated SKILL.md: integrate insights into the sections where
 they belong (never append an observations list at the bottom); preserve
 structure, voice, and attribution; place new rules where they logically
@@ -301,3 +340,17 @@ well as files. Do not edit skill files in place — nothing goes live
 until the user installs it. **Keep-two rule:** for any skill, keep only
 the two most recent date directories under `skill-updates/`; delete
 older ones.
+
+**Staging manifest.** Every delivery appends one entry to
+`[workspace folder]/skill-updates/PENDING.md`: the skill, the date
+directory, the observation ids applied, and a per-change summary
+(observation id → section touched → one-line rationale). The manifest is
+what the Session Start Protocol reads to announce "N staged updates
+awaiting review", so staged work is never quietly forgotten; the
+per-change summary is what lets the user review a full-file diff
+quickly, which is what raises the install rate. Remove an entry when the
+user installs the update or when the keep-two rule prunes its directory.
+The gate stays absolute — the fix for a safety gate people are tempted to
+bypass is reducing the friction that creates the temptation, not
+loosening the gate. An optional git-based staging medium is described in
+`references/environments.md`.

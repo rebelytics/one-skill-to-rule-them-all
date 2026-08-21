@@ -47,6 +47,22 @@ an unskippable tool call — or remove it). Treat these as a review
 checklist; ask "what can we remove?" as deliberately as "what should we
 add?"
 
+## The generalisability test
+
+Before recording a candidate improvement, ask: (1) would this correction
+still make sense in another project? (2) would it apply to another task
+using the same skill? (3) does it identify a missing rule, workflow step or
+principle, rather than merely fix this task? (4) is there evidence the
+issue is likely to recur? If the answers are mostly no, treat it as
+task-specific context rather than an observation. A workaround that only
+applies to one repository, a preference specific to one user, a decision
+forced by a temporary constraint — these look like skill improvements
+while the task is happening and are not. Instead of "the user preferred
+modules in a single repository", log "the skill lacks guidance for
+deciding when shared modules should be centralised". Knowing when *not*
+to learn is as important as detecting signals: over-learning from isolated
+examples is how a skill drifts into over-specific complexity.
+
 ## Do NOT log
 
 One-off corrections that don't generalise; preferences already captured in
