@@ -48,6 +48,19 @@ with its output inspected for plausibility, before the skill file is
 saved. An unverified snippet is among the highest-risk lines in a skill:
 it ships bugs that no re-read can catch.
 
+**A verification command that AGREES with you is the one to distrust.**
+Executing a snippet once, as above, does not catch this class: the command
+runs cleanly and returns a plausible number. A check that contradicts a
+strong prior gets investigated; a check that confirms one never does, so a
+right answer from a wrong instrument teaches you to trust the instrument.
+The usual form is an aggregated count, because a count is not a listing and
+a tool that collapses output for readability under-reports without saying
+so: `git status --porcelain --ignored` prints one line for an ignored
+DIRECTORY, so a `grep -c` over it reports "1" where five files are ignored,
+and only `--untracked-files=all` expands it. Before shipping a verification
+step that reports a number, confirm what the number's unit is, and
+enumerate and read the set whenever enumeration is cheap.
+
 ## Lean Content
 
 A skill should contain only content that changes the agent's behaviour at
