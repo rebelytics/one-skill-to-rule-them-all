@@ -84,30 +84,30 @@ fallback active. No → write today's date to
 firings within the window re-surface the offer). No scheduler available in
 this environment → skip silently.
 
-**Step 1 — load.** Archive entries resolved in *previous* sessions (see
-Archival on Write in SKILL.md — including its liveness probe: a minutes-old
-mtime or an unaccounted-for entry count means another session may be
-writing, so defer archival). Read the observation log.
+**Step 1 — load.** Archive observation files resolved in *previous*
+sessions (see Archival on Write in SKILL.md). Read only the frontmatter of
+each file in `observation-log/` — not the bodies — to build the work queue;
+load a body only when you actually action that observation in Step 5. This
+frontmatter-first pass is what keeps the review cheap as the backlog grows.
 
-Build the work queue from the structural identifiers, not from a status
-filter. The OPEN set is defined as: **status is literally OPEN, OR the
-observation has no Status line at all.** Concretely:
+Build the work queue from the files themselves, not from a status filter.
+The OPEN set is defined as: **`status` is literally `open`, OR the file has
+no `status` field at all.** Concretely:
 
-1. Enumerate all `### Observation N:` headers first — this is the
-   authoritative list of entries in the log.
-2. For each header, classify the entry's status by looking for a
-   `**Status:**` line within its body. Treat a missing, blank, or any
-   non-ACTIONED / non-DECLINED status as OPEN.
-3. Never derive the work queue from a `grep '**Status:** OPEN'` alone.
-   Derive it from the header list minus the resolved (ACTIONED /
-   DECLINED) entries. A grep on an optional field silently drops every
-   entry missing that field — the review then confidently reports a
-   clean log while a backlog of untriaged observations is skipped.
+1. Enumerate every file in `observation-log/` — the directory listing is the
+   authoritative list of entries.
+2. For each file, read the `status` field from its frontmatter. Treat a
+   missing, blank, or any non-`actioned` / non-`declined` status as OPEN.
+3. Never derive the work queue from a `grep 'status: open'` alone. Derive
+   it from the file list minus the resolved (`actioned` / `declined`)
+   files. A grep on an optional field silently drops every file missing
+   that field — the review then confidently reports a clean backlog while
+   untriaged observations are skipped.
 
 **Reconciliation guard:** before proceeding, assert that
-`count(### Observation headers) == count(status-classified entries)`.
-If the counts differ, the delta is statusless entries — surface and
-triage them (as OPEN) rather than proceeding as if the log were clean.
+`count(files in observation-log/) == count(status-classified files)`. If the
+counts differ, the delta is statusless files — surface and triage them (as
+OPEN) rather than proceeding as if the backlog were clean.
 
 Also read all active cross-cutting principles. If there are no OPEN
 observations and no outstanding principles: report "no open observations
@@ -123,8 +123,12 @@ only the delta, creating it if needed and noting the pairing in
 configuration.
 
 **Step 3 — cross-check observations.** Evaluate every OPEN observation
-against every skill — not just the skill named in its header; Principles
-often generalise. Build skill → [relevant observations]. Interactive:
+against every skill — not just the skills named in its `skill:` list;
+Principles often generalise. Build skill → [relevant observations], seeding
+it from the frontmatter: every entry in an observation's `skill:` list puts
+it in that skill's bucket (the first entry is primary), and every entry in
+`proposes_skill:` puts it under a new-skill candidate of that name. An
+observation may appear in both. Interactive:
 present all of it and await approval. Autonomous: apply the approval policy
 above and continue.
 
@@ -162,25 +166,25 @@ file as base, staging, diff-before-overwrite).
 **Scaling note — fan out when the apply-phase is large.** When the
 apply-phase spans more than ~3 skills or ~10 observations, delegate Step 5
 to parallel subagents clustered by skill rather than applying everything
-in the main session. Brief each subagent with: the observation numbers to
-read from the log, the live-mount path, the staging path, the
+in the main session. Brief each subagent with: the observation ids (files) to
+read, the live-mount path, the staging path, the
 mkdir/per-file-cp/`chmod -R u+w` seeding sequence, the integration logic
 for observation interdependencies (which observation supersedes, refines,
 or folds into which — the parent must state this per cluster explicitly,
 or subagents applying observations sequentially produce patch-on-patch
 instead of coherent final state), the confidentiality rules for
-open-source skills, and an explicit do-not-touch-the-log rule. Reserve
-ALL observation-log writes (status marking, archival) for the parent
-session. The principle: the apply-phase is embarrassingly parallel across
-skills but strictly serial on the shared log — split the work along that
-seam.
+open-source skills, and an explicit rule that subagents do not change any observation's
+status. Reserve status marking and archival for the parent session. The principle: the apply-phase is embarrassingly parallel across
+skills but the bookkeeping must have one owner — split the work along
+that seam.
 
-**Step 6 — mark ACTIONED.** Update each applied observation's status:
-`ACTIONED (YYYY-MM-DD) — Applied to [skill-name] (weekly review)`. The
-date immediately after the status word is load-bearing: archival is gated
-on it (entries archive only when it's before today), so a dateless mark
+**Step 6 — mark ACTIONED.** In each applied observation's frontmatter set
+`status: actioned`, `resolved: YYYY-MM-DD` (today), and
+`resolution: Applied to [skill-name] (weekly review)` — editing only those
+fields, in that one file. The `resolved:` date is load-bearing: archival is
+gated on it (files archive only when it's before today), so a dateless mark
 breaks the cross-session grace period. Do NOT archive same-session — the
-next log write on a later day archives them.
+next write on a later day archives them.
 
 **Step 7 — timestamp.** Write today's date to
 `skill-observations/last-review-date.txt`.
@@ -206,7 +210,8 @@ Wait for the user to acknowledge before other work.
 
 ## Constraints
 
-- Don't modify observation entries beyond their status field.
+- Don't modify observation files beyond their `status`, `resolved`, and
+  `resolution` frontmatter fields.
 - Don't create new skills in a review — note candidates for the user to
   action via the skill-creator.
 - Unsure how to integrate an observation → skip it and say so in the
