@@ -13,10 +13,10 @@ jobs:
       - uses: actions/checkout@v6
       - name: Build .skill bundle
         run: |
-          mkdir -p /tmp/bundle/task-observer/references
+          mkdir -p /tmp/bundle/task-observer
           cp SKILL.md /tmp/bundle/task-observer/
-          cp references/*.md /tmp/bundle/task-observer/references/
-          cd /tmp/bundle && zip -r task-observer.skill task-observer
+          cp -r references scripts /tmp/bundle/task-observer/
+          python3 scripts/validate-skill-bundle.py /tmp/bundle/task-observer --pack /tmp/bundle/task-observer.skill
       - name: Attach to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

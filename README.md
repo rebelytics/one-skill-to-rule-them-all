@@ -53,19 +53,19 @@ One honest boundary: the formal observation log and review cycle pay off most as
 
 ## Installation
 
-The skill is a small bundle: `SKILL.md` plus three files in `references/` that are loaded on demand (this keeps the always-loaded part lean). Installing only SKILL.md works, but runs degraded — the skill will tell you which files are missing.
+The skill is a small bundle: `SKILL.md`, the files in `references/` that are loaded on demand (this keeps the always-loaded part lean), and two helper scripts in `scripts/`. Installing only SKILL.md works, but runs degraded — the skill will tell you which files are missing.
 
-**Get the files:** download the repo as a ZIP (Code → Download ZIP) or clone it, and keep `SKILL.md` and the `references/` folder together.
+**Get the files:** download the `.skill` bundle attached to the latest release, or download the repo as a ZIP (Code → Download ZIP) / clone it and keep `SKILL.md`, `references/` and `scripts/` together.
 
-**Claude (web interface, desktop app, mobile app, Cowork):** put `SKILL.md` and `references/` into one folder, zip that folder, and upload it via Settings → Capabilities. The skill is then available in all chats and in Cowork tasks.
+**Claude (web interface, desktop app, mobile app, Cowork):** upload the `.skill` bundle via Settings → Capabilities (or put `SKILL.md`, `references/` and `scripts/` into one folder and zip that folder). The skill is then available in all chats and in Cowork tasks.
 
-**Claude Code:** place the folder at `.claude/skills/task-observer/` (project-level) or in your user-level skills directory, preserving the `references/` subfolder.
+**Claude Code:** place the folder at `.claude/skills/task-observer/` (project-level) or in your user-level skills directory, preserving the `references/` and `scripts/` subfolders.
 
 **Other systems:** keep the folder structure intact wherever your platform expects skills, and let your AI guide you (see "How it works" above).
 
 ## Claude environment notes
 
-**In Claude Cowork (including Dispatch) or Claude Code in the desktop app:** Full experience. The observer writes observation logs to your filesystem, so improvements persist between sessions and can be actioned easily. Observations land in `[your shared folder]/skill-observations/`; proposed skill updates land in `[your shared folder]/skill-updates/`. You don't normally need to look at these directly — Claude handles them — but they're there if you want to inspect what's been captured.
+**In Claude Cowork (including Dispatch) or Claude Code in the desktop app:** Full experience. The observer writes observation logs to your filesystem, so improvements persist between sessions and can be actioned easily. Observations land in `[your shared folder]/skill-observations/observation-log/`, one small file each; proposed skill updates land in `[your shared folder]/skill-updates/`. Upgrading from a version before 3.0? The first session converts your old single-file log automatically (see the user guide). You don't normally need to look at these directly — Claude handles them — but they're there if you want to inspect what's been captured.
 
 **In Claude.ai web or Claude Chat in the desktop app / mobile app:** Handoff doc mode. Since there's no filesystem access, the observer produces a structured handoff document at the end of your session that you can use to update your skills in a dedicated session.
 
