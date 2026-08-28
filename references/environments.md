@@ -50,8 +50,17 @@ skill first.
 ```
 Before the first tool call of any session — and before writing or
 proposing a plan, not merely before executing one — invoke the
-task-observer skill. Any turn that will involve a tool call counts; do not
-classify the session as "too simple" from its opening message.
+task-observer skill AND execute its Session Start Protocol (storage
+check, frontmatter scan, review trigger). Loading the skill and running
+the protocol are separate steps; a session that loads the file and stops
+has activated nothing. Any turn that will involve a tool call counts; do
+not classify the session as "too simple" from its opening message.
+
+After completing each task, check the observation records written this
+session and report a one-line summary (ids and titles, or "none logged
+and why"). This is the activation backstop: it forces a look at the log,
+so a session that silently skipped the protocol is discovered at the
+first task boundary instead of never.
 
 When loading any skill, check the observation log for OPEN observations
 tagged to that skill. Apply their insights to the current work, even if
@@ -100,6 +109,19 @@ suggestion to a sentence or two. The block above is the propagated
 artefact: suggest it whole, including the anchoring paragraph, because
 constraints that live only in SKILL.md arrive after the decision they were
 meant to govern.
+
+**Load is not activation.** The failure the block's wording guards
+against, reported from real use: the agent loads the skill per the
+config instruction, then stops — the Session Start Protocol (log files,
+scan, review trigger) never runs, and nothing surfaces the omission
+because a loaded-but-inert skill looks identical to an active one from
+the user's side. It moves only when the user explicitly asks "have you
+executed the session start protocol?". Hence the two belts above: the
+instruction demands the protocol by name, not just the load, and the
+post-task summary line makes silent inactivity visible at the first
+task boundary. If you adopt only one line of the block, adopt the
+post-task check — in field use it turned an intermittently-activating
+install into a stably-recording one.
 
 **Anti-pattern:** don't chain activation through another skill — load
 task-observer and related skills independently from configuration; a broken
