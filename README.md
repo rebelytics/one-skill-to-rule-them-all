@@ -59,7 +59,7 @@ The skill is a small bundle: `SKILL.md`, the files in `references/` that are loa
 
 **Get the files:** download the `.skill` bundle attached to the latest release, or download the repo as a ZIP (Code → Download ZIP) / clone it and keep `SKILL.md`, `references/` and `scripts/` together.
 
-**Claude (web interface, desktop app, mobile app, Cowork):** upload the `.skill` bundle via Settings → Capabilities (or put `SKILL.md`, `references/` and `scripts/` into one folder and zip that folder). The skill is then available in all chats and in Cowork tasks.
+**Claude (web interface, desktop app, mobile app, Cowork):** upload the `.skill` bundle via Settings → Customize (or put `SKILL.md`, `references/` and `scripts/` into one folder and zip that folder). The skill is then available in all chats and in Cowork tasks.
 
 **Claude Code:** place the folder at `.claude/skills/task-observer/` (project-level) or in your user-level skills directory, preserving the `references/` and `scripts/` subfolders.
 
