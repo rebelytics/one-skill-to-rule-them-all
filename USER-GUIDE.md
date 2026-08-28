@@ -1,6 +1,6 @@
 # Getting Started with the task-observer meta-skill (aka "One skill to rule them all")
 
-This guide includes practical tips for getting value out of the meta-skill. It's based on my own daily usage of the skill across Claude Cowork, the web interface, Claude Code (only via the desktop app) and the mobile app. I've been using this skill for six months now and it has logged and applied more than 900 improvements across my 50 skills, all of which were themselves created based on observations by the meta-skill.
+This guide includes practical tips for getting value out of the meta-skill. It's based on my own daily usage of the skill across Claude Cowork, the web interface, Claude Code (only via the desktop app) and the mobile app. I've been using this skill for seven months now and it has logged more than 1200 observations across my 70 skills, most of which were applied as skill improvements. The majority of my 70 skills were themselves created based on observations by the meta-skill.
 
 The best way to get started with this new work setup in any environment is to grab the skill, the reference files, the user guide and the readme file from the repo and feed them to the AI of your choice. It should then be able to guide you towards the best equivalent of this setup for your particular environment, no matter which system you use. As long as skills are supported, this approach should work with any AI system, with some adjustments.
 
@@ -10,7 +10,7 @@ The rest of this user guide focusses on Claude and specifically Claude Cowork, b
 
 ## Where the skill runs
 
-The skill is a multi-file bundle: `SKILL.md` plus a `references/` folder that is loaded on demand. To install it, put both into one folder, zip that folder, and upload it via Settings → Capabilities in your Claude account. Uploading the bare SKILL.md alone results in a degraded install — the skill still works, but will tell you which files are missing (see the Installation section of the readme for other environments).
+The skill is a multi-file bundle: `SKILL.md`, a `references/` folder that is loaded on demand, and a `scripts/` folder with two small helpers (the pre-3.0 log migration and the bundle validation gate). To install it, put all three into one folder, zip that folder, and upload it via Settings → Customize in your Claude account. Uploading the bare SKILL.md alone results in a degraded install — the skill still works, but will tell you which files are missing, and the automatic upgrade from a pre-3.0 log won't run without `scripts/` (see the Installation section of the readme for other environments).
 
 Once you've uploaded the skill, it's available in all chats (web interface, mobile app, desktop app) and also in the Cowork and Code tabs of the desktop app. Its full potential can be exploited in Cowork tasks and Code sessions.
 
@@ -32,7 +32,7 @@ I started with an empty folder just for Claude Cowork, and it turned into a thri
 
 The meta-skill writes only to its own subdirectories of your shared folder:
 
-- `[your shared folder]/skill-observations/` — the observation log, the cross-cutting principles file, and an archive of resolved observations
+- `[your shared folder]/skill-observations/` — the observation log (a folder, `observation-log/`, with one small file per observation and resolved ones under its `archive/`), the cross-cutting principles file, and a few small bookkeeping files the skill maintains (the last review date, a checkpoint marker, the skill-family registry)
 - `[your shared folder]/skill-updates/` — staged versions of skill updates that are waiting for you to install them
 
 Existing files in your shared folder are not modified by the observer. If you point the meta-skill at a folder that already contains client work or personal documents, those files stay where they are; the observer only reads from them when you ask Claude to use them in a task. Skill updates are also never installed automatically — they're staged in `skill-updates/` for you to review and install yourself.
@@ -45,7 +45,7 @@ Once you've started a Cowork task by giving your first instructions or some cont
 
 The task observer needs to be active at the start of a session to automatically log observations in the background, but you can always invoke it later and ask Claude to analyse the entire conversation for skill creation or improvement potentials. The skill can activate on its own by matching your task description against its triggers, but this isn't always reliable: Claude is mainly focused on your task, not on loading background skills.
 
-The more reliable approach is a dual-layer setup: the skill's own triggers plus a direct instruction in your CLAUDE.md file telling Claude to load the task observer at the start of every task-oriented session. The meta-skill itself will guide you towards setting this up, and the same approach works for any other skill you want to load consistently (so keep this in mind for the future).
+The more reliable approach is a dual-layer setup: the skill's own triggers plus a direct instruction in your CLAUDE.md file telling Claude to load the task observer at the start of every task-oriented session. Make sure that instruction says to run the skill's Session Start Protocol, not just to load the skill — loading and executing are separate steps, and a session that loads the file and then stops has activated nothing. The meta-skill itself will guide you towards setting this up, and the same approach works for any other skill you want to load consistently (so keep this in mind for the future).
 
 ## How the skill works during a session
 
@@ -59,7 +59,11 @@ One thing I do frequently is ask towards the end of a session: "Any observations
 
 Over time, I got used to just asking about the logged observations every time I archive a task. I like to keep my task list clean, so I archive all tasks that are done and just do a quick check on the logged observations at the same time. This has proven to be the most reliable way to log as many relevant observations as possible.
 
-If you want to browse the observation log yourself, you can find it at `[your shared folder]/skill-observations/log.md`. You don't normally need to look at it directly (Claude handles that), but it's there if you're curious.
+If you want to browse the observations yourself, you'll find them at `[your shared folder]/skill-observations/observation-log/` — one small Markdown file per observation, each starting with a frontmatter header (status, skill, type, date) followed by the issue, the suggested improvement, and the principle. Resolved observations move to `observation-log/archive/`. You don't normally need to look at these directly (Claude handles that), but they're there if you're curious. Storing one file per observation, with the metadata in frontmatter, lets Claude scan just the headers to find what's open instead of re-reading the whole backlog — which keeps token usage low as observations pile up.
+
+### Upgrading from a version before 3.0
+
+Versions before 3.0.0 kept all observations in one file, `skill-observations/log.md`. Version 3.0.0 stores one file per observation. The first session that runs with the new version installed will notice the old file and convert it with a small script bundled in the skill — it checks the log first, reports anything it isn't sure about, and keeps the old file as `log.md.migrated` so nothing is lost. You don't need to do anything except say yes when asked; the details, including how to roll back, are in `references/migration.md`.
 
 ## The cross-cutting principles file
 
@@ -87,7 +91,7 @@ What to expect when the review runs: Claude cross-checks all open observations a
 
 I only ever reached this threshold once, because I normally update skills more regularly than once a week. But it's there as a safety net to make sure observations don't pile up indefinitely.
 
-Now, since Claude Cowork introduced scheduled tasks, I have an automatic skill review task that runs every Monday, Wednesday and Friday morning. It goes through the 10 to 20 open observations that normally accumulate from my work every two working days. This 3x per week cadence works perfectly for me at the moment.
+Now, since Claude Cowork introduced scheduled tasks, I have an automatic skill review task that runs every Monday, Wednesday and Friday morning. It goes through the 20 to 30 open observations that normally accumulate from my work every two working days. This 3x per week cadence works perfectly for me at the moment.
 
 ## The skill-creator
 

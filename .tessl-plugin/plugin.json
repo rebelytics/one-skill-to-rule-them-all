@@ -1,9 +1,9 @@
 {
   "name": "rebelytics/task-observer",
-  "description": "Monitors task execution for skill improvement opportunities. Use this skill during ANY multi-step task, agentic workflow, or substantive work session where the agent is using tools and producing deliverables. It captures patterns, user corrections, workflow insights, and methodology worth preserving as reusable skills. Also triggers during post-task feedback discussions and when the user explicitly mentions skill observations, improvements, the observation log, skill taxonomy, or asks the agent to watch for skill opportunities. Also known as \"One Skill to Rule Them All\" — trigger on this phrase too. IMPORTANT: this skill should be invoked at the start of every task-oriented session — if you are about to use tools to produce deliverables, invoke this skill first. For reliable activation, pair this description with a CLAUDE.md instruction or harness-level session-start hook (see Recommended Activation Setup) — description-level matching alone is not enforceable.",
+  "description": "Monitors task execution for skill improvement opportunities. Use during ANY multi-step task, agentic workflow, or work session where the agent uses tools and produces deliverables. Captures patterns, user corrections, workflow insights, and methodology worth preserving as reusable skills. Also triggers in post-task feedback discussions and when the user mentions skill observations, improvements, the observation log, skill taxonomy, or asks the agent to watch for skill opportunities. Also known as \"One Skill to Rule Them All\" — trigger on this phrase too. IMPORTANT: invoke this skill before the FIRST tool call of any session and before writing or proposing a plan — any turn that will involve a tool call counts, however simple the opener looks. This sentence is the session-start trigger and the only activation layer that survives an unreachable config file; pair it with a CLAUDE.md instruction or a harness session-start hook (references/environments.md) — description matching alone is not enforceable.",
   "private": false,
   "skills": [
     "."
   ],
-  "version": "2.0.0"
+  "version": "3.0.0"
 }
