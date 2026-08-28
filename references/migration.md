@@ -54,7 +54,17 @@ Run from the workspace folder. Python 3.8+, no dependencies.
 1. **Make sure nothing else is writing.** Close parallel sessions and
    check for a scheduled review due in the next hour. The conversion
    reads `log.md` once; an entry appended after that moment would be
-   lost from the new layout.
+   lost from the new layout. Know this probe's limit: it catches sessions
+   writing NOW, not sessions that will write LATER from a stale model of
+   the layout — a long-running session that appended to `log.md` hours ago
+   and is idle at migration time is invisible to any liveness check, and
+   its next append can recreate the old file (`cat >>` creates missing
+   targets). The rename in step 7 is therefore also a guard: it makes
+   stale appends fail their numbering pre-check loudly — provided
+   appenders treat an empty/missing probe as a stop signal rather than
+   defaulting the counter (see the log-write safety rules in SKILL.md).
+   After migrating, warn any known long-running session before it next
+   writes.
 2. **Back up.** `cp skill-observations/log.md skill-observations/log.md.bak`
 3. **Check-only pass over everything you have**, including archived logs
    you do not intend to convert:

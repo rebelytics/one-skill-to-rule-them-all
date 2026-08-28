@@ -131,12 +131,12 @@ no `status` field at all.** Concretely:
 1. Enumerate every file in `observation-log/` — the directory listing is the
    authoritative list of entries.
 2. For each file, read the `status` field from its frontmatter. Treat a
-   missing, blank, or any status other than `actioned`, `declined` or
-   `superseded` as OPEN.
+   missing, blank, or any status other than `actioned`, `declined`,
+   `superseded` or `parked` as OPEN.
 3. Never derive the work queue from a `grep 'status: open'` alone. Derive
    it from the file list minus the resolved (`actioned` / `declined` /
-   `superseded`)
-   files. A grep on an optional field silently drops every file missing
+   `superseded`) and the `parked` files. A grep on an optional field
+   silently drops every file missing
    that field — the review then confidently reports a clean backlog while
    untriaged observations are skipped.
 
@@ -144,6 +144,18 @@ no `status` field at all.** Concretely:
 `count(files in observation-log/) == count(status-classified files)`. If the
 counts differ, the delta is statusless files — surface and triage them (as
 OPEN) rather than proceeding as if the backlog were clean.
+
+**Parked entries: excluded from the queue, not from view.** `status: parked`
+means the observation was judged sound but is blocked on an external
+precondition recorded in `parked_until:` (SKILL.md, How to Log). It is a
+decision, so it must NOT be re-escalated — but it is not resolved, so it also
+never archives and stays in `observation-log/`. Two things happen to it in
+every review, while the frontmatter is already in hand: (a) re-check each
+`parked_until:` condition against the current state of the world, and where it
+has been met, set the entry back to `status: open`, clear `parked_until:`, and
+carry it into this review's queue; (b) list every still-parked entry in the
+Step 8 summary in ONE LINE each — id, title, unpark condition — so a parked
+backlog stays visible without re-entering the work queue.
 
 Also read all active cross-cutting principles. If there are no OPEN
 observations and no outstanding principles: report "no open observations
@@ -188,6 +200,19 @@ observation may appear in both. Then, before anything is presented:
   earlier one's mitigation does not work, mark the earlier one
   `status: superseded`, `resolution: "by #N"`, and carry only the later
   one forward.
+- **Family propagation.** An observation whose `skill:` list carries more
+  than one entry is not actioned until every listed skill has been updated
+  or explicitly dispositioned — partial application is the default failure
+  and it is silent, because the observation gets marked `actioned` on the
+  strength of the first skill it touched. Record the per-skill disposition
+  in `resolution:` and carry it into the Family coherence block of the
+  summary. Also check `siblings_checked:` while the frontmatter is in
+  hand: an entry with the field missing or blank was logged without the
+  check, so before actioning it, do the check now (registry, tests and
+  fallback in `observation-log.md`) and widen `skill:` if it was
+  under-scoped. Count these — "N observations logged without a sibling
+  check" is a health metric of the logging practice, not a per-entry
+  nuisance.
 - **Confidentiality pass over the log itself.** For every OPEN
   `open-source` observation, check the Issue and Improvement fields for
   client-identifying specifics no longer needed for context and strip
@@ -218,22 +243,72 @@ pointer exists on BOTH sides — relay it to that session directly, or
 surface it to the user as a handoff item. A one-way note leaves the entry
 pointing at a decision that may be settled without it.
 
-**Step 4 — cross-check principles.** Flag every skill that doesn't yet
-comply with each active cross-cutting principle.
+**Step 4 — cross-check principles, and audit the families for drift.**
+Flag every skill that doesn't yet comply with each active cross-cutting
+principle.
+
+Then run the **family drift audit**: for each family in
+`skill-observations/skill-families.md`, grep every member for each rule
+listed as shared and surface the gaps. It is mechanical and takes minutes,
+and it is the only part of the family mechanism that catches drift
+predating the rule or introduced by a skill authored outside the log — a
+registry can go stale, a grep cannot. Two disciplines make the output
+usable: judge each gap against the family's `Member-specific` column
+before calling it drift (absence is sometimes correct), and resolve it
+according to the family's coherence model — `synced-duplicates` means
+editing every member, `shared-core` means editing the core and checking
+the pointers. Where the audit finds a rule missing from members that need
+it, log it as an observation naming all of them rather than fixing it
+silently, so the correction is visible to the next review. If no registry
+exists yet, build one from this pass: the audit's grouping IS the first
+draft of the registry. Cadence is monthly rather than every review unless
+the library has grown or a new family member was authored since the last
+audit — a new member always warrants one (see `skill-authoring.md`, New
+skills).
 
 **Step 5 — apply.** Begin with the copy, not the edit: for each skill
 with approved/non-escalated items,
 
 ```bash
-mkdir -p "[workspace folder]/skill-updates/[today]/[skill-name]"
-cp "<live>/SKILL.md" "[workspace folder]/skill-updates/[today]/[skill-name]/SKILL.md"
-diff -q "<live>/SKILL.md" "[workspace folder]/skill-updates/[today]/[skill-name]/SKILL.md"
+# Stage the FULL skill directory (SKILL.md + references/, scripts/, assets/),
+# not SKILL.md alone. From a read-only mount, mkdir + per-file cp + chmod is
+# the only verified sequence for trees (cp -R and cp --no-preserve=mode both
+# fail creating files inside copied subdirectories — see skill-authoring.md
+# editing rule 6):
+live="<absolute path to the live skill directory, no trailing slash>"
+s="[workspace folder]/skill-updates/[today]/[skill-name]"
+find "$live" -type d | while IFS= read -r d; do mkdir -p "$s/${d#$live}"; done
+find "$live" -type f | while IFS= read -r f; do cp    "$f" "$s/${f#$live}"; done
+chmod -R u+w "$s"
+diff -rq "$live" "$s"      # must be identical before any edit
 # then make EVERY edit against the staged path
 ```
 
-so the live path is never the target of an edit, the staged copy provably
-starts from live, and a stale staged copy from an earlier date cannot be
-picked up by accident. **Presence check before writing anything:** grep
+Two details in that snippet are load-bearing and were both wrong in an
+earlier version. Strip the prefix **without** a trailing slash — `${d#$live}`,
+not `${d#$live/}`. The pattern with the slash strips correctly for every
+subdirectory and fails on the one path that has no trailing slash to match:
+the top-level directory itself. `mkdir -p` then rebuilds the entire absolute
+live path *inside* the staged directory, once per skill. And keep `IFS=` on
+both `read` loops — workspace paths routinely contain spaces, and without it
+the loop mangles them.
+
+**If the `diff` reports anything, do not edit and do not delete.** On a mount
+that denies `unlink`, `rm -rf` and `rmdir` both fail on the unwanted paths, so
+the obvious cleanup is unavailable and the step stalls. Rename them into a
+holding folder instead — the mount permits rename — then re-run the diff:
+
+```bash
+mkdir -p "[workspace folder]/_to_delete/<date>-staging-artefacts"
+mv "<unwanted path>" "[workspace folder]/_to_delete/<date>-staging-artefacts/<name>"
+```
+
+Requesting the delete permission for the workspace folder also works where
+that tool exists, and is worth doing anyway before the prune in Delivery.
+
+The sequence exists so the live path is never the target of an edit, the
+staged copy provably starts from live, and a stale staged copy from an earlier
+date cannot be picked up by accident. **Presence check before writing anything:** grep
 the staged copy for the substance of each suggested improvement and
 classify it as already-applied / partially-applied / outstanding — an
 `open` status is not evidence the work is outstanding, and applying an
@@ -251,8 +326,9 @@ file as base, staging, diff-before-overwrite).
 apply-phase spans more than ~3 skills or ~10 observations, delegate Step 5
 to parallel subagents clustered by skill rather than applying everything
 in the main session. Brief each subagent with: the observation ids (files) to
-read, the live-mount path, the staging path, the
-mkdir/per-file-cp/`chmod -R u+w` seeding sequence, the integration logic
+read, the live-mount path, the staging path, the seeding sequence **as the
+verbatim snippet from the Step 5 block above** (never described in prose —
+its two failure modes are both reconstruction errors), the integration logic
 for observation interdependencies (which observation supersedes, refines,
 or folds into which — the parent must state this per cluster explicitly,
 or subagents applying observations sequentially produce patch-on-patch
@@ -261,6 +337,41 @@ open-source skills, and an explicit rule that subagents do not change any observ
 status. Reserve status marking and archival for the parent session. The principle: the apply-phase is embarrassingly parallel across
 skills but the bookkeeping must have one owner — split the work along
 that seam.
+
+**The orchestrator owns a merge-time validation pass.** Splitting work
+across parallel workers splits the verification surface with it, and the
+split is not clean: local checks partition neatly, global invariants do
+not partition at all. Any property defined over the whole deliverable
+becomes unverifiable the moment the work is divided, and stays
+unverifiable no matter how rigorous each worker is — every subagent can
+return a provably clean batch and the merged artefact still be wrong.
+Assume that everything the workers could not see is exactly where the
+defects are. So after the returns are in, and before anything is marked
+actioned or delivered, re-verify globally over the combined result. Three
+checks, at minimum:
+
+1. **Cross-slice duplicates and collisions** — two subagents handed the
+   same source signal will independently produce near-identical output,
+   and neither self-check can fire because neither can see the other.
+   Here that includes the same rule landing in two skills' sections with
+   divergent wording, and two staged copies of one skill in the same
+   day's folder.
+2. **Vocabulary and convention consistency across slices** — where the
+   brief was under-specified, each worker resolved it locally,
+   defensibly, and differently. The inconsistency is invisible inside any
+   one slice and obvious across the set.
+3. **Conformance of the combined totals to the plan** — every observation
+   routed, every skill in the plan staged, counts matching, no
+   multi-skill observation applied to only some of its listed skills
+   (Step 3, Family propagation).
+
+Corollary for the brief: require every delegated agent to close with a
+"decisions the brief did not cover" section. That section is how brief
+defects are discovered — an agent that silently resolves an ambiguity
+converts a fixable specification bug into an invisible inconsistency. And
+when two independent agents flag the same ambiguity, the brief is the
+defect, not the agents: fix the brief and re-issue rather than
+adjudicating the two outputs.
 
 **Step 6 — mark ACTIONED.** In each applied observation's frontmatter set
 `status: actioned`, `resolved: YYYY-MM-DD` (today), and
@@ -286,6 +397,16 @@ Updated skills ([N] observations, [N] principles applied):
 ### Observations Actioned
 [numbers and titles]
 
+### Family coherence
+[each multi-skill observation: applied to all listed skills, or partially
+applied with the outstanding skill named — never left implicit]
+[drift audit: gaps found per family, and how each was resolved]
+[N observations logged without a sibling check]
+
+### Parked
+[one line each: #id — title — unparks when: [condition]; plus any entry
+whose condition has been met and was returned to the queue this review]
+
 ### Skipped (needs manual review)
 [items with reasons]
 ```
@@ -294,8 +415,8 @@ Wait for the user to acknowledge before other work.
 
 ## Constraints
 
-- Don't modify observation files beyond their `status`, `resolved`, and
-  `resolution` frontmatter fields.
+- Don't modify observation files beyond their `status`, `parked_until`,
+  `resolved`, and `resolution` frontmatter fields.
 - Don't create new skills in a review — note candidates for the user to
   action via the skill-creator.
 - Unsure how to integrate an observation → skip it and say so in the
@@ -341,9 +462,23 @@ until the user installs it. **Keep-two rule:** for any skill, keep only
 the two most recent date directories under `skill-updates/`; delete
 older ones.
 
+**The dated staging folder is multi-writer.** `skill-updates/<date>/` is
+a namespace keyed only by date, so a manual session and a scheduled run
+can both write into the same day's folder (observed minutes apart). Any
+producer should assume it is not the only writer that day: before staging
+a skill, check whether that day's folder already holds a staged copy of
+the same skill — if it does, diff and integrate rather than overwrite,
+and say so in the manifest. Any consumer choosing the "newest staged
+version" (e.g. the publishing pipeline's freshness gate) must resolve it
+by content, not by assuming a single authoritative producer — if two
+same-day copies of one skill diverge, surface the conflict rather than
+letting mtime decide. The manifest entry (below) is the provenance
+marker: who staged it, from which run, applying what.
+
 **Staging manifest.** Every delivery appends one entry to
 `[workspace folder]/skill-updates/PENDING.md`: the skill, the date
-directory, the observation ids applied, and a per-change summary
+directory, the producer (which session or scheduled run staged it), the
+observation ids applied, and a per-change summary
 (observation id → section touched → one-line rationale). The manifest is
 what the Session Start Protocol reads to announce "N staged updates
 awaiting review", so staged work is never quietly forgotten; the

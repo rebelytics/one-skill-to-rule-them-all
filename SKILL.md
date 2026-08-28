@@ -110,12 +110,29 @@ was handled without its reference loaded, log an observation.
    surface unprompted. Frontmatter-only is the whole point of the per-file
    format: the scan stays cheap once hundreds of observations exist.
 
+   **An empty scan in a log known to be non-empty is a broken command
+   until proven otherwise**, never the finding "no relevant observations".
+   Count the files independently of the parse — a literal path, not the
+   variable the loop uses — and halt if files exist but nothing parsed.
+   Re-derive every path inside the same tool call: shell state does not
+   carry between calls in most harnesses, and a path variable that
+   silently resolves to empty turns a filter into a match-nothing glob
+   rather than an error.
+
    ```bash
-   for f in skill-observations/observation-log/*.md; do
-     awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
-          fm && /^---[[:space:]]*$/ {print "---"; exit}
-          fm' "$f"
+   d=skill-observations/observation-log                                # re-derive in EVERY call
+   n=$(ls skill-observations/observation-log/*.md 2>/dev/null | wc -l) # literal path: independent of $d
+   parsed=0
+   for f in "$d"/*.md; do
+     [ -e "$f" ] || continue
+     hdr=$(awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
+                fm && /^---[[:space:]]*$/ {exit}
+                fm' "$f")
+     [ -n "$hdr" ] && parsed=$(( parsed + 1 ))
+     printf '%s\n---\n' "$hdr"
    done
+   [ "$n" -gt 0 ] && [ "$parsed" -eq 0 ] && \
+     { echo "SCAN COMMAND BROKEN — $n files present, 0 headers parsed"; exit 1; }
    ```
 3. **Review trigger.** Read `skill-observations/last-review-date.txt`. The
    value carries the truth: a date = when the last review actually ran;
@@ -190,6 +207,27 @@ one — independently logged proposals for one skill rarely share a name.
 that exists now; if it doesn't, the observation proposes a skill instead.
 Checking is cheap at write time and expensive forty entries later.
 
+**Check the target's siblings at write time, and record that you did.**
+Libraries accumulate *families* — several skills implementing one
+methodology for different tools, one structure for different subjects, one
+companion pattern for different base skills. An insight found while using
+one member usually applies to the rest, but nothing in the workflow asks,
+so `skill:` collapses to a single entry and the family silently diverges.
+Before writing, resolve the target against the family registry
+(`skill-observations/skill-families.md`; spec, coherence models and the
+no-registry fallback in `references/observation-log.md`), and for each
+sibling either add it to `skill:` or state in the body why it does not
+apply. Fast test: **could this sentence survive having the tool's or
+subject's name removed?** If yes it belongs to every sibling — and a rule
+that declares itself generic inside one artefact ("this applies to any
+file-writing script, not just X") is the cheapest possible propagation
+signal, so treat that phrasing as an automatic multi-skill flag. Then
+record the outcome in the mandatory `siblings_checked:` frontmatter field,
+including the verdict "checked — instance-specific, no propagation": a
+one-entry `skill:` list is byte-identical whether the siblings were
+evaluated or never considered, and only the recorded field makes the
+*absence* of the judgement visible to a review or a drift audit.
+
 ## How to Log
 
 Write the observation file **silently, within the same turn or the next** —
@@ -247,24 +285,50 @@ overwrite or renumber anyone else's work. If two parallel sessions pick the
 same id, two files share a number — harmless; the next review renumbers one
 and logs a meta-observation.
 
+**Batch writes: resolve each id at its own write time.** When logging more
+than one observation in a session that may overlap a scheduled review or
+another writer, run the id snippet before EACH file — never pre-compute a
+range and hardcode sequential numbers into a batch. A batch append is N
+separate races, not one; pre-baked numbers collapse N independent
+max-checks into a single stale read (observed: a hardcoded id collided
+with one a parallel review issued between the check and the write).
+
+**A structural probe that comes back empty where content existed before is
+a stop signal, not a create.** If the directory or file you logged to
+earlier in the session is suddenly missing, or the id check returns empty
+in a log you know is populated, HALT and re-probe the structure (is there
+an `observation-log/`? a `log.md.migrated`?) — a parallel session may have
+migrated or reorganised the storage. Never let an append silently recreate
+a missing target: that converts a migration signal into corruption
+(observed: a stale session recreated the retired `log.md` with a fresh
+"Observation 1" after the per-file migration renamed it).
+
 **File format.** YAML frontmatter (the metadata every scan reads) followed
 by the Issue → Improvement → Principle body. **The frontmatter is mandatory;
-always write `status: open` at creation time** — an observation without a
-`status` field is treated as OPEN by reviews, never as nonexistent.
+always write `status: open` and a non-empty `siblings_checked:` at creation
+time** — an observation without a `status` field is treated as OPEN by
+reviews, never as nonexistent, and one without `siblings_checked:` counts
+as logged without a sibling check.
 
 ```markdown
 ---
 id: [N]
 title: [Short descriptive title]
-status: open            # open | actioned | declined | superseded
+status: open            # open | actioned | declined | superseded | parked
 type: open-source       # open-source | internal
 skill: [list of existing skills this improves — always a list, even with
        one entry; first entry is primary; may be empty]
 proposes_skill: [list of new skills this argues for, by working name;
        may be empty — an observation can fill either list or both]
+siblings_checked: [MANDATORY, never blank: the family name and the members
+       evaluated, plus the verdict — e.g. "family-name: a, b — shared, both
+       added" or "family-name: a, b — instance-specific, no propagation";
+       the literal `none` only where the target belongs to no family]
 area: [which part of the skill or workflow]
 date: [YYYY-MM-DD]
 session_context: [what task was being worked on]
+parked_until:           # MANDATORY when status is parked, empty otherwise:
+                        #   one line naming the condition that unparks it
 resolved:               # date resolved; leave empty while OPEN
 resolution:             # what was done — set only when actioned/declined
 reference:              # optional: path to saved session-local evidence
@@ -279,6 +343,20 @@ section or rule; for new skills, scope and key components.]
 **Principle:** [The generalisable takeaway — the most important field.]
 ```
 
+**`parked` means decided, not pending.** Use it when an observation is sound
+but cannot be acted on until an external precondition is met — the scheduled
+task that produced it is disabled, the tool it describes is out of use, a
+dependency has not landed. A parked entry is OUT of the work queue: reviews
+must not re-escalate it, and the decision belongs in `status:`, not in a
+free-text note beside a `status: open` (a note nothing classifies on leaves
+the entry in the queue and it gets re-raised at every review). It is not
+resolved either, so it never archives — archival needs a resolved status plus
+a `resolved:` date. It stays in `observation-log/` indefinitely until either
+its `parked_until:` condition is met — set it back to `open` and queue it — or
+it is genuinely resolved. `parked_until:` is mandatory whenever status is
+`parked`: one line stating the condition, phrased so a later session can
+actually answer whether it has happened.
+
 **Context preservation:** if an observation depends on session-local data
 (uploads, API output), save that context into the workspace first and set
 `reference:` to its path — an observation whose evidence dies with the
@@ -291,7 +369,8 @@ traceable to a real project. Full confidentiality layers:
 `references/skill-authoring.md`.
 
 **Changing an existing observation:** re-read that one file, edit only the
-frontmatter fields you are changing (`status`, `resolved`, `resolution`),
+frontmatter fields you are changing (`status`, `parked_until`, `resolved`,
+`resolution`),
 never batch-rewrite the directory. Archival is a plain `mv` (below).
 
 ## Referencing Observations
@@ -345,8 +424,9 @@ friction, and if a user has said they always defer, suppress it entirely.
 whole session (including discussion phases); logged silently; each follows
 Issue → Improvement → Principle; each is typed; existing-skill items name
 the section; no open-source Principle contains client-identifying info;
-every observation file carries `status:` (`status: open` at write time) —
-if any lacks one, add it now.
+every observation file carries `status:` (`status: open` at write time) and
+a non-empty `siblings_checked:` — if any lacks one, do the sibling check
+now and record it rather than back-filling the field with `none`.
 
 ## Acting on Observations
 
@@ -397,7 +477,9 @@ exactly as it is for logging.
 | When do I observe? | The whole session, including feedback and reflection phases |
 | How do I log? | Silently, immediately, as one file per observation named `NNNN-slug.md`; id = max(active, archive, `.id-floor`) + 1 |
 | When do I surface? | End of session, or earlier if needed |
-| Status field? | Mandatory `status: open` frontmatter on every new observation; reviews treat a missing status as OPEN, never as nonexistent |
+| Status field? | Mandatory `status: open` frontmatter on every new observation; reviews treat a missing status as OPEN, never as nonexistent. Five values: `open`, `actioned`, `declined`, `superseded`, `parked` — `parked` = decided but blocked on an external precondition, so it leaves the queue, requires `parked_until:`, and never archives |
+| Does the target skill have siblings? | Resolve it against `skill-observations/skill-families.md` BEFORE writing; add every sibling the insight applies to to `skill:`, and record the verdict in the mandatory `siblings_checked:` field — including "checked, no propagation" |
+| A scan or query came back empty? | Two possibilities, only one is a finding: guard every retrieval meant to prevent duplicate work with an independent existence check, and treat empty output over known content as a broken command |
 | Citing an observation number? | From the `id:` frontmatter field (= the `NNNN-` filename prefix); never a `grep -n` line number; sanity-check against the known id range |
 | Open-source or internal? | Default open-source; the boundary is confidential |
 | Small fix or substantial? | Additive → apply directly; restructuring/new skill → `references/skill-authoring.md` |

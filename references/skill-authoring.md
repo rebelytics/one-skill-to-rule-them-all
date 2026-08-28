@@ -120,6 +120,29 @@ skills is a separate, lower-priority job — the default binds immediately
 for new work and for any revision substantial enough that the body is
 being rewritten anyway.
 
+**The load trigger is a new failure point the monolith did not have.** A
+split delivers its saving only if the reference file is actually fetched
+when its episode fires. When it isn't, the agent improvises the episode
+from the lean core, behaviour degrades, and nothing errors — the content
+is all still there, so no check on the content can catch it. So the trial
+criteria for any split must test the LOADING, not just the content split:
+
+1. Every pointer is an instruction carrying its trigger ("load X when Y"),
+   not a description of what X contains.
+2. During the trial, each episode is observed firing in a real session and
+   the reference load confirmed — one criterion per episode, so an episode
+   that never fired is visibly unproven rather than assumed fine.
+3. A missed load is a blocking finding, not a note. The fix is structural
+   enforcement — a checklist step the episode cannot complete without —
+   rather than firmer wording, per this file's own pre-flight principle.
+
+Add a runtime backstop as well: instruct the agent to log an observation
+whenever it notices an episode was handled without its reference loaded.
+Without it the negative case has no recording channel, and the trial
+cannot distinguish "not yet observed" from "not happening" (see Trial
+design below, which governs how such a trial must be instrumented so
+naming the trigger does not become the intervention).
+
 ## Documenting an external tool surface
 
 Applies to any skill that documents a surface someone else owns — an MCP
@@ -271,6 +294,21 @@ in layers so any one catches what others miss:
    citations with a plain description of the analysis they came from.
    Test: "can the recipient open or verify every reference in this
    document?"
+7. **Cross-skill reference scan (published skills)** — a skill written
+   inside a personal library accumulates pointers into sibling skills
+   ("see {other-skill}'s Hyperlink markers"). Inside the library they
+   help; published, they dangle — the reader cannot resolve them, and
+   they leak the existence and naming of the author's internal tooling.
+   A published skill must either work standalone or declare its
+   dependency on a specific *published* open-source companion. Scan for
+   references to other skills by name; each hit is (a) a declared
+   published companion — keep, ideally with a repo link; (b) inlineable —
+   pull the needed rule into the text; or (c) internal tooling — rephrase
+   to capability language ("whatever presentation tooling the subagent
+   runs"). Make it mechanical in any publishing workflow: grep the
+   content against the list of installed-but-unpublished skill names.
+   Every pointer in a published document must resolve in the reader's
+   world, not the author's.
 
 ## Timelessness — shared skills must not capture current state
 
@@ -287,6 +325,22 @@ pattern: grep for "currently", "right now", "as of", "now", and
 present-tense state verbs near infrastructure nouns. (Internal client
 dossiers are exempt: they live in a maintenance loop where current-state
 capture is the point.)
+
+**First-party observation dates: prefer verification-based phrasing in
+published skills.** Rule (b) above — dated facts stay — holds for
+third-party-published facts (vendor changelogs, API announcements,
+calendar-date examples). It does NOT extend to dates that reveal when the
+AUTHOR observed, verified or reviewed something ("as of April 2026", "a
+June 2026 re-check"): in a published artefact those are metadata about
+the author's process, leak the internal review cadence, and read as
+staleness markers. Replace them with verification-based phrasing — "at
+last verification", "a later re-check found" — plus an explicit
+instruction for how to re-verify against the live source; readers need to
+know how to re-check a claim, not when the author last did. The same rule
+covers commit messages on published repos. And make the check mechanical:
+this rule was violated during fluent drafting while fully documented, so
+any publishing workflow must grep public artefacts for month-name + year
+patterns before committing — a scan, not a reminder.
 
 ## Editing skills — always start from the live file
 
@@ -324,6 +378,15 @@ capture is the point.)
    absorbed earlier changes (e.g. the user installed a staged update
    mid-session), not that edits vanished. Treat unexpected diff-stat
    direction as a baseline-moved signal, not an error in the edits.
+   Recorded measurements obey the same rule: when a handoff records a
+   test-merge result (a conflict count, a diff-stat), record it WITH the
+   base commit or install date it was measured against, and re-run the
+   test merge against the current base before planning around it — treat
+   the old result as a pointer to where conflicts will cluster, not as a
+   count. When a change's whole purpose is to make a class of machinery
+   unnecessary, every conflict hunk in that class resolves the same way
+   (take the change's side), so classification matters more than the
+   count.
 5. Stage every update to
    `[workspace folder]/skill-updates/[date]/[skill-name]/` — the FULL
    skill directory (SKILL.md plus references/, scripts/, assets/ where
@@ -385,6 +448,12 @@ capture is the point.)
    `chmod -R u+w` on the staged path. A workaround documented as
    equivalent to another must be re-verified per failure surface — an
    option that works for single files can still fail for directory trees.
+   Use the exact snippet in `weekly-review.md` Step 5 rather than
+   reconstructing it: strip the live prefix **without** a trailing slash so
+   the top-level directory maps to the staged root, and keep `IFS=` on the
+   read loops for paths containing spaces. Both are easy to get wrong from
+   this description alone, and the resulting phantom directories cannot be
+   deleted on a mount that denies `unlink`.
 7. Match process rigour to the change: complex/open-source/uncertain design
    → use the skill-creator if available; internal skills with requirements
    already established in conversation → write directly, flagging
@@ -409,6 +478,23 @@ a two-tier check:
    changes, list-to-prose adaptation, re-wrapped lines splitting a phrase
    across newlines), not real losses.
 4. Word-count sanity check per file.
+
+**Cross-reference-dense monoliths: keep section numbers global, add a
+map.** When the document being split is dense with internal
+cross-references (§13.6, §8.3.3b …) that will span the new file set, do
+NOT renumber per file — renumbering breaks every reference or forces a
+risky rewrite pass. The verified pattern (a ~5k-line skill split into a
+core + 8 reference files with zero content loss): keep the original
+section numbers global across the whole file set; move content by
+verbatim line-range extraction so nothing is retouched; add a "Section
+map" table to the core resolving §N → file; give each reference file a
+one-line header pointing back to the map. The identifier space is an
+interface — keep it stable across the split and add a resolution layer,
+rather than renumbering content to match its new container. Corollaries:
+the map's load triggers must be phrased as mandatory ("read X before
+running Y"), and a core-size overshoot past the ~500-line guideline is
+acceptable when the overage is genuinely per-invocation principle content
+— record that reasoning where the next editor will see it.
 
 One tier alone either misses losses (substance-only) or cries wolf
 (exact-only). **The checker is code too, and the least-tested code in the
@@ -448,6 +534,45 @@ Use the skill-creator when available, passing the observation(s) as the
 brief. Determine type early: open-source → strip and generalise; internal →
 include specifics freely; uncertain → default open-source and let the user
 add internal detail afterwards.
+
+**First decide whether the skill joins a family, and if it does, read the
+siblings before drafting.** Intent → interview → draft is right for a
+genuinely new skill and wrong for one joining an existing family (the
+registry is `skill-observations/skill-families.md`; see
+`observation-log.md`), because the family already contains most
+of the answer, distributed unevenly across its members. Drafting from the
+current session's experience and consulting the siblings only for the
+tool-agnostic parts you happen to remember produces a third divergent
+member: observed, a new skill carried a category neither sibling had and
+omitted two that one sibling had, taking a family from two inconsistent
+members to three. The cost is asymmetric and front-loaded — reading two
+siblings first is minutes; reconciling three divergent skills afterwards
+means re-reading all of them, deciding per rule whether each divergence is
+intentional, and editing in three places, with the divergences hardest to
+spot precisely because each skill reads as coherent on its own.
+
+Read every sibling in full, draft against them, and produce a short
+**reconciliation note** as part of the deliverable, not as optional
+homework: (a) content taken from the siblings; (b) content the new skill
+adds that the siblings should also get — logged as observations naming
+those siblings, never silently absorbed; (c) sibling content deliberately
+omitted, with the reason. The note is what converts a new family member
+from a source of drift into a correction of it. Then update the registry
+with the new member.
+
+Two corollaries. Where the family's shared material is substantial, the
+pre-draft read is the natural moment to ask whether it should be extracted
+into a core skill the members load (`shared-core`) rather than restated a
+third time — the question is cheapest to answer before the third copy
+exists. And the general form, which reaches well past skills: **a new
+instance is the best available audit of the existing set.** Drafting it
+forces the shared material to be restated from scratch, and every place
+the fresh statement differs from a sibling's is either an improvement or a
+gap. Whenever a new instance joins a set of parallel implementations, read
+the set first — not because the new instance needs their content, but
+because it is the only moment when the differences between all of them are
+being actively thought about by anyone. Skipping the comparison wastes the
+audit and creates the divergence.
 
 ## Retiring skills — harvest before you retire
 

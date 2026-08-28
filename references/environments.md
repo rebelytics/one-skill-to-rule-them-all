@@ -174,12 +174,36 @@ the only place product-specific names live; when a step says "present the
 staged file" or "register the review", look up the current environment
 here rather than guessing a tool name.
 
+**Cowork execution mode — cloud vs local is a user setting.** Cowork can
+run a session in two modes with materially different tool surfaces, and
+the platform's default moved to cloud (so installs upgraded from earlier
+versions may silently change mode — users experience that as the tool
+losing abilities). The switch: Settings → Cowork → "Run new tasks in the
+cloud" (plus a "Beta" button at session start). The tell: the
+local-filesystem permission tool (`allow_cowork_file_delete`) present in
+the tool surface ⇒ local session; absent ⇒ cloud. What differs:
+
+| Capability | Local session | Cloud session |
+|---|---|---|
+| Scheduled-task editing | desktop scheduled-task tools | draft instructions only; the user applies them on the Scheduled tasks page |
+| Deleting workspace files | permission gate (`allow_cowork_file_delete`) | no delete tool; rename-away only |
+| Git on the mounted workspace | with the delete grant | never — use a sandbox clone |
+| Locally-installed MCP servers | reachable | unreachable unless proxied via the desktop app |
+| Working-file persistence | workspace folder persists | files not handed back are not kept |
+| Runs while the computer is off | no | yes |
+
+Steps that must edit scheduled tasks, delete workspace files (review
+cleanup, keep-two pruning), or run git in the shared folder need a local
+session — treat that as a one-line precondition on those steps, and when
+reporting a mode-conditional limit, name the mode and the switch in the
+same breath.
+
 | Capability | Claude Cowork | Claude Code | Web chat / no filesystem |
 |---|---|---|---|
 | Persistent workspace | the shared folder | pinned absolute path (see activation block) | none — handoff-doc mode below |
 | Live skill files | `.claude/skills/{skill}/` on a read-only mount (writes fail with EROFS) | `~/.claude/skills/{skill}/`, ordinary writable files — no guard | n/a |
 | Present a staged file for install | the file-presentation tool (`present_files`) with its upload button | none — report the staged path and a change summary in chat | paste into the handoff doc |
-| Scheduled review | the app's scheduled tasks (runs on the user's machine, only while it is on) | cron / a harness `SessionStart` hook / an account-level scheduler that can reach the workspace | calendar reminder + manual trigger |
+| Scheduled review | the app's scheduled tasks (cloud-default: run remotely; legacy local mode: run on the user's machine, only while it is on — see the execution-mode note above) | cron / a harness `SessionStart` hook / an account-level scheduler that can reach the workspace | calendar reminder + manual trigger |
 | Session-start hook | none | `SessionStart` hook (`hookSpecificOutput.additionalContext`) | none |
 | Local-vs-cloud tell | `allow_cowork_file_delete` present ⇒ local session | n/a | n/a |
 
