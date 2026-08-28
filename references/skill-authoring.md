@@ -143,6 +143,45 @@ cannot distinguish "not yet observed" from "not happening" (see Trial
 design below, which governs how such a trial must be instrumented so
 naming the trigger does not become the intervention).
 
+## Configuration vs process — the three-container rule
+
+A skill that needs values specific to one person, team or installation —
+an identity, an account name, a private blocklist, a set of local
+exclusions — needs **three containers, not two**. With only the skill and
+its invoking prompt available, the specifics must land in one of them: in
+the skill they block publication and generalisation; in the prompt they
+keep it fat and drifting. The third container resolves the tension:
+
+1. **The skill** holds the process, and *reads* configuration.
+2. **A private config file** holds the specifics. The skill names its
+   expected location and never ships it.
+3. **The invoking prompt** holds only the trigger.
+
+State the precedence explicitly: config wins for *configuration*, the
+skill wins for *process*, and config can never relax a rule. Give the
+skill a first-run fallback that asks for the values and offers to write
+the file when none exists — those few lines are what make the skill
+usable by someone who is not its author. The test for whether a line
+belongs in config rather than in the skill: **would a different person
+running this skill need a different value here?** Measured on a real
+conversion, the extraction is smaller than it looks — most identifying
+lines are a proper name where a role noun ("the maintainer") reads
+identically.
+
+**When a prompt or config duplicates a skill's rules for safety, replace
+the copy with a stop condition, not a shorter copy.** Duplication
+defended as insurance is the least audited kind — the argument for
+copying it is also an argument against questioning the copy, so the
+copies carrying the most important rules are the ones most likely to be
+silently stale (found in practice: a third copy of a rule set still
+carried a convention its source had superseded, and nothing detected it).
+A copy of a rule can drift out of agreement with its source; a refusal to
+proceed without the source cannot. "If the skill did not load, stop and
+report — do not proceed from this prompt" is one line and has nothing to
+drift. Keep at most the irreversible invariants stated in both places,
+and say in the prompt that it deliberately carries no fallback copy, so a
+future editor does not helpfully re-add one.
+
 ## Documenting an external tool surface
 
 Applies to any skill that documents a surface someone else owns — an MCP

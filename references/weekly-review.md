@@ -365,6 +365,22 @@ checks, at minimum:
    multi-skill observation applied to only some of its listed skills
    (Step 3, Family propagation).
 
+4. **Characterisations, not just values** — the verification pass reads
+   naturally as a rule about values (counts, fields, totals), and holds
+   least where outputs are stated as judgements: a reported conflict,
+   defect, risk or readiness verdict carries no unit to check against,
+   and a wrong characterisation is consumed by being *agreed with*,
+   leaving no trace — where a wrong value tends to fail loudly when
+   something computes with it. Any subagent claim that will reach the
+   user as a finding must be spot-checked against the source by the
+   parent before it leaves the session, at whatever granularity makes
+   the claim falsifiable — one grep is usually enough. The structural
+   trigger: the moment you are about to write a sentence attributing a
+   problem to something you did not read yourself. Require subagents to
+   return the evidence alongside the claim (the file, the line, the
+   matched string) so the check is cheap; a claim returned without
+   locatable evidence is a claim to verify, not to relay.
+
 Corollary for the brief: require every delegated agent to close with a
 "decisions the brief did not cover" section. That section is how brief
 defects are discovered — an agent that silently resolves an ambiguity
