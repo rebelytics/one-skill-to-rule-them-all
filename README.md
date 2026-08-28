@@ -2,24 +2,26 @@
 
 ## The meta-skill that builds and improves all your skills, including itself.
 
-In the first six months of using this meta-skill, it **logged and applied over 900 improvements across my 50 skills**, most of which were themselves created based on observations by the meta-skill.
+In the first seven months of using this meta-skill, it **logged over 1200 improvements across my 70 skills**, most of which were turned into skill improvements. The majority of my 70 skills were themselves created based on observations by the meta-skill.
 
-This meta-skill, called "task-observer", is a practical application of the [Augmented Expertise](https://www.rebelytics.com/augmented-expertise/) methodology, an AI framework for knowledge workers. However, users have reported successful integrations into their Hermes and Openclaw setups, so it works equally well with autonomous agents.
+The current version of task-observer also includes improvements suggested by 36 different users, across 60 issues and 12 pull requests. Without these contributions, the project wouldn't be half as good as it is today.
 
-## Why you should use this meta-skill
+This meta-skill is a practical application of the [Augmented Expertise](https://www.rebelytics.com/augmented-expertise/) methodology, an AI framework for knowledge workers. However, users have reported successful integrations into their Hermes and Openclaw setups, so it works equally well with autonomous agents.
+
+## Why you should use task-observer
 
 Creating skills is powerful but time-consuming. The skills that do get built stay frozen: they never learn from how you actually use them.
 
 Task Observer fixes those problems. It's a meta-skill that runs alongside your work, watches what you do, and does two things:
 
-1. **Identifies new skills for you** — it spots repeating patterns in your work and flags them as skill candidates, then helps you build them, so you get skills without staring at a blank page
-2. **Improves your existing skills** — it notices corrections you make, preferences you express, and gaps in your current skills, then suggests specific updates
+1. **Identifies new skills for you** — it spots repeating patterns in your work and flags them as skill candidates, then helps you build them, so you get skills without staring at a blank page.
+2. **Improves your existing skills** — it notices corrections you make, preferences you express, and gaps in your current skills, then suggests specific updates.
 
 You work normally. It watches. Your skill library grows and gets better over time.
 
 ## The self-improving part
 
-This is the detail that makes the task observer truly beautiful in my opinion. Because it runs during every session and observes all active skills — including itself — it captures improvements to its own methodology over time.
+This is the detail that makes Task Observer truly beautiful in my opinion. Because it runs during every session and observes all active skills — including itself — it captures improvements to its own methodology over time.
 
 If it misses something, or if its observation format could be clearer, or if it's triggering in contexts where it shouldn't — it notices, and it logs that too. The skill that improves all your skills also improves itself.
 
@@ -28,7 +30,7 @@ If it misses something, or if its observation format could be clearer, or if it'
 Task Observer monitors your work sessions and looks for three things:
 
 1. **Corrections and adjustments** — if you adjust the AI's output or steer it in a different direction, that's a signal that a skill could be clearer or more complete
-2. **Gaps no skill covers yet** — if you're doing something manually that could be systematised, the observer flags it as a candidate for a new skill
+2. **Gaps no skill covers yet** — if you're doing something manually or repeatedly that could be systematised, the observer flags it as a candidate for a new skill
 3. **Its own blind spots** — the observer watches itself too, capturing improvements to its own methodology as you use it
 
 During each session, it produces a structured observation log: what it noticed, which skills are affected, and specific suggested improvements. You review, approve, and your skills evolve.
@@ -53,7 +55,7 @@ One honest boundary: the formal observation log and review cycle pay off most as
 
 ## Installation
 
-The skill is a small bundle: `SKILL.md`, the files in `references/` that are loaded on demand (this keeps the always-loaded part lean), and two helper scripts in `scripts/`. Installing only SKILL.md works, but runs degraded — the skill will tell you which files are missing.
+The skill is a small bundle: `SKILL.md`, the files in `references/` that are loaded on demand (this keeps the always-loaded part lean), and two helper scripts in `scripts/`. Installing only SKILL.md works, but runs degraded and isn't recommended — the skill will tell you which files are missing.
 
 **Get the files:** download the `.skill` bundle attached to the latest release, or download the repo as a ZIP (Code → Download ZIP) / clone it and keep `SKILL.md`, `references/` and `scripts/` together.
 
@@ -78,11 +80,11 @@ The skill is a small bundle: `SKILL.md`, the files in `references/` that are loa
 - Claude mobile app (handoff doc mode)
 - Claude Code in the desktop app
 
-**Expected to work but untested:**
-- Claude Code without desktop app — the methodology and format translate directly - users have reported seamless experiences with this.
+**Confirmed to work by users:**
+- Claude Code without desktop app — the methodology and format translate directly - plenty of users have reported seamless experiences with this.
 
 **Versions for other environments created by users:**
-- Codex version by AllstarGER: [https://github.com/AllstarGER/one-skill-to-rule-them-all](https://github.com/AllstarGER/one-skill-to-rule-them-all)
+- Codex version by AllstarGER: [https://github.com/AllstarGER/one-skill-to-rule-them-all](https://github.com/AllstarGER/one-skill-to-rule-them-all) (based on an older version of task-observer)
 - Please get in touch if you've open-sourced an adaptation of the meta-skill for another system or environment. I'm happy to include it here.
 
 **Potentially compatible with caveats:**
@@ -95,7 +97,7 @@ If you try it in another environment, please let me know how it goes. Issues and
 
 1. Read the user guide at [https://github.com/rebelytics/one-skill-to-rule-them-all/blob/main/USER-GUIDE.md](https://github.com/rebelytics/one-skill-to-rule-them-all/blob/main/USER-GUIDE.md)
 2. Give the content of this repo (skill, readme and user guide) to the AI system of your choice and let it guide you towards the ideal configuration for your individual setup.
-3. Make sure that the skill loads in all sessions where it's needed (I solved this via an instruction in my CLAUDE.md file)
+3. Make sure that the skill loads in all sessions where it's needed (I solved this via an instruction in my CLAUDE.md file).
 4. Try to remember to ask "Any observations logged?" when you finish a session (I do this every time I archive a session). Sometimes, the skill then finds additional improvement potential that it didn't log before.
 5. Schedule a recurring review session that applies all open observations. Mine runs Monday, Wednesday and Friday morning, but you should adapt this to your needs.
 
@@ -104,8 +106,8 @@ If you try it in another environment, please let me know how it goes. Issues and
 This is an open-source project for the community. If you use it, I would love to hear from you:
 
 - **Bug reports and feature requests:** Open an issue or a pull request, whichever you prefer — you are credited either way. See [CONTRIBUTING.md](CONTRIBUTING.md) for how reports become changes and how credit works.
-- **Platform compatibility reports:** Tried it somewhere other than Claude? Tell me what happened
-- **Interesting use cases:** Have you come up with a creative way of using or improving the task observer?
+- **Platform compatibility reports:** Tried it somewhere other than Claude? Tell me what happened.
+- **Interesting use cases:** Have you come up with a creative way of using or improving Task Observer?
 - **Integrations with other systems:** One user told me that they connected task observer to Obsidian. Do you have a similar story?
 
 ## License
@@ -131,7 +133,7 @@ I would like to thank the following creators, platforms, publications, companies
 - Aashish Pahwa: [https://www.instagram.com/p/DXwqpPQj62s/](https://www.instagram.com/p/DXwqpPQj62s/)
 - Nick Saraev: [https://www.instagram.com/reels/DaN0yYtPzjY/](https://www.instagram.com/reels/DaN0yYtPzjY/)
 - Peter Griffin AI: [https://www.instagram.com/reels/DavN_06t105/](https://www.instagram.com/reels/DavN_06t105/)
-- Myriam Jessier: [https://www.linkedin.com/posts/myriamjessier_add-rigor-to-your-thinking-without-adding-share-7475808954376359936-WdwP/](https://www.linkedin.com/posts/myriamjessier_add-rigor-to-your-thinking-without-adding-share-7475808954376359936-WdwP/)
+- Myriam Jessier: [https://www.linkedin.com/posts/myriamjessier_i-feel-like-i-am-part-of-an-mlm-sponsored-share-7483809490992140288-6Lwm/](https://www.linkedin.com/posts/myriamjessier_i-feel-like-i-am-part-of-an-mlm-sponsored-share-7483809490992140288-6Lwm/)
 - Victor Dorneanu: [https://brainfck.org/t/self-improving-agents/](https://brainfck.org/t/self-improving-agents/)
 - CORE.TODAY: [https://core.today/blog/task-observer-meta-skill](https://core.today/blog/task-observer-meta-skill)
 - KIMI: [https://www.kimi.com/resources/claude-code-skills](https://www.kimi.com/resources/claude-code-skills)
@@ -141,6 +143,23 @@ I would like to thank the following creators, platforms, publications, companies
 - Surf Skills: [https://surfskills.surf/s/rebelytics/one-skill-to-rule-them-all/task-observer](https://surfskills.surf/s/rebelytics/one-skill-to-rule-them-all/task-observer)
 - Juan Pablo Rosso: [https://www.instagram.com/reels/Dayv8dvjeLi/](https://www.instagram.com/reels/Dayv8dvjeLi/)
 - Johannes Manske: [https://www.linkedin.com/posts/johannesmanske_vor-8-wochen-war-ki-noch-sparringspartner-share-7461096580809547777-0ty7/](https://www.linkedin.com/posts/johannesmanske_vor-8-wochen-war-ki-noch-sparringspartner-share-7461096580809547777-0ty7/)
+- Xavier Ting: [https://xaviertingai.com/tools/task-observer.html](https://xaviertingai.com/tools/task-observer.html)
+- Lazy Owen (게으른 빌더): [https://lazyowen.com/guides/claude-skills-top5-0815](https://lazyowen.com/guides/claude-skills-top5-0815)
+- Minhaj Rais: [https://justbeingresourceful.com/2026/08/21/5-claude-code-plugins-worth-installing-in-2026-and-the-fine-print-on-the-unlimited-tokens-claim/](https://justbeingresourceful.com/2026/08/21/5-claude-code-plugins-worth-installing-in-2026-and-the-fine-print-on-the-unlimited-tokens-claim/)
+- Denghao (等號): [https://denghao.substack.com/p/5](https://denghao.substack.com/p/5)
+- Erfan Iranshad: [https://erfaniranshad.ir/5-claude-code-plugins/](https://erfaniranshad.ir/5-claude-code-plugins/)
+- Tech Future Atlas: [https://techfutureatlas.com/posts/t3_1tm887i/](https://techfutureatlas.com/posts/t3_1tm887i/)
+- 球球不冲了: [https://www.binance.com/en/square/post/355189407349041](https://www.binance.com/en/square/post/355189407349041)
+- gptsavyy: [https://www.instagram.com/reel/DbFs6QENr43/](https://www.instagram.com/reel/DbFs6QENr43/)
+- Hudson Brendon: [https://gist.github.com/hudsonbrendon/818e84cd81bcc215a3ad00286b04af82](https://gist.github.com/hudsonbrendon/818e84cd81bcc215a3ad00286b04af82)
+- IA IRL: [https://www.tiktok.com/@ia_irl/video/7665714151305547030](https://www.tiktok.com/@ia_irl/video/7665714151305547030)
+- Ozzibig.ai: [https://www.tiktok.com/@ozzibig/video/7662484018075634976](https://www.tiktok.com/@ozzibig/video/7662484018075634976)
+- Danielgpt2: [https://www.tiktok.com/@danielgpt2/photo/7663796072724172054](https://www.tiktok.com/@danielgpt2/photo/7663796072724172054)
+- Doit.systemIA: [https://www.youtube.com/shorts/535GKrg1E08](https://www.youtube.com/shorts/535GKrg1E08)
+- Erfan Yousefi: [https://codenight.ir/articles/claude-code-plugins](https://codenight.ir/articles/claude-code-plugins)
+- DecimalAI: [https://app.decimal.ai/skills/rebelytics-task-observer](https://app.decimal.ai/skills/rebelytics-task-observer)
+- MigueBaenaIA: [https://www.youtube.com/shorts/OBeoYZzHDcw](https://www.youtube.com/shorts/OBeoYZzHDcw)
+- Santiago Comse: [https://www.linkedin.com/posts/santiagocosme_5-skills-para-poner-90-ugcPost-7491131673254846465-SQAl/](https://www.linkedin.com/posts/santiagocosme_5-skills-para-poner-90-ugcPost-7491131673254846465-SQAl/)
 
 If I forgot to list your recommendation here, please let me know or submit it via a PR in the same format as the others.
 
