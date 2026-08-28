@@ -434,6 +434,20 @@ suggested type; ask which to act on. Surface earlier when an observation
 needs user input to be complete, when a skill is actively producing wrong
 output, or when observations cluster on one skill.
 
+**Deferral wears a second disguise: not a promise, but an argument.** "Let's
+wait until this has seen a few days of real use", "we should gather more data
+first" — this reads as diligence, which is exactly why it goes unchallenged,
+including by the person saying it. It is not an announcement, so a rule about
+executing rather than announcing does not catch it. So before writing *any*
+"later" into a recommendation, name two things: **which specific observation
+would change the decision, and when it could realistically arrive.** If you
+cannot name one, the evidence is either already conclusive (act now) or waiting
+adds nothing (act now). Then ask what the delay costs — if a known-defective
+state stays live meanwhile, the burden of proof is on deferring, not on acting.
+A deferral is a decision and needs the same justification as acting; "more
+evidence would be better" is not one, because the question is whether more
+evidence could change the OUTCOME.
+
 **Default to log-and-defer.** Surfacing an observation is not an invitation
 to act on it: state that it is logged for the next review, and stop.
 Reserve in-session application strictly for the triggers under "Acting on
