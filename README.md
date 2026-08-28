@@ -159,7 +159,7 @@ I would like to thank the following creators, platforms, publications, companies
 - Erfan Yousefi: [https://codenight.ir/articles/claude-code-plugins](https://codenight.ir/articles/claude-code-plugins)
 - DecimalAI: [https://app.decimal.ai/skills/rebelytics-task-observer](https://app.decimal.ai/skills/rebelytics-task-observer)
 - MigueBaenaIA: [https://www.youtube.com/shorts/OBeoYZzHDcw](https://www.youtube.com/shorts/OBeoYZzHDcw)
-- Santiago Comse: [https://www.linkedin.com/posts/santiagocosme_5-skills-para-poner-90-ugcPost-7491131673254846465-SQAl/](https://www.linkedin.com/posts/santiagocosme_5-skills-para-poner-90-ugcPost-7491131673254846465-SQAl/)
+- Santiago Cosme: [https://www.linkedin.com/posts/santiagocosme_5-skills-para-poner-90-ugcPost-7491131673254846465-SQAl/](https://www.linkedin.com/posts/santiagocosme_5-skills-para-poner-90-ugcPost-7491131673254846465-SQAl/)
 
 If I forgot to list your recommendation here, please let me know or submit it via a PR in the same format as the others.
 
