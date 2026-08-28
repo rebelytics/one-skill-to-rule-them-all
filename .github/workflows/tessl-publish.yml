@@ -2,6 +2,8 @@ name: Publish
 on:
   push:
     branches: [main]
+    paths:
+      - '.tessl-plugin/plugin.json'
 
 jobs:
   publish:
