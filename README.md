@@ -2,7 +2,7 @@
 
 ## The meta-skill that builds and improves all your skills, including itself.
 
-In the first seven months of using this meta-skill, it **logged over 1200 improvements across my 70 skills**, most of which were turned into skill improvements. The majority of my 70 skills were themselves created based on observations by the meta-skill.
+In the first seven months of using this meta-skill, it **logged over 1200 observations across my 70 skills**, most of which were turned into skill improvements. The majority of my 70 skills were themselves created based on observations by the meta-skill.
 
 The current version of task-observer also includes improvements suggested by 36 different users, across 60 issues and 12 pull requests. Without these contributions, the project wouldn't be half as good as it is today.
 
