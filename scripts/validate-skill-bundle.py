@@ -48,7 +48,10 @@ def folded_description(fm):
 
 
 def check_dir(skill_dir, fails):
-    skill_dir = pathlib.Path(skill_dir)
+    # Resolve before comparing names: Path('.').name is '' for a relative
+    # argument naming the current directory, which false-fails a correct
+    # bundle and blames the frontmatter for an argument problem.
+    skill_dir = pathlib.Path(skill_dir).resolve()
     skill_md = skill_dir / "SKILL.md"
     if not skill_md.is_file():
         fails.append("SKILL.md missing"); return
