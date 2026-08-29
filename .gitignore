@@ -1,0 +1,4 @@
+# test/build artefacts
+__pycache__/
+*.pyc
+.venv/
