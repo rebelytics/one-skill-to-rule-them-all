@@ -129,7 +129,31 @@ Run from the workspace folder. Python 3.8+, no dependencies.
    fabricate precision the records never had, and nothing reads them on a
    normal turn.
 
-8. **Re-check anything that mentions the old path.** Other skills, a
+8. **Enumerate the machine's other workspaces before recording the
+   migration anywhere.** Everything above converts exactly one workspace
+   folder. When the skill is installed at user/global scope, each other
+   workspace has its own `skill-observations/` anchor still on the legacy
+   layout, and each migrates separately. Search wherever your workspace
+   folders anchor — in Claude Code, for example:
+
+   ```bash
+   find ~/.claude/projects -maxdepth 3 -name log.md -path '*/skill-observations/*'
+   ```
+
+   Any hit with no `observation-log/` directory beside it is an
+   unconverted workspace: run this procedure there now, or list it
+   explicitly as pending. Skipping this step loses no data — the Session
+   Start Protocol still catches each workspace lazily, on its next
+   session there — but "lazily" can be days, and nothing marks those
+   workspaces as unconverted in the meantime.
+
+   The same scope rule applies to the record of the migration: a
+   completion note written into a document that reaches beyond one
+   workspace — a machine-global CLAUDE.md, a team runbook — must name the
+   workspace(s) it covers, because "migration done" in a global document
+   reads as "done everywhere" to every future reader.
+
+9. **Re-check anything that mentions the old path.** Other skills, a
    CLAUDE.md, a scheduled task or a review template may name
    `skill-observations/log.md`. Point them at the directory; "the
    observation log" as a phrase stays correct.
