@@ -254,10 +254,12 @@ are noise, not a wall. Report "failed N times", never "cannot be done",
 unless retries and alternate interfaces are actually exhausted; otherwise
 observations are silently lost for the rest of the session.
 
-**Deliverable-event flush.** Whenever you present or render a major
-deliverable — a file handed to the user, a deck or PDF render, a staged
-skill file — or complete a task/todo batch, write any pending observation
-files at that moment, before moving on. These checkpoints already involve a
+**Deliverable-event flush.** Whenever you take any action by which a unit
+of work is declared complete to a human — presenting a major deliverable
+(a file handed to the user, a deck or PDF render, a staged skill file),
+sending a completion notification, writing a final report or a status
+entry that says "done", or completing a task/todo batch — write any
+pending observation files at that moment, before moving on. These checkpoints already involve a
 tool call; piggy-backing the flush onto them makes the write a side effect
 of work you were doing anyway. (Why both checkpoints are writes rather than
 questions: `references/observation-log.md`.)
@@ -273,15 +275,25 @@ in which nothing was logged at all.**
    left and must be applied deliberately.
 2. *"Is this a major deliverable?" is a self-assessment, and self-assessment is
    what fails under load.* Prefer triggers unmistakable in the tool record over
-   ones needing a judgement call. In particular, treat any **project-completing
-   command** — a deploy, release, publish, or push — as a flush point: it is a
-   concrete tool call, as hard a trigger as a completed todo, and it reliably
-   marks the end of a unit of work where insights have accumulated.
+   ones needing a judgement call. The flush point is a **property, not a
+   command list**: any action by which a unit of work is declared complete to
+   a human. A deploy, release, publish, or push qualifies — but so does a
+   completion notification, a final report, or a status file set to "done".
+   Each is a concrete tool call, as hard a trigger as a completed todo, and it
+   reliably marks the end of a unit of work where insights have accumulated.
+   A command list cannot be the definition: it inherits the shape of the
+   sessions it was derived from and is silently inert in any session that
+   declares completion through other tools — no deploy and no version control
+   does not mean no completions.
 
 The rule behind both: an enforcement trigger must hang on an event objectively
 visible in the tool record, never on the agent noticing that a moment qualifies.
 And a counter bound to a single tool is silently inert in every session that does
-not use it — such triggers always need a second, independent path.
+not use it — such triggers always need a second, independent path. Nor may a
+trigger pre-empt a delivery decision a later layer already owns ("the recipient
+is right there, no need to send"): fire the action and let the owning layer
+suppress it — a suppressed send leaves a trace in the tool record, an unsent one
+leaves nothing.
 
 **Id and filename.** Each observation is `NNNN-short-slug.md` (zero-padded
 id + a kebab-case slug from the title). The id is the highest of three
