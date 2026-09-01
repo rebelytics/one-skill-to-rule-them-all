@@ -376,7 +376,13 @@ a `resolved:` date. It stays in `observation-log/` indefinitely until either
 its `parked_until:` condition is met — set it back to `open` and queue it — or
 it is genuinely resolved. `parked_until:` is mandatory whenever status is
 `parked`: one line stating the condition, phrased so a later session can
-actually answer whether it has happened.
+actually answer whether it has happened — and checked, before parking, for
+whether it can happen at all: ask who or what would have to act to meet the
+condition, and whether that party has a reason to do exactly the opposite
+(sometimes as the intended effect of the very thing the entry is waiting to
+observe). If the condition cannot occur, the entry is not waiting: close it on
+the substitute evidence available today, or park it on a trigger that can
+actually fire.
 
 **Context preservation:** if an observation depends on session-local data
 (uploads, API output), save that context into the workspace first and set
@@ -442,7 +448,12 @@ executing rather than announcing does not catch it. So before writing *any*
 "later" into a recommendation, name two things: **which specific observation
 would change the decision, and when it could realistically arrive.** If you
 cannot name one, the evidence is either already conclusive (act now) or waiting
-adds nothing (act now). Then ask what the delay costs — if a known-defective
+adds nothing (act now). A criterion you *can* name must also be able to occur:
+ask who or what would have to act for it to fire, and whether that party has a
+reason to do exactly the opposite — a deferral whose criterion cannot occur is
+indistinguishable from a silent drop, only more expensive, and it looks better
+than a vague one because it is precisely phrased. Then ask what the delay
+costs — if a known-defective
 state stays live meanwhile, the burden of proof is on deferring, not on acting.
 A deferral is a decision and needs the same justification as acting; "more
 evidence would be better" is not one, because the question is whether more
