@@ -296,7 +296,7 @@ d=skill-observations/observation-log
 hi=$( { ls "$d" "$d/archive" 2>/dev/null | grep -oE '^[0-9]+'; cat "$d/archive/.id-floor" 2>/dev/null; } \
      | sort -n | tail -1); : "${hi:=0}"
 [ "$hi" -eq 0 ] && [ -n "$(ls "$d"/*.md 2>/dev/null)" ] && { echo "ID COMMAND BROKEN — log is non-empty but no ids extracted"; exit 1; }
-next_id=$(( hi + 1 )); echo "$next_id" > "$d/archive/.id-floor"
+next_id=$(( 10#$hi + 1 )); echo "$next_id" > "$d/archive/.id-floor"
 ```
 
 The guard line distinguishes "the log says zero" from "I could not read
