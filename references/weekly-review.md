@@ -501,6 +501,20 @@ awaiting review", so staged work is never quietly forgotten; the
 per-change summary is what lets the user review a full-file diff
 quickly, which is what raises the install rate. Remove an entry when the
 user installs the update or when the keep-two rule prunes its directory.
+The manifest carries provenance and install instructions, never follow-up
+work. Anything a review recognises as "check next time" — a sibling to
+mirror, an audit to run once the staging is installed — is logged as its own
+observation with `status: parked` and a named `parked_until:` condition,
+before the summary is written. That puts it in the queue the next review
+reads by procedure (Step 1 re-checks every parked condition; Step 8 lists
+every parked entry), and it survives the install and the prune that remove
+the manifest entry. A note in an artefact whose lifetime ends at install
+cannot carry a follow-up: nothing in the review reads manifest notes as a
+queue, and the one place the review is guaranteed to delete is the one
+place it is tempting to write the leftover backlog. (Observed: two sessions
+on two days each wrote a follow-up into the manifest; the first was found
+only because the manifest happened to be read before the next review, the
+second was caught in the same turn and re-filed as a parked observation.)
 The gate stays absolute — the fix for a safety gate people are tempted to
 bypass is reducing the friction that creates the temptation, not
 loosening the gate. An optional git-based staging medium is described in
