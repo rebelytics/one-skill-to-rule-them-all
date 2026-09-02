@@ -490,6 +490,17 @@ by content, not by assuming a single authoritative producer — if two
 same-day copies of one skill diverge, surface the conflict rather than
 letting mtime decide. The manifest entry (below) is the provenance
 marker: who staged it, from which run, applying what.
+The same-day check has a third outcome: the day's folder already holds a copy
+the user has INSTALLED — its manifest entry is marked done and it diffs clean
+against live. Do not seed a second round into it: the seed would be
+byte-identical to live, the `diff -rq` gate would pass trivially, and the
+new round would inherit a manifest entry that claims it is installed. Give
+the second round a discriminated anchor (`<date>-<slug>` or `<date>.2`)
+with its own manifest entry, and count rounds rather than days when the
+keep-two rule prunes. (Observed: a second apply round for one skill started
+the same evening the first had been installed; the date-keyed anchor pointed
+at the installed copy, and only a manual check of the manifest state
+prevented seeding over it.)
 
 **Staging manifest.** Every delivery appends one entry to
 `[workspace folder]/skill-updates/PENDING.md`: the skill, the date
