@@ -287,7 +287,17 @@ in which nothing was logged at all.**
    does not mean no completions.
 
 The rule behind both: an enforcement trigger must hang on an event objectively
-visible in the tool record, never on the agent noticing that a moment qualifies.
+visible in the tool record, never on the agent noticing that a moment qualifies. Visibility is
+necessary, not sufficient: a trigger's pattern is a claim about the future tool
+record, so before it counts as armed, run the literal event string the project
+actually produces through it as a positive control, and one known non-event
+from the real tool record as a negative control — never invented examples,
+which sample the author's model of the input, the same model that produced
+the gap. Record both results next to the trigger. (Observed: a reminder hook
+whose six patterns were derived from what the deploy script does internally
+never matched the command the project actually types to run it, and had been
+inert on its own target since installation; the same day it fired on a
+read-only command whose test string merely contained a signal word.)
 And a counter bound to a single tool is silently inert in every session that does
 not use it — such triggers always need a second, independent path. Nor may a
 trigger pre-empt a delivery decision a later layer already owns ("the recipient
