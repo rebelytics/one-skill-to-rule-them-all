@@ -504,8 +504,10 @@ user installs the update or when the keep-two rule prunes its directory.
 The manifest carries provenance and install instructions, never follow-up
 work. Anything a review recognises as "check next time" — a sibling to
 mirror, an audit to run once the staging is installed — is logged as its own
-observation with `status: parked` and a named `parked_until:` condition,
-before the summary is written. That puts it in the queue the next review
+observation before the summary is written: created with `status: open`, as the
+file-format rule requires of every new entry, and parked in the same turn —
+`status: parked` plus a named `parked_until:` condition, the same two-field
+edit a review makes on any parked entry. That puts it in the queue the next review
 reads by procedure (Step 1 re-checks every parked condition; Step 8 lists
 every parked entry), and it survives the install and the prune that remove
 the manifest entry. A note in an artefact whose lifetime ends at install
