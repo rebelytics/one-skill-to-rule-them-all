@@ -427,7 +427,8 @@ patterns before committing — a scan, not a reminder.
    (take the change's side), so classification matters more than the
    count.
 5. Stage every update to
-   `[workspace folder]/skill-updates/[date]/[skill-name]/` — the FULL
+   `[workspace folder]/skill-updates/[date]/[skill-name]/` (a second round on
+   the same day takes a discriminated anchor — weekly-review.md, Delivery) — the FULL
    skill directory (SKILL.md plus references/, scripts/, assets/ where
    present), never SKILL.md alone — and present it for review and
    installation; nothing goes live until the user installs it. Where no
