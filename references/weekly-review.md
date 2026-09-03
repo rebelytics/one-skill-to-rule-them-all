@@ -68,17 +68,23 @@ not cover reading everything), say so in the question, mark the proposed
 split as provisional, and re-present it if the contents disagree. The
 order is `read → bucket → present counts → ask`, never `ask → read`.
 Reading the bodies is necessary but not sufficient: a body can itself
-assert a checkable external fact ("the target is foreign-maintained, so
-an upstream contribution is possible"), and an option built on it
-inherits the claim unverified. When an offered option rests on a cheaply
-checkable external fact — the target section exists upstream, the PR is
-still open, the repo is alive — check that fact BEFORE presenting the
-option: the check costs one fetch, while the unchecked option costs the
-user a decision made on a false premise plus the re-ask that follows.
-Forked files need the check at two levels: file-level provenance ("this
-skill is foreign-maintained") and section-level provenance ("the section
-this observation extends is a local addition") are separate statements,
-and routing to upstream-vs-fork depends on the second. (Observed: an
+assert a checkable premise ("the target is foreign-maintained, so an
+upstream contribution is possible"), and an option built on it inherits
+the claim unverified. Settle such a premise BEFORE presenting the
+option, from what is already local — the checkout or copy the skill was
+installed from, a stored baseline, the file's own attribution block.
+Local provenance answers most of it, and it costs far less than a
+decision made on a false premise plus the re-ask that follows. Where the
+premise is genuinely remote (does the section still exist at upstream
+HEAD, is the PR still open), the review must not depend on reaching the
+network: present the option with that half named as unverified, and
+leave the remote check to the feedback pre-flight in
+`references/skill-authoring.md`, which runs once the user has chosen to
+contribute. Forked files need the check at two levels: file-level
+provenance ("this skill is foreign-maintained") and section-level
+provenance ("the section this observation extends is a local addition")
+are separate statements — both answerable from the local copy — and
+routing to upstream-vs-fork depends on the second. (Observed: an
 "upstream contribution" option was offered and chosen for three
 observations extending a section that turned out to exist only in the
 local fork — the decision had to be re-asked with the corrected facts.)
