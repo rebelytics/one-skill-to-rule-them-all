@@ -49,26 +49,52 @@ follow-up, and still emit the final report — a blocked step N must never
 cost the report for steps 1 through N-1.
 
 **Several observation logs on one machine — unify the review at the
-integration point.** Each workspace folder carries its own log, and where
-the observed skills are installed globally, logs from different projects
-overwhelmingly target the SAME skills. Running the per-workspace review
-once per log then stages each shared skill several times, each staged
-copy integrating only its own log's slice — by construction, the same
-same-day multi-writer divergence the Delivery section exists to detect —
-and convergent observations filed in different projects are escalated as
-separate decisions, because no single run ever sees them together (the
-ownership-fence rule in Step 3 covers a backlog split across sessions,
-not across logs). So when more than one observation log exists and their
-target skills overlap, run ONE review session over ALL of them: build
-the Step 3 clustering across logs, and stage each affected skill ONCE
-into a single designated staging anchor (one workspace's
-`skill-updates/`, named as such in the manifest). The per-log
-bookkeeping stays strictly separate: each log's work queue, status
-edits, archival, and `last-review-date.txt` are read from and written
-back to its own workspace. Integration and staging unify; bookkeeping
-does not. The principle: when several append-only queues feed edits into
-shared targets, the review that drains them must be unified at the
-integration point even though the queues themselves stay separate.
+integration point.** First check whether the logs should coexist at all:
+`references/environments.md` requires one log per observed scope, and
+two logs over the same globally installed skills are the silent fork it
+warns about — consolidate those instead of reviewing them jointly. What
+remains is the legitimate case: logs deliberately kept apart because
+observation bodies carry non-portable task context, while the skills
+they observe are installed globally and therefore shared. There, running
+the per-workspace review once per log stages each shared skill several
+times, each staged copy integrating only its own log's slice — by
+construction the same-day multi-writer divergence the Delivery section
+exists to detect — and convergent observations filed in different
+projects are escalated as separate decisions, because no single run ever
+sees them together (the ownership-fence rule in Step 3 covers a backlog
+split across sessions, not across logs).
+
+An aggregate review is therefore an explicitly invoked run over a named
+set of workspace roots — not something a per-workspace scheduled task
+discovers or starts. Those keep their per-log behaviour, which is what
+stops two runs from draining the same queues at once. Given the roots:
+
+- **Scope by what the logs observe, not by what they declare.** Logs
+  whose workspaces observe the same installed skills are in scope. Do
+  not gate on their `skill:` lists overlapping: Step 3 says convergent
+  entries are routinely filed against *different* skills, so a
+  declared-target gate skips exactly the clusters this exists for.
+  Cluster across all logs first (Step 3's Principle-line pass), then
+  decide.
+- **Qualify every id that leaves its log.** Ids are allocated per log,
+  so `#5` exists in each of them. Any cross-log reference — approval
+  list, `resolution: "by #N"`, Step 8 summary, manifest entry — carries
+  the workspace key alongside the number.
+- **Stage each affected skill ONCE, and publish the anchor everywhere.**
+  One workspace's `skill-updates/` is the anchor; append the manifest
+  entry there AND a pointer entry in every participating workspace's
+  `PENDING.md`. A manifest is read only from its own workspace and its
+  entry is removed on install, so an anchor named in one workspace alone
+  is invisible from the others and gone after the first install.
+- **Bookkeeping stays local.** Each log's work queue, status edits,
+  archival and `last-review-date.txt` are read from and written back to
+  its own workspace. Integration and staging unify; bookkeeping does
+  not.
+
+The principle: when several append-only queues feed edits into shared
+targets, the review that drains them must be unified at the integration
+point even though the queues themselves stay separate — and unification
+needs an identity per queue, or the merged references stop resolving.
 
 ## Approval policy
 
