@@ -313,6 +313,17 @@ differ; an identical id AND slug is one path, which is what the snippet's
 existence check and `noclobber` create guard against; the next review renumbers
 one and logs a meta-observation.
 
+**The bounded-mutation discipline outlived the single-file log.** It was
+written for `log.md` and it applies to every deletion or replacement the
+agent makes in any multi-entry text file — a handoff document, a numbered
+list, a review report, a manifest. Locate the target by its own boundaries
+(the item's first line and the next item's first line), never by
+surrounding whitespace or a greedy pattern: a `\n\n` "paragraph" boundary
+around one item of a numbered list ran to the end of the list and deleted
+every item after it, exactly the shape of the sixteen-entry loss above.
+Re-read the region after the edit and count what survived against what
+was meant to survive.
+
 ## Editing an existing observation
 
 Status changes and archival touch exactly one file. Re-read that file
