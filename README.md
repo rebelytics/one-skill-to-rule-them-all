@@ -65,6 +65,8 @@ The skill is a small bundle: `SKILL.md`, the files in `references/` that are loa
 
 **Other systems:** keep the folder structure intact wherever your platform expects skills, and let your AI guide you (see "How it works" above).
 
+**Check that it actually runs.** Installing the files is not the same as activating the skill: description matching alone under-triggers, so add the activation instruction from `references/environments.md` to your CLAUDE.md (or your platform's equivalent) or install the session-start hook. Then verify in a *new* session — the session you install in cannot prove it — that the skill is invoked before the first tool call. The external tell if you skipped this: if `skill-observations/observation-log/` doesn't exist after a few sessions of real work, activation never happened.
+
 ## Claude environment notes
 
 **In Claude Cowork (including Dispatch) or Claude Code in the desktop app:** Full experience. The observer writes observation logs to your filesystem, so improvements persist between sessions and can be actioned easily. Observations land in `[your shared folder]/skill-observations/observation-log/`, one small file each; proposed skill updates land in `[your shared folder]/skill-updates/`. Upgrading from a version before 3.0? The first session converts your old single-file log automatically (see the user guide). You don't normally need to look at these directly — Claude handles them — but they're there if you want to inspect what's been captured.

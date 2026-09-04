@@ -218,6 +218,33 @@ the reminder branch fires by running the hook against fixtures at `never`,
 that never fires and a nag that is correctly silent look identical from a
 passing run.
 
+### Verify activation in a NEW session — the installing session cannot prove it
+
+The config file is read at session start, so an instruction written
+mid-session takes effect only on the next one; and in a harness that
+hot-loads a newly installed skill, the skill being callable right after
+install proves nothing about activation — it was invoked by hand. The
+installing session therefore sees everything pass (bundle complete, skill
+listed, protocol ran, hook emits valid JSON) while the one thing that
+matters is untested, and the tempting close is "installed and tested".
+Report the install as **activation unverified** until a fresh session has
+been seen invoking the skill on its own, and name the check: in the next
+session, before any work, confirm the skill was invoked (not merely
+listed) and that the Session Start Protocol ran — verify by evidence of
+invocation, not by a side effect that a hand invocation would also
+produce. If the environment offers no way to start a fresh session from
+the installing one (a GUI-only harness, no CLI), hand the check to the
+user as the first item of their next session; an unverifiable step never
+closes silently as "tested".
+
+The runtime cannot diagnose its own absence — Session Start step 4 only
+runs once activation has already succeeded — so the external diagnostic
+is the one that catches a skipped install step: **if
+`skill-observations/observation-log/` does not exist after a few sessions
+of tool-using work, activation never happened**; check the activation
+block in the config, or install the hook. The README carries the same
+diagnostic for users who never read this file.
+
 ### If CLAUDE.md (or the equivalent config) is governance-protected
 
 Some setups guard shared config files with hooks or file-protection rules
