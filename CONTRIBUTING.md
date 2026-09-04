@@ -43,6 +43,14 @@ and say how yours differs.
 Release notes mention contributors by handle. If you would rather not be
 credited, say so in the issue.
 
+The trailers are checked, not assumed: before a release is cut, every
+commit that closes an issue is verified to carry the `Co-authored-by:` or
+`Reported-by:` trailer the issue earned, and a commit without one does not
+ship. v3.1.0 shipped with the credits in the commit bodies only, which
+does not reach your profile or the contributors list; the commit that
+adds this paragraph carries every credit that release owed, and the check
+now runs as part of the release procedure.
+
 ## What kind of change goes where
 
 - **Improvements to the core skill** — fixes, clarifications, missing
