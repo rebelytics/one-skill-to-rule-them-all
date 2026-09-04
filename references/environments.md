@@ -128,6 +128,15 @@ that directory and the identity root are both "stable"; anchor inside the
 managed directory when one exists, otherwise on the identity root — never
 both.
 
+**Scope matches installation scope.** Skills installed at user or global
+scope are observed from every project, so their log is one user-scope
+path shared by every project, tool and agent; a per-project anchor is
+right only for skills that exist in one project. A stable anchor can
+still be plural — in Claude Code the identity is derived from the
+directory the session starts in, so per-subfolder habits shard the log
+into several stable anchors that each look like the only one. Decide the
+scope once, at install, and pin it.
+
 **Before creating a log, search for one.** Check the plausible anchor
 candidates — the pinned path, the project identity root, the
 environment-managed persistence directory, the shared folder, the other

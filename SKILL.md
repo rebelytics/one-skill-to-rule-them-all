@@ -46,7 +46,18 @@ cwd inside an ephemeral checkout — a git worktree under
 `.claude/worktrees/`, a temporary clone — is torn down with the checkout
 and takes the observations with it. Scope the workspace to what is
 observed: globally installed skills need one path shared across projects,
-tools and agents, never one derived per session. Never place it inside a
+tools and agents, never one derived per session — and "stable" is not
+the same as "single". In Claude Code the project identity is derived
+from the directory a session starts in, so a habit of starting sessions
+in per-project subfolders yields one stable anchor per subfolder, each
+a silent shard of the same log; a per-project default scatters
+observations about a globally installed skill across every project
+touched, and a review run in any one of them looks complete while seeing
+a fraction of the backlog. The rule: if the skills being observed are
+installed at user or global scope, pin the log to one matching
+user-scope path (for example `~/.claude/skill-observations/` or the
+equivalent outside any project) and keep the per-project default only
+for skills that exist in that project alone. Never place it inside a
 skills-discovery directory. Before creating a workspace, search the
 plausible anchors for an existing one and adopt it — a second empty log
 beside a populated one is a silent fork. **The observation log is a
