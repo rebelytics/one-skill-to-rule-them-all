@@ -59,8 +59,8 @@ lines — never the bodies. This is what keeps the session-start scan and
 the review's work-queue pass cheap once hundreds of observations exist:
 
 ```bash
-d=skill-observations/observation-log                                # re-derive in EVERY call
-n=$(find skill-observations/observation-log -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')  # literal path: independent of $d
+d="[ABSOLUTE PATH]/skill-observations/observation-log"   # the pinned workspace path — re-derive in EVERY call, never relative to the cwd
+n=$(find "[ABSOLUTE PATH]/skill-observations/observation-log" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')  # literal path: independent of $d
 parsed=$(find "$d" -maxdepth 1 -name '*.md' -exec awk 'FNR==1 {if (/^---[[:space:]]*$/) print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')
 for f in $(find "$d" -maxdepth 1 -name '*.md' | sort); do
   awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
@@ -206,7 +206,7 @@ stale resolved files to `archive/`, so archival happens as a side effect
 of a step no write can skip.
 
 ```bash
-d=skill-observations/observation-log
+d="[ABSOLUTE PATH]/skill-observations/observation-log"   # the pinned workspace path, never relative to the cwd
 today=$(date +%F)          # archival rides inside this command (see below):
 for f in $(find "$d" -maxdepth 1 -name '*.md'); do   # stale resolved files move before the id is read
   hdr=$(awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}

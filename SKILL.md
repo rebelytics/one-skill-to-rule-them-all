@@ -55,7 +55,12 @@ directory:**
 with a YAML frontmatter header per observation, with resolved entries under
 `observation-log/archive/` — unless the user's configuration pins it
 elsewhere. "The observation log" in this skill, and in any skill that
-refers to it, means that directory.
+refers to it, means that directory. Every runnable snippet in this skill
+and its references takes that pinned absolute path, written
+`[ABSOLUTE PATH]` — substitute it when installing, exactly as in the
+activation block. A snippet run with a relative path from any other
+directory does not fail: it reports an empty, clean backlog, which is the
+one answer that never gets questioned.
 
 ## Reference files — load on demand, not up front
 
@@ -154,8 +159,8 @@ was handled without its reference loaded, log an observation.
    rather than an error.
 
    ```bash
-   d=skill-observations/observation-log                                # re-derive in EVERY call
-   n=$(find skill-observations/observation-log -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')  # literal path: independent of $d
+   d="[ABSOLUTE PATH]/skill-observations/observation-log"   # the pinned workspace path — re-derive in EVERY call, never relative to the cwd
+   n=$(find "[ABSOLUTE PATH]/skill-observations/observation-log" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')  # literal path: independent of $d
    parsed=$(find "$d" -maxdepth 1 -name '*.md' -exec awk 'FNR==1 {if (/^---[[:space:]]*$/) print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')
    for f in $(find "$d" -maxdepth 1 -name '*.md' | sort); do
      awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
@@ -357,7 +362,7 @@ resolved files into `archive/` — archival is a side effect of deriving the
 id, not a separate duty (see Archival on Write):
 
 ```bash
-d=skill-observations/observation-log
+d="[ABSOLUTE PATH]/skill-observations/observation-log"   # the pinned workspace path, never relative to the cwd
 today=$(date +%F)          # archival rides inside this command (see below):
 for f in $(find "$d" -maxdepth 1 -name '*.md'); do   # stale resolved files move before the id is read
   hdr=$(awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
