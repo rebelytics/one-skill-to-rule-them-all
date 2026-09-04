@@ -62,6 +62,9 @@ the review's work-queue pass cheap once hundreds of observations exist:
 d="[ABSOLUTE PATH]/skill-observations/observation-log"   # the pinned workspace path — re-derive in EVERY call, never relative to the cwd
 n=$(find "[ABSOLUTE PATH]/skill-observations/observation-log" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')  # literal path: independent of $d
 parsed=$(find "$d" -maxdepth 1 -name '*.md' -exec awk 'FNR==1 {if (/^---[[:space:]]*$/) print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')
+suspect=$(find "$d" -maxdepth 1 -name '*.md' -exec awk 'FNR==1 && /^---[[:space:]]*$/ {fm=1; next}
+  fm && /^---[[:space:]]*$/ {fm=0; nextfile}
+  fm && /^[a-z_]+: [^"\047[|>].*: / {print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')   # values with an unquoted ": " — invalid YAML
 for f in $(find "$d" -maxdepth 1 -name '*.md' | sort); do
   awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
        fm && /^---[[:space:]]*$/ {exit}
@@ -71,6 +74,8 @@ done
 if [ "$n" -gt 0 ] && [ "$parsed" -eq 0 ]; then
   echo "SCAN COMMAND BROKEN — $n files present, 0 headers parsed"; exit 1
 fi
+[ "$suspect" -gt 0 ] && echo "NOTE: $suspect of $n headers carry an unquoted ': ' in a value — quote those values (File format)"
+printf 'files: %s  parsed: %s  suspect: %s\n' "$n" "$parsed" "$suspect"
 ```
 
 **Guard the read, not just the write.** A query that returns nothing is

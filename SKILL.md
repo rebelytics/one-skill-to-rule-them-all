@@ -173,6 +173,9 @@ was handled without its reference loaded, log an observation.
    d="[ABSOLUTE PATH]/skill-observations/observation-log"   # the pinned workspace path — re-derive in EVERY call, never relative to the cwd
    n=$(find "[ABSOLUTE PATH]/skill-observations/observation-log" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')  # literal path: independent of $d
    parsed=$(find "$d" -maxdepth 1 -name '*.md' -exec awk 'FNR==1 {if (/^---[[:space:]]*$/) print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')
+   suspect=$(find "$d" -maxdepth 1 -name '*.md' -exec awk 'FNR==1 && /^---[[:space:]]*$/ {fm=1; next}
+     fm && /^---[[:space:]]*$/ {fm=0; nextfile}
+     fm && /^[a-z_]+: [^"\047[|>].*: / {print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')   # values with an unquoted ": " — invalid YAML
    for f in $(find "$d" -maxdepth 1 -name '*.md' | sort); do
      awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
           fm && /^---[[:space:]]*$/ {exit}
@@ -182,6 +185,8 @@ was handled without its reference loaded, log an observation.
    if [ "$n" -gt 0 ] && [ "$parsed" -eq 0 ]; then
      echo "SCAN COMMAND BROKEN — $n files present, 0 headers parsed"; exit 1
    fi
+   [ "$suspect" -gt 0 ] && echo "NOTE: $suspect of $n headers carry an unquoted ': ' in a value — quote those values (File format)"
+   printf 'files: %s  parsed: %s  suspect: %s\n' "$n" "$parsed" "$suspect"
    ```
 3. **Review trigger.** Read `skill-observations/last-review-date.txt`. The
    value carries the truth: a date = when the last review actually ran;
@@ -481,21 +486,25 @@ as logged without a sibling check.
 
 ```markdown
 ---
-id: [N]
-title: [Short descriptive title]
+id: 0
+title: "Short descriptive title"
 status: open            # open | actioned | declined | superseded | parked
 type: open-source       # open-source | internal
-skill: [list of existing skills this improves — always a list, even with
-       one entry; first entry is primary; may be empty]
-proposes_skill: [list of new skills this argues for, by working name;
-       may be empty — an observation can fill either list or both]
-siblings_checked: [MANDATORY, never blank: the family name and the members
-       evaluated, plus the verdict — e.g. "family-name: a, b — shared, both
-       added" or "family-name: a, b — instance-specific, no propagation";
-       the literal `none` only where the target belongs to no family]
-area: [which part of the skill or workflow]
-date: [YYYY-MM-DD]
-session_context: [what task was being worked on]
+skill: [skill-a, skill-b]        # existing skills this improves — always a
+                                 # list, even with one entry; first entry is
+                                 # primary; may be empty: []
+proposes_skill: []               # new skills this argues for, by working
+                                 # name; an observation can fill either
+                                 # list or both
+siblings_checked: "family-name: a, b — shared, both added"
+                                 # MANDATORY, never blank: the family name,
+                                 # the members evaluated and the verdict —
+                                 # or "family-name: a, b — instance-specific,
+                                 # no propagation"; the literal none only
+                                 # where the target belongs to no family
+area: "which part of the skill or workflow"
+date: YYYY-MM-DD
+session_context: "what task was being worked on"
 parked_until:           # MANDATORY when status is parked, empty otherwise:
                         #   one line naming the condition that unparks it
 resolved:               # date resolved; leave empty while OPEN
@@ -511,6 +520,21 @@ section or rule; for new skills, scope and key components.]
 
 **Principle:** [The generalisable takeaway — the most important field.]
 ```
+
+**Every prose value is double-quoted.** `title`, `siblings_checked`,
+`area`, `session_context`, `resolution`, `parked_until` and `reference`
+carry free text, and free text contains `: ` as the common case, not the
+exotic one ("resolution: Actioned: principle #8 extended…"). Unquoted,
+that is invalid YAML: the frontmatter still extracts, so nothing in the
+scan notices, but every consumer that PARSES it — a review reading
+`status`, a hook counting `skill:` — throws on the file. Measured on one
+live log at last verification: 27 of 292 files unreadable, 25 of them in
+`resolution:`, every one written by following the earlier unquoted
+template. Quote the value (`"…"`, with inner `"` written as `\"`), keep
+lists in `[]` with bare kebab-case names, and leave dates and status
+words bare. The scan reports suspect headers — a value with an unquoted
+`: ` — beside the file count, so a log drifting into this state announces
+itself at session start.
 
 **`parked` means decided, not pending.** Use it when an observation is sound
 but cannot be acted on until an external precondition is met — the scheduled
