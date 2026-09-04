@@ -485,7 +485,14 @@ actually fire.
 **Context preservation:** if an observation depends on session-local data
 (uploads, API output), save that context into the workspace first and set
 `reference:` to its path — an observation whose evidence dies with the
-session is incomplete.
+session is incomplete. The pointer must survive the handoff too:
+`reference:` — like any pointer that hands work to a later session — must
+name a durable path, one that outlives the session and a reboot and that
+a session other than this one can resolve. A session-scoped temp
+directory fails both tests, and a role name ("the scratchpad", "my
+notes") is not a path at all. Such a pointer cannot fail at write time,
+only at read time, when its author is no longer there to repair it — a
+pointer a fresh session cannot follow is not preservation.
 
 **Confidentiality at logging time:** for `type: open-source` observations,
 the Issue/Improvement fields may reference specifics for context, but the
