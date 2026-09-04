@@ -135,7 +135,12 @@ right only for skills that exist in one project. A stable anchor can
 still be plural — in Claude Code the identity is derived from the
 directory the session starts in, so per-subfolder habits shard the log
 into several stable anchors that each look like the only one. Decide the
-scope once, at install, and pin it.
+scope once, at install, and pin it. The one legitimate plural is several
+logs kept apart on purpose because their observation bodies carry
+non-portable project context while the skills they observe are shared:
+those are not consolidated but reviewed together — the precondition and
+the procedure are under "Several observation logs on one machine" in
+`references/weekly-review.md`.
 
 **Before creating a log, search for one.** Check the plausible anchor
 candidates — the pinned path, the project identity root, the

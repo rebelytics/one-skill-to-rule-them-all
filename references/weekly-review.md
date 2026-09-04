@@ -67,7 +67,14 @@ split across sessions, not across logs).
 An aggregate review is therefore an explicitly invoked run over a named
 set of workspace roots — not something a per-workspace scheduled task
 discovers or starts. Those keep their per-log behaviour, which is what
-stops two runs from draining the same queues at once. Given the roots:
+stops two runs from draining the same queues at once. State each root
+once, as an absolute path: a root derived from a project identity can
+begin with `-` (Claude Code's `-root`, `-root-projects-…`), and passed
+relatively, `ls` and `grep` read it as an option and exit nonzero — a
+scan that redirects stderr and pipes into a count then reports zero
+files and nothing says why, the empty scan in a populated log that the
+Session Start Protocol already treats as a broken command. Given the
+roots:
 
 - **Scope by what the logs observe, not by what they declare.** Logs
   whose workspaces observe the same installed skills are in scope. Do
@@ -81,15 +88,28 @@ stops two runs from draining the same queues at once. Given the roots:
   list, `resolution: "by #N"`, Step 8 summary, manifest entry — carries
   the workspace key alongside the number.
 - **Stage each affected skill ONCE, and publish the anchor everywhere.**
-  One workspace's `skill-updates/` is the anchor; append the manifest
-  entry there AND a pointer entry in every participating workspace's
-  `PENDING.md`. A manifest is read only from its own workspace and its
-  entry is removed on install, so an anchor named in one workspace alone
-  is invisible from the others and gone after the first install.
+  One workspace is the *anchor workspace*: its `skill-updates/` holds the
+  staged copy, and it supplies `[workspace folder]` for the Step 5 seed,
+  which then chooses the *anchor directory* inside it by the same-day
+  rule exactly as a single-log run would — two decisions, in that order.
+  Append the manifest entry there AND a pointer entry in every *other*
+  participating workspace's `PENDING.md` — the skill and the absolute
+  path of its staged copy (anchor workspace, anchor directory, skill), so
+  that workspace's reconciliation gate can diff it against live like a
+  local entry; it counts as one staged update there and is removed by
+  the same gate, a pointer whose target is gone being superseded.
+  Create the manifest where a workspace has never staged anything. A
+  manifest is read only from its own
+  workspace and its entry is removed on install, so an anchor named in
+  one workspace alone is invisible from the others and gone after the
+  first install.
 - **Bookkeeping stays local.** Each log's work queue, status edits,
-  archival and `last-review-date.txt` are read from and written back to
-  its own workspace. Integration and staging unify; bookkeeping does
-  not.
+  archival, `activation-tiers.txt` and `last-review-date.txt` are read
+  from and written back to its own workspace — the activation config
+  Step 1 checks is one shared block (and, where the harness has one, one
+  shared hook), but the record of the tiers found goes to every
+  participant, so each log's next review has its own baseline.
+  Integration and staging unify; bookkeeping does not.
 
 The principle: when several append-only queues feed edits into shared
 targets, the review that drains them must be unified at the integration
@@ -412,7 +432,9 @@ the most. An empty duplicate search releases the draft only after a
 positive control: search for a term you know an existing issue contains,
 and if that returns nothing the search is broken, not clean.
 
-Choose the anchor first: if `[today]/[skill-name]` already exists, apply the
+Choose the anchor directory first (in an aggregate run over several logs,
+inside the anchor workspace — see "Several observation logs on one
+machine"): if `[today]/[skill-name]` already exists, apply the
 same-day rule under Delivery — integrate another writer's pending copy, or give
 a second round after an install a discriminated anchor — and put that path into
 `s=` below; the guard line refuses to seed over an existing anchor.
@@ -719,8 +741,11 @@ it, or when the keep-two rule prunes the directory — never "at install
 time", because no session observes the install; the session that reads
 the manifest owns its cleanup.
 
-The manifest carries provenance and install instructions, never follow-up
-work. Anything a review recognises as "check next time" — a sibling to
+The manifest carries provenance, install instructions and — in an
+aggregate run over several logs — the pointer to the anchor workspace
+that holds the staged copy (the entry kind defined under "Several
+observation logs on one machine"); never follow-up work. Anything a
+review recognises as "check next time" — a sibling to
 mirror, an audit to run once the staging is installed — is logged as its own
 observation before the summary is written: created with `status: open`, as the
 file-format rule requires of every new entry, and parked in the same turn —
