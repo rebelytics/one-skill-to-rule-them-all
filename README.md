@@ -2,9 +2,9 @@
 
 ## The meta-skill that builds and improves all your skills, including itself.
 
-In the first seven months of using this meta-skill, it **logged over 1200 observations across my 70 skills**, most of which were turned into skill improvements. The majority of my 70 skills were themselves created based on observations by the meta-skill.
+In the first seven months of using this meta-skill, it **logged over 1300 observations across my 75 skills**, most of which were turned into skill improvements. The majority of my 75 skills were themselves created based on observations by the meta-skill.
 
-The current version of task-observer also includes improvements suggested by 36 different users, across 60 issues and 12 pull requests. Without these contributions, the project wouldn't be half as good as it is today.
+The current version of task-observer also includes improvements suggested by 44 different users, across 82 issues and 23 pull requests. Without these contributions, the project wouldn't be half as good as it is today.
 
 This meta-skill is a practical application of the [Augmented Expertise](https://www.rebelytics.com/augmented-expertise/) methodology, an AI framework for knowledge workers. However, users have reported successful integrations into their Hermes and Openclaw setups, so it works equally well with autonomous agents.
 
@@ -152,6 +152,8 @@ I would like to thank the following creators, platforms, publications, companies
 - Erfan Iranshad: [https://erfaniranshad.ir/5-claude-code-plugins/](https://erfaniranshad.ir/5-claude-code-plugins/)
 - Tech Future Atlas: [https://techfutureatlas.com/posts/t3_1tm887i/](https://techfutureatlas.com/posts/t3_1tm887i/)
 - 球球不冲了: [https://www.binance.com/en/square/post/355189407349041](https://www.binance.com/en/square/post/355189407349041)
+- AI LABS: [https://www.youtube.com/watch?v=jyLKRN36-Dc](https://www.youtube.com/watch?v=jyLKRN36-Dc)
+- Aarush Jain: [https://medium.com/no-time/i-stopped-losing-hours-to-claude-errors-these-6-claude-skills-changed-everything-6814f594d29e](https://medium.com/no-time/i-stopped-losing-hours-to-claude-errors-these-6-claude-skills-changed-everything-6814f594d29e)
 - gptsavyy: [https://www.instagram.com/reel/DbFs6QENr43/](https://www.instagram.com/reel/DbFs6QENr43/)
 - Hudson Brendon: [https://gist.github.com/hudsonbrendon/818e84cd81bcc215a3ad00286b04af82](https://gist.github.com/hudsonbrendon/818e84cd81bcc215a3ad00286b04af82)
 - IA IRL: [https://www.tiktok.com/@ia_irl/video/7665714151305547030](https://www.tiktok.com/@ia_irl/video/7665714151305547030)

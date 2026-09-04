@@ -1,6 +1,6 @@
 # Getting Started with the task-observer meta-skill (aka "One skill to rule them all")
 
-This guide includes practical tips for getting value out of the meta-skill. It's based on my own daily usage of the skill across Claude Cowork, the web interface, Claude Code (only via the desktop app) and the mobile app. I've been using this skill for seven months now and it has logged more than 1200 observations across my 70 skills, most of which were applied as skill improvements. The majority of my 70 skills were themselves created based on observations by the meta-skill.
+This guide includes practical tips for getting value out of the meta-skill. It's based on my own daily usage of the skill across Claude Cowork, the web interface, Claude Code (only via the desktop app) and the mobile app. I've been using this skill for seven months now and it has logged more than 1300 observations across my 75 skills, most of which were applied as skill improvements. The majority of my 75 skills were themselves created based on observations by the meta-skill.
 
 The best way to get started with this new work setup in any environment is to grab the skill, the reference files, the user guide and the readme file from the repo and feed them to the AI of your choice. It should then be able to guide you towards the best equivalent of this setup for your particular environment, no matter which system you use. As long as skills are supported, this approach should work with any AI system, with some adjustments.
 
