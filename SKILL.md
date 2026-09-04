@@ -155,18 +155,17 @@ was handled without its reference loaded, log an observation.
 
    ```bash
    d=skill-observations/observation-log                                # re-derive in EVERY call
-   n=$(ls skill-observations/observation-log/*.md 2>/dev/null | wc -l) # literal path: independent of $d
-   parsed=0
-   for f in "$d"/*.md; do
-     [ -e "$f" ] || continue
-     hdr=$(awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
-                fm && /^---[[:space:]]*$/ {exit}
-                fm' "$f")
-     [ -n "$hdr" ] && parsed=$(( parsed + 1 ))
-     printf '%s\n---\n' "$hdr"
+   n=$(find skill-observations/observation-log -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')  # literal path: independent of $d
+   parsed=$(find "$d" -maxdepth 1 -name '*.md' -exec awk 'FNR==1 {if (/^---[[:space:]]*$/) print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')
+   for f in $(find "$d" -maxdepth 1 -name '*.md' | sort); do
+     awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
+          fm && /^---[[:space:]]*$/ {exit}
+          fm' "$f"
+     printf -- '---\n'
    done
-   [ "$n" -gt 0 ] && [ "$parsed" -eq 0 ] && \
-     { echo "SCAN COMMAND BROKEN — $n files present, 0 headers parsed"; exit 1; }
+   if [ "$n" -gt 0 ] && [ "$parsed" -eq 0 ]; then
+     echo "SCAN COMMAND BROKEN — $n files present, 0 headers parsed"; exit 1
+   fi
    ```
 3. **Review trigger.** Read `skill-observations/last-review-date.txt`. The
    value carries the truth: a date = when the last review actually ran;

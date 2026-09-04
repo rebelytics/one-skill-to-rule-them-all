@@ -60,18 +60,17 @@ the review's work-queue pass cheap once hundreds of observations exist:
 
 ```bash
 d=skill-observations/observation-log                                # re-derive in EVERY call
-n=$(ls skill-observations/observation-log/*.md 2>/dev/null | wc -l) # literal path: independent of $d
-parsed=0
-for f in "$d"/*.md; do
-  [ -e "$f" ] || continue
-  hdr=$(awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
-             fm && /^---[[:space:]]*$/ {exit}
-             fm' "$f")
-  [ -n "$hdr" ] && parsed=$(( parsed + 1 ))
-  printf '%s\n---\n' "$hdr"
+n=$(find skill-observations/observation-log -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')  # literal path: independent of $d
+parsed=$(find "$d" -maxdepth 1 -name '*.md' -exec awk 'FNR==1 {if (/^---[[:space:]]*$/) print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')
+for f in $(find "$d" -maxdepth 1 -name '*.md' | sort); do
+  awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
+       fm && /^---[[:space:]]*$/ {exit}
+       fm' "$f"
+  printf -- '---\n'
 done
-[ "$n" -gt 0 ] && [ "$parsed" -eq 0 ] && \
-  { echo "SCAN COMMAND BROKEN — $n files present, 0 headers parsed"; exit 1; }
+if [ "$n" -gt 0 ] && [ "$parsed" -eq 0 ]; then
+  echo "SCAN COMMAND BROKEN — $n files present, 0 headers parsed"; exit 1
+fi
 ```
 
 **Guard the read, not just the write.** A query that returns nothing is
@@ -87,13 +86,32 @@ the file count comes from a literal path, not from the variable the parse
 loop uses, and the assertion compares two numbers derived by different
 means. Empty output has to earn the status of evidence.
 
+Three properties of the snippet's form are load-bearing, and each was
+learned from a report. The guard's `parsed` count is derived by its own
+command, never by a counter incremented inside the printing loop: a
+counter that rides the output stream lives in a subshell the moment the
+loop is piped (`done | grep …`), and the guard then fires "0 headers
+parsed" directly under a screen of correctly printed headers. Files are
+enumerated with `find`, not a glob: under zsh's default `nomatch` an
+unmatched `"$d"/*.md` aborts the whole `for` before its first iteration,
+so a fresh install's empty log produced an error where the answer was
+"no observations", and the `[ -e "$f" ] || continue` line meant to catch
+the literal glob was dead code there. And the guard is an `if` block, not
+a trailing `&&` chain: a chain whose last test is false leaves the block
+with exit status 1 on every healthy scan, so a harness that surfaces exit
+codes reported failure at exactly the step whose job is to say whether
+the log could be read. When adapting a snippet, keep the guard out of
+the stream it guards, enumerate without globs, and end on a statement
+whose status is 0 when nothing is wrong.
+
 **Snippets spanning several tool calls must re-derive their own paths.**
 Shell state does not carry between tool calls in most harnesses, so a
-variable defined in an earlier call is empty in the next one — and an
-empty path variable does not error, it expands the glob to `/*.md` and
-matches nothing. A filter silently becomes a match-nothing filter. Every
-snippet here defines the paths it uses in the same invocation that uses
-them; keep that property when adapting them.
+variable defined in an earlier call is empty in the next one. With a
+glob, an empty path variable does not error — it expands to `/*.md` and
+matches nothing, and a filter silently becomes a match-nothing filter;
+`find ""` at least errors, which is one reason the snippets enumerate
+with `find`. Every snippet here defines the paths it uses in the same
+invocation that uses them; keep that property when adapting them.
 
 ## Skill families and the sibling check
 
