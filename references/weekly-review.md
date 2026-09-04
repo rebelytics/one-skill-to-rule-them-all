@@ -323,6 +323,11 @@ skills).
 **Step 5 — apply.** Begin with the copy, not the edit: for each skill
 with approved/non-escalated items,
 
+Choose the anchor first: if `[today]/[skill-name]` already exists, apply the
+same-day rule under Delivery — integrate another writer's pending copy, or give
+a second round after an install a discriminated anchor — and put that path into
+`s=` below; the guard line refuses to seed over an existing anchor.
+
 ```bash
 # Stage the FULL skill directory (SKILL.md + references/, scripts/, assets/),
 # not SKILL.md alone. From a read-only mount, mkdir + per-file cp + chmod is
@@ -331,6 +336,7 @@ with approved/non-escalated items,
 # editing rule 6):
 live="<absolute path to the live skill directory, no trailing slash>"
 s="[workspace folder]/skill-updates/[today]/[skill-name]"
+[ -e "$s" ] && { echo "anchor exists — apply the same-day rule (Delivery) before seeding"; exit 1; }
 find "$live" -type d | while IFS= read -r d; do mkdir -p "$s/${d#$live}"; done
 find "$live" -type f | while IFS= read -r f; do cp    "$f" "$s/${f#$live}"; done
 chmod -R u+w "$s"
@@ -568,6 +574,20 @@ by content, not by assuming a single authoritative producer — if two
 same-day copies of one skill diverge, surface the conflict rather than
 letting mtime decide. The manifest entry (below) is the provenance
 marker: who staged it, from which run, applying what.
+The same-day check has a third outcome: the day's folder already holds a copy
+the user has INSTALLED — it diffs clean against live and has no manifest entry
+left, because the install removed it (an entry still present means another
+writer's pending copy: integrate, as above). Do not seed a second round into it: the seed would be
+byte-identical to live, the `diff -rq` gate would pass trivially, and the
+new round would inherit a manifest entry that claims it is installed. Give
+the second round a discriminated anchor (`<date>-<slug>` or `<date>.2`)
+with its own manifest entry, and count rounds rather than days when the
+keep-two rule prunes. The anchor is chosen BEFORE the Step 5 seed — the
+snippet's `s=` line takes the discriminated path — not discovered afterwards
+from this paragraph. (Observed: a second apply round for one skill started
+the same evening the first had been installed; the date-keyed anchor pointed
+at the installed copy, and only a manual check of the manifest state
+prevented seeding over it.)
 
 **Staging manifest.** Every delivery appends one entry to
 `[workspace folder]/skill-updates/PENDING.md`: the skill, the date
