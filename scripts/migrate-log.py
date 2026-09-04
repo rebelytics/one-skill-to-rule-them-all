@@ -69,7 +69,10 @@ LABEL_RE = re.compile(r"^\*\*([A-Za-z][A-Za-z /-]*):\*\*[ \t]*(.*)$")
 ISO_DATE_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 STATUS_RE = re.compile(r"^(OPEN|ACTIONED|DECLINED|SUPERSEDED)\b(.*)$", re.I)
 NEW_SKILL_RE = re.compile(r"^New skill candidate:\s*(.+)$", re.I)
-SKILL_NAME_RE = re.compile(r"^([A-Za-z0-9][A-Za-z0-9._-]*)$")
+# A skill name is a bare token or a scoped `plugin:skill` identifier — the
+# literal string the Skill tool takes on platforms that namespace plugin
+# skills (e.g. `dev-workflow:next`). The colon is part of the name.
+SKILL_NAME_RE = re.compile(r"^([A-Za-z0-9][A-Za-z0-9._-]*)(:[A-Za-z0-9][A-Za-z0-9._-]*)?$")
 
 
 def split_top_level(text, seps=";"):
@@ -265,7 +268,10 @@ def parse_skill(raw, area, known_skills, flags):
     # clean single-skill case: promote the qualifier into an empty area field
     if len(names) == 1 and not area and len(quals) == 1 and names[0] in quals:
         return names, [], quals[names[0]], {}
-    if quals:
+    # An unparseable name is already flagged above; the qualifier flag is
+    # for genuine qualifiers, so do not raise it a second time for the same
+    # cause (one malformed token used to produce two review flags).
+    if any(k not in ("_unparsed",) for k in quals):
         flags.append("skill-qualifiers-need-review")
     return names, [], area, quals
 
@@ -379,6 +385,16 @@ def id_floor_from(paths):
 
 
 def main():
+    # The report prints observation titles, which are log content in any
+    # script; never let the console's encoding decide whether a completed
+    # conversion exits 0 (a cp1252 console raised UnicodeEncodeError on a
+    # title containing an arrow AFTER every file had been written).
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(errors="replace")
+            except (ValueError, AttributeError):
+                pass
     ap = argparse.ArgumentParser()
     ap.add_argument("logs", nargs="+")
     ap.add_argument("--check", action="store_true", help="parse and report only")
