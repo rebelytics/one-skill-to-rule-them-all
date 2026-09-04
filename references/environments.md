@@ -396,7 +396,8 @@ regimes:
 This skill consists of `SKILL.md`, the reference files it lists
 (`weekly-review.md`, `skill-authoring.md`, `environments.md`,
 `observation-log.md`, `signals.md`, `migration.md`,
-`starter-principles.md`) and `scripts/migrate-log.py`. If a referenced
+`starter-principles.md`) and `scripts/migrate-log.py` and
+`scripts/validate-skill-bundle.py`. If a referenced
 file is missing, the install is
 incomplete: proceed using the rules in `SKILL.md`, tell the user which
 files are missing, and point them to the full bundle at the canonical

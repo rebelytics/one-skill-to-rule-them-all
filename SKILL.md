@@ -103,9 +103,10 @@ was handled without its reference loaded, log an observation.
   pre-3.0 single-file `log.md`. **Load only when the Session Start
   Protocol detects a legacy log.** Fresh installs never read it.
 - `references/starter-principles.md` — an optional, provenance-stripped
-  seed set of generic cross-cutting principles. **Load at first run when
-  offering the seed** (Session Start step 1); never read it once the
-  adopter's own principles file exists.
+  seed set of generic cross-cutting principles. **Load only when the
+  starter-set reconciliation is due** (Session Start step 1: the
+  `starter-principles-reviewed.txt` marker is absent or names an older
+  starter set) — never on an ordinary session start.
 
 ## Session Start Protocol
 
@@ -123,15 +124,27 @@ was handled without its reference loaded, log an observation.
    `skill-observations/observation-log/` (with its `archive/`
    subdirectory) or `skill-observations/cross-cutting-principles.md`
    don't exist, create them (principles template:
-   `references/skill-authoring.md`). When the principles file is being
-   created for the first time, offer one choice and act on the answer:
-   start empty, or seed it from `references/starter-principles.md` — a
-   provenance-stripped set of generic methodology principles shipped with
-   the bundle. Seeded entries carry `**Origin:** imported from starter set`
-   so the adopter's own reviews can prune them like any other rule. Never
-   pre-populate silently: the file's authority comes from the adopter's
-   own evidence trail, and unexamined imported rules contradict the
-   pruning principle the file itself carries.
+   `references/skill-authoring.md`). Then the **starter-set
+   reconciliation**, due whenever
+   `skill-observations/starter-principles-reviewed.txt` is absent or holds
+   a starter-set version older than the one in
+   `references/starter-principles.md` (its first line carries
+   `Starter set version: N`) — which covers a fresh install, an existing
+   install upgrading to a bundle that ships the file, and every later
+   growth of the set. Load the starter file, match each starter entry
+   against the adopter's existing principles by substance (a rule that
+   says the same thing under a different title counts as covered), and
+   offer once, in one line: "the bundle ships N starter principles; M are
+   not covered by your file — want to see them?" On yes, show only the
+   uncovered ones, let the adopter pick, and import the picks in the
+   template format with `**Origin:** imported from starter set`, so the
+   adopter's own reviews can prune them like any other rule. On a fresh
+   file M equals N and the choice is simply "start empty, or seed". Either
+   way, write the starter set's version into the marker file, so the
+   offer never repeats until the shipped set changes. Never pre-populate
+   silently: the file's authority comes from the adopter's own evidence
+   trail, and unexamined imported rules contradict the pruning principle
+   the file itself carries.
    Create `skill-observations/last-review-date.txt` containing the literal
    value `never` if it doesn't exist — never write a date into it at setup;
    a date means a review actually ran. If a legacy single-file

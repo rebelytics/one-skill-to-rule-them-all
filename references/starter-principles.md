@@ -1,5 +1,7 @@
 # Starter Cross-Cutting Principles (optional seed)
 
+Starter set version: 1
+
 This file is NOT the adopter's principles file. It is an optional seed:
 a curated set of generic methodology principles, accumulated over a long
 run of the task-observer loop and stripped of their provenance
@@ -8,10 +10,17 @@ The live file is `[workspace folder]/skill-observations/cross-cutting-principles
 and its authority comes from the adopter's own evidence trail — so nothing
 here takes effect until the adopter consciously imports it.
 
-**When to read this file:** only at first run, when the Session Start
-Protocol (SKILL.md, step 1) is creating the principles file and offers the
-choice "start empty, or seed from the starter set". Never read it once the
-adopter's own file exists.
+**When to read this file:** only when the Session Start Protocol
+(SKILL.md, step 1) finds the starter-set reconciliation due — the marker
+`skill-observations/starter-principles-reviewed.txt` is absent, or holds
+a version lower than the `Starter set version` line above. That is true
+on a fresh install, on an existing install's first session after
+upgrading to a bundle that ships this file, and again whenever a later
+version grows the set. Never read it on an ordinary session start. The
+reconciliation compares by substance, not title: an adopter who already
+carries a rule under their own wording is covered, and only the uncovered
+entries are offered. Bump the version line whenever entries are added or
+materially changed, or existing installs never see the change.
 
 **How to import:** copy the entries the adopter chooses (all, or a subset)
 into the live file in the template format from `references/skill-authoring.md`,
