@@ -539,7 +539,7 @@ writable — staging-only is a deliberate safety property of the review loop
 constraint. For any skill with
 supporting files, zip the staged directory into a `.skill` bundle and
 present the bundle; a bare SKILL.md install silently truncates a
-multi-file skill. Pre-delivery gate (two items, run as the last step
+multi-file skill. Pre-delivery gate (run as the last step
 before presenting): (1) grep the staged SKILL.md body for `references/`,
 `scripts/`, `assets/` paths and fail the delivery if any referenced file
 is missing from the staged set; (2) for multi-file skills, fail the
@@ -550,8 +550,16 @@ delivery above 1024 characters, with a soft warning above ~900 —
 measure every skill in the set, not just the one that failed; (4) `name`
 is kebab-case, matches the directory, and the frontmatter parses; (5) the
 bundle's member paths use `/`, checked on raw bytes (Windows packers write
-`\`, and normalising readers hide it). `scripts/validate-skill-bundle.py`
-asserts all five and packs a well-formed bundle — run it where Python is
+`\`, and normalising readers hide it); (6) exactly one frontmatter block
+— a second `---` block or stray `name:`/`description:` lines directly
+after the first is a duplicated header that every field check passes by
+construction; (7) no edit residue in any text file of the bundle,
+outside code: a literal regex backreference (`\1`) on its own line or in
+prose, merge-conflict markers, unresolved `{{slot}}` placeholders — the
+gate checks the form of a delivery, and this is the one content assertion,
+because a failed replacement once passed apply, gate and install as a
+literal `\1`. `scripts/validate-skill-bundle.py`
+asserts all seven and packs a well-formed bundle — run it where Python is
 available. Sweep build artefacts (`__pycache__/`, `*.pyc`, `.DS_Store`,
 `.~lock.*`) before zipping and read the archive listing back after, for
 leaked artefacts and for path separators. When seeding staged

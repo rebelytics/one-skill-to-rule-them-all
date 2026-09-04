@@ -32,6 +32,18 @@ MAX_DESCRIPTION_CHARS = 1024   # installer's documented cap on the folded descri
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")   # kebab-case
 PATH_RE = re.compile(r"`((?:references|scripts|assets)/[^`\s*?]+\.[A-Za-z0-9]+)`")
 BUILD_JUNK = {"__pycache__", ".DS_Store"}
+# Edit residue: strings that only ever enter a file through a failed
+# replacement, an unresolved template slot or an unfinished merge. The gate
+# checks bundle FORM; this is the one CONTENT assertion, because a literal
+# backreference passed apply, gate and install once.
+RESIDUE_RES = [
+    (re.compile(r"(?m)^\\[0-9]\s*$"), "literal regex backreference on its own line"),
+    (re.compile(r"(?<![\w`])\\[1-9](?![\w])"), "literal regex backreference in prose"),
+    (re.compile(r"(?m)^(<<<<<<<|=======|>>>>>>>)( |$)"), "merge conflict marker"),
+    (re.compile(r"\{\{[A-Za-z_][A-Za-z0-9_ .-]*\}\}"), "unresolved template slot"),
+    (re.compile(r"\b(TODO|FIXME|XXX)\b: ?(fill|replace|write)", re.I), "placeholder note left in"),
+]
+SECOND_FRONTMATTER_RE = re.compile(r"^---\n.*?\n---\n\s*(---\n|name:|description:)", re.S)
 
 
 def frontmatter(text):
@@ -88,9 +100,26 @@ def check_dir(skill_dir, fails):
     for rel in sorted(set(PATH_RE.findall(text))):
         if not (skill_dir / rel).is_file():
             fails.append(f"cited path missing from staged set: {rel}")
+    # exactly one frontmatter block: a second `---` block (or stray
+    # name:/description: lines) directly after the first is a duplicated
+    # header that every field check passes by construction
+    if SECOND_FRONTMATTER_RE.match(text):
+        fails.append("frontmatter: a second frontmatter block follows the first")
     for p in skill_dir.rglob("*"):
         if p.name in BUILD_JUNK or p.suffix == ".pyc" or p.name.startswith(".~lock"):
             fails.append(f"build artefact in staged tree: {p.relative_to(skill_dir)}")
+        # content residue in every text file of the bundle, not only SKILL.md
+        if p.is_file() and p.suffix.lower() in (".md", ".txt", ".yml", ".yaml", ".json"):
+            body = p.read_text(encoding="utf-8", errors="replace")
+            # code is where backreferences legitimately live: blank out
+            # fenced blocks and inline spans, keeping line numbers intact
+            prose = re.sub(r"(?ms)^```.*?^```[ \t]*$", lambda m: re.sub(r"[^\n]", " ", m.group(0)), body)
+            prose = re.sub(r"`[^`\n]*`", lambda m: " " * len(m.group(0)), prose)
+            for rx, why in RESIDUE_RES:
+                m = rx.search(prose)
+                if m:
+                    line = body.count("\n", 0, m.start()) + 1
+                    fails.append(f"edit residue in {p.relative_to(skill_dir)}:{line}: {why} ({m.group(0).strip()!r})")
 
 
 def pack(src, out):
