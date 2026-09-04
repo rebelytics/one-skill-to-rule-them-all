@@ -208,8 +208,7 @@ of a step no write can skip.
 ```bash
 d=skill-observations/observation-log
 today=$(date +%F)          # archival rides inside this command (see below):
-for f in "$d"/*.md; do     # stale resolved files move before the id is read
-  [ -e "$f" ] || continue
+for f in $(find "$d" -maxdepth 1 -name '*.md'); do   # stale resolved files move before the id is read
   hdr=$(awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
              fm && /^---[[:space:]]*$/ {exit} fm' "$f")
   case $hdr in
@@ -224,8 +223,11 @@ for f in "$d"/*.md; do     # stale resolved files move before the id is read
 done
 hi=$( { ls "$d" "$d/archive" 2>/dev/null | grep -oE '^[0-9]+'; cat "$d/archive/.id-floor" 2>/dev/null; } \
      | sed 's/^0*\([0-9]\)/\1/' | sort -n | tail -1); : "${hi:=0}"
-[ "$hi" -eq 0 ] && [ -n "$(ls "$d"/*.md 2>/dev/null)" ] && { echo "ID COMMAND BROKEN — log is non-empty but no ids extracted"; exit 1; }
+[ "$hi" -eq 0 ] && [ -n "$(find "$d" -maxdepth 1 -name '*.md')" ] && { echo "ID COMMAND BROKEN — log is non-empty but no ids extracted"; exit 1; }
 next_id=$(( hi + 1 )); echo "$next_id" > "$d/archive/.id-floor"
+f="$d/$(printf '%04d' "$next_id")-<slug>.md"      # the target path, built from the id just derived
+[ -e "$f" ] && { echo "COLLISION — $f exists; re-derive the id"; exit 1; }
+(set -C; : > "$f") || exit 1                        # noclobber: create, never truncate an existing file
 printf '%04d\n' "$next_id"     # filename prefix
 ```
 
@@ -306,7 +308,9 @@ entries from a Status line to end-of-file, and because a parallel session's
 write-back once silently erased entries appended minutes earlier. None of
 those failure modes exist when each file is isolated. In the rare case two
 parallel sessions pick the same id, the result is two files sharing a
-number — harmless, distinct files, nothing lost; the next review renumbers
+number — harmless, distinct files, nothing lost, as long as the slugs
+differ; an identical id AND slug is one path, which is what the snippet's
+existence check and `noclobber` create guard against; the next review renumbers
 one and logs a meta-observation.
 
 ## Editing an existing observation

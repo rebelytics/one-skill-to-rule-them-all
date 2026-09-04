@@ -359,8 +359,7 @@ id, not a separate duty (see Archival on Write):
 ```bash
 d=skill-observations/observation-log
 today=$(date +%F)          # archival rides inside this command (see below):
-for f in "$d"/*.md; do     # stale resolved files move before the id is read
-  [ -e "$f" ] || continue
+for f in $(find "$d" -maxdepth 1 -name '*.md'); do   # stale resolved files move before the id is read
   hdr=$(awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
              fm && /^---[[:space:]]*$/ {exit} fm' "$f")
   case $hdr in
@@ -375,8 +374,11 @@ for f in "$d"/*.md; do     # stale resolved files move before the id is read
 done
 hi=$( { ls "$d" "$d/archive" 2>/dev/null | grep -oE '^[0-9]+'; cat "$d/archive/.id-floor" 2>/dev/null; } \
      | sed 's/^0*\([0-9]\)/\1/' | sort -n | tail -1); : "${hi:=0}"
-[ "$hi" -eq 0 ] && [ -n "$(ls "$d"/*.md 2>/dev/null)" ] && { echo "ID COMMAND BROKEN — log is non-empty but no ids extracted"; exit 1; }
+[ "$hi" -eq 0 ] && [ -n "$(find "$d" -maxdepth 1 -name '*.md')" ] && { echo "ID COMMAND BROKEN — log is non-empty but no ids extracted"; exit 1; }
 next_id=$(( hi + 1 )); echo "$next_id" > "$d/archive/.id-floor"
+f="$d/$(printf '%04d' "$next_id")-<slug>.md"      # the target path, built from the id just derived
+[ -e "$f" ] && { echo "COLLISION — $f exists; re-derive the id"; exit 1; }
+(set -C; : > "$f") || exit 1                        # noclobber: create, never truncate an existing file
 ```
 
 The `sed` strips the filename prefixes' zero-padding before the
@@ -387,9 +389,15 @@ prefix containing an 8 or 9 errors out.
 The guard line distinguishes "the log says zero" from "I could not read
 the log": a command that fails to empty rather than to error would
 otherwise propose id 1 in a populated log. A new file never touches another entry's bytes, so it cannot truncate,
-overwrite or renumber anyone else's work. If two parallel sessions pick the
-same id, two files share a number — harmless; the next review renumbers one
-and logs a meta-observation.
+overwrite or renumber anyone else's work — provided it is a new file. If
+two parallel sessions pick the same id and different slugs, two files
+share a number — harmless; the next review renumbers one and logs a
+meta-observation. If they pick the same id and the same slug (two
+sessions logging the same finding at the same moment), the path is
+identical and the second writer would silently replace the first, which is
+why the snippet refuses an existing path and creates the file under
+`noclobber` — write the body only after that create succeeds, and on a
+collision re-derive the id rather than overwrite.
 
 **Run the snippet immediately before EVERY write, including the first and
 only one of a session.** Having already read the log directory earlier for
