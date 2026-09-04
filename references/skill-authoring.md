@@ -485,7 +485,19 @@ patterns before committing — a scan, not a reminder.
    the same step, not as a rule the author is expected to remember — an
    unasserted metric does not merely miss defects, it manufactures
    confidence that none exist. State limits as numbers and label them as
-   the consumer's. (Reading this rule while drafting does not enforce it
+   the consumer's. **A recommended check carries three measured numbers.**
+   When proposing an automated check or a new gate rule, run each
+   candidate over the existing corpus first and record, per rule: (a)
+   hits on today's corpus, (b) true defects among them, (c) the
+   normalisation needed to remove the rest. None of that is knowable from
+   the idea alone — measured on one corpus, one candidate class produced
+   35 hits that were nearly all locale artefacts, two produced 0 hits
+   (free locks, addable today), one produced 7 of which 2 were defects
+   and 5 legitimate content a naive rule would flag forever. A proposed
+   guard is a claim about the future, and the cheapest evidence for it
+   already exists in the artefact being audited; a rule with an
+   unmeasured false-positive rate is a proposal to make people ignore a
+   test. (Reading this rule while drafting does not enforce it
    at delivery; run the gate as the last step before presenting.)
    Packaging hygiene: before zipping, sweep the staged tree for build
    artefacts (`__pycache__/`, `*.pyc`, `.DS_Store`, `.~lock.*`) left by
