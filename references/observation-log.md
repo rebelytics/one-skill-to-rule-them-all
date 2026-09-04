@@ -182,24 +182,73 @@ filename prefix in `observation-log/`, the highest in
 `observation-log/archive/.id-floor`. The floor file holds the highest id
 ever issued, so the counter cannot restart from 1 when the active directory
 is empty (every file archived) and nothing else remembers the range. Update
-it whenever you issue an id above it.
+it whenever you issue an id above it. The archival sweep (see Archival
+below) is folded into this same command: every id derivation first moves
+stale resolved files to `archive/`, so archival happens as a side effect
+of a step no write can skip.
 
 ```bash
 d=skill-observations/observation-log
+today=$(date +%F)          # archival rides inside this command (see below):
+for f in "$d"/*.md; do     # stale resolved files move before the id is read
+  [ -e "$f" ] || continue
+  hdr=$(awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
+             fm && /^---[[:space:]]*$/ {exit} fm' "$f")
+  case $hdr in
+    *"status: actioned"*|*"status: declined"*|*"status: superseded"*) ;;
+    *) continue ;;
+  esac
+  r=$(printf '%s\n' "$hdr" | sed -n 's/^resolved:[[:space:]]*//p' | head -1)
+  case $r in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;; *) continue ;; esac
+  [ "$r" != "$today" ] && \
+    [ "$(printf '%s\n%s\n' "$r" "$today" | sort | head -1)" = "$r" ] && \
+    mv "$f" "$d/archive/"
+done
 hi=$( { ls "$d" "$d/archive" 2>/dev/null | grep -oE '^[0-9]+'; cat "$d/archive/.id-floor" 2>/dev/null; } \
-     | sort -n | tail -1); : "${hi:=0}"
+     | sed 's/^0*\([0-9]\)/\1/' | sort -n | tail -1); : "${hi:=0}"
 [ "$hi" -eq 0 ] && [ -n "$(ls "$d"/*.md 2>/dev/null)" ] && { echo "ID COMMAND BROKEN — log is non-empty but no ids extracted"; exit 1; }
 next_id=$(( hi + 1 )); echo "$next_id" > "$d/archive/.id-floor"
 printf '%04d\n' "$next_id"     # filename prefix
 ```
 
-`ls`, `grep -oE`, `sort -n` and `printf` are POSIX; the snippet runs
-unchanged on macOS, Linux and Git Bash. A skill that hands the agent a
+The `sed` strips the filename prefixes' zero-padding before the
+arithmetic. It is load-bearing, not cosmetic: shell arithmetic reads a
+leading-zero number as octal, so `$(( 0105 + 1 ))` yields 70 — a silently
+wrong id — and a prefix containing an 8 or 9 (e.g. `0108`) is an invalid
+octal constant and errors the whole derivation.
+
+`ls`, `awk`, `sed -n`, `grep -oE`, `sort -n`, `mv` and `printf` are POSIX;
+the snippet runs unchanged on macOS, Linux and Git Bash. The date
+comparison relies on ISO dates sorting lexically, so it needs no `date`
+arithmetic. A skill that hands the agent a
 shell command owns that command's portability: lead with the portable
 form, never offer it as a footnote the agent reaches for after the primary
 has failed — and make any command that derives a number from a file fail
 loudly on an empty result, because a command that fails to empty rather
 than to error may never announce that it failed at all.
+
+**A prior read of the log is not an id derivation.** The snippet runs
+immediately before every write, including the first and only one of a
+session. The precondition worth naming is the one in which skipping it
+feels most reasonable: the directory has already been listed or grepped
+earlier in the session for some other purpose — the session-start
+frontmatter scan, a filter for observations naming the skills in use, a
+status check — and having just read it makes the range feel already
+surveyed. It is not. Those are *relevance* queries; the id is a
+*maximum*, and the answer to one is never evidence about the other. A
+relevance grep returns its highest matching entry, not the highest
+entry, and neither it nor any plain listing of `observation-log/` reads
+`archive/` or `.id-floor` — two of the three inputs, and the reason the
+command exists at all. (Observed: a relevance grep whose top hit was
+id N was read as meaning the next id was N+1, over an id already in
+use, while the true maximum, sitting in the archive, was twenty higher.)
+
+**Recovering from a collision.** Two files sharing an id is harmless —
+distinct files, nothing lost — but should be fixed on discovery rather
+than left for a review to notice: derive a correct id with the snippet,
+`mv` the newer file to that prefix, and edit its `id:` frontmatter field
+to match. Both are ordinary single-file operations; no other entry is
+touched.
 
 **Run the snippet once per file when writing a batch.** Appending several
 observations in one session that may overlap a scheduled review or another
@@ -258,6 +307,34 @@ ownership fence: an explicit in-scope list by id, an explicit out-of-scope
 list, and the instruction that each session edits status only on its own
 ids.
 
+## Partially actioning a multi-skill observation — the carrier pattern
+
+`status:` is per-observation, but `skill:` is a list, so the lifecycle
+field is coarser than the work it tracks. When one session legitimately
+acts on only a subset of the listed skills — a release session owning one
+skill while a parallel review owns the rest — both plain moves are wrong:
+left `open`, another session may re-apply the finished portion; marked
+`actioned`, the unfinished portions silently leave every future review
+queue. Split the record along the work's seams instead:
+
+1. **While the partial work is in progress**, note the claim in the body:
+   "portion X being applied by session Y — do not re-apply." The claim is
+   what protects the in-flight portion from a parallel session.
+2. **On completion**, mark the observation `actioned` with a `resolution:`
+   naming exactly which portions were applied.
+3. **In the same turn**, log a carrier observation holding the remaining
+   portions: only the outstanding skills in its `skill:` list, a body
+   stating it carries the unapplied remainder of the original (cite the
+   original's id), and the substance the outstanding portions need —
+   never just a pointer, since the original is about to archive.
+4. **Reviews treat carriers as first-class.** A carrier enters the work
+   queue like any other open observation; nothing about its provenance
+   defers or demotes it.
+
+Principle: when a record's lifecycle field is coarser than the work it
+tracks, every state transition tells some consumer a lie — split the
+record along the work's seams rather than overloading the status.
+
 ## When the workspace is under version control
 
 Versioning the workspace folder is good practice — it gives the rollback
@@ -283,14 +360,25 @@ run `git clean` with that directory in scope.
 
 ## Archival
 
-On every write, first move already-resolved files from `observation-log/`
-to `observation-log/archive/`. "Already resolved" is decided by the file's
+Archival is bound structurally to the id derivation (Assigning an id,
+above): the same command that computes the next id first moves
+already-resolved files from `observation-log/` to
+`observation-log/archive/`, so every write triggers the sweep as a side
+effect of a step it cannot skip. The prose form of the rule — "on every
+write, first archive" — under-fires in practice: a duty attached as a
+preamble to another action inherits none of that action's enforcement,
+so if a step must always accompany a tool call, it belongs inside the
+same command, not beside it in prose. The scheduled review archives
+independently at its Step 1, as a backstop for logging-quiet weeks.
+"Already resolved" is decided by the file's
 own frontmatter: `status: actioned`, `declined` or `superseded` AND a
 `resolved:` date before today. Files resolved today stay until the next
 day, no matter which session resolved them — the grace period lives in the
 file, never in session memory, so it holds across parallel and subsequent
 sessions. A resolved file with no readable `resolved:` date gets today's
-date written to that field instead of being archived.
+date written to that field instead of being archived; the embedded sweep
+deliberately skips such files (its date check fails closed), so that
+one-field repair is a separate, careful edit of that file alone.
 
 **`parked` is exempt from archival — deliberately.** It is the one status
 that means "decided" without meaning "resolved", so it satisfies neither half

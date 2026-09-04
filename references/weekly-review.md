@@ -143,7 +143,12 @@ no `status` field at all.** Concretely:
 **Reconciliation guard:** before proceeding, assert that
 `count(files in observation-log/) == count(status-classified files)`. If the
 counts differ, the delta is statusless files — surface and triage them (as
-OPEN) rather than proceeding as if the backlog were clean.
+OPEN) rather than proceeding as if the backlog were clean. **This is a
+point-in-time assertion, not a standing guarantee.** It proves the scan was
+complete when it ran; the log is multi-writer and a long review is exactly
+when other sessions are logging, so the result decays for the duration of
+the run. Keep the Step 1 file list — Step 6 re-scans against it before
+anything is marked.
 
 **Parked entries: excluded from the queue, not from view.** `status: parked`
 means the observation was judged sound but is blocked on an external
@@ -156,6 +161,31 @@ has been met, set the entry back to `status: open`, clear `parked_until:`, and
 carry it into this review's queue; (b) list every still-parked entry in the
 Step 8 summary in ONE LINE each — id, title, unpark condition — so a parked
 backlog stays visible without re-entering the work queue.
+
+**Staged-work reconciliation gate.** Installation is a manual, per-item
+act that happens outside any session, so no session observes it and
+nothing fires at install time: a ledger whose removal trigger is an event
+no session observes only ever grows. Bind the cleanup to the moment the
+ledger is read — reading is the only reliably recurring event, so the
+reading session owns it. For each entry in `skill-updates/PENDING.md`
+(and, where the manifest may be missing entries, each skill directory
+under recent `skill-updates/` dates), run `diff -rq` of the staged copy
+against the live skill and classify THREE ways — three-way because live
+legitimately moves on, so a bare "differs" is not a verdict:
+
+- **(a) identical** → installed; remove the manifest entry.
+- **(b) live strictly newer / a superset of the staged copy** →
+  superseded; remove the entry with a note.
+- **(c) the staged copy carries content absent from live** → NOT
+  installed; surface it, and treat the staged copy — not live — as the
+  base for any new staging of that skill in this review.
+
+Reconcile in BOTH directions every time: lingering-done (installed but
+still listed) and missing-done (staged but never installed) fail
+differently, and only the diff sees both. Completion of a manual batch is
+a claim, not a state; the check is one `diff -rq` per skill and runs in
+seconds over a 20-skill batch. The Session Start Protocol (step 6) runs
+the same gate whenever it announces staged updates.
 
 Also read all active cross-cutting principles. If there are no OPEN
 observations and no outstanding principles: report "no open observations
@@ -206,7 +236,10 @@ observation may appear in both. Then, before anything is presented:
   and it is silent, because the observation gets marked `actioned` on the
   strength of the first skill it touched. Record the per-skill disposition
   in `resolution:` and carry it into the Family coherence block of the
-  summary. Also check `siblings_checked:` while the frontmatter is in
+  summary. Where a legitimate partial application exists (one session owns
+  a subset of the listed skills), the carrier pattern in
+  `observation-log.md` resolves it — and a carrier observation enters this
+  queue as first-class, never deferred on account of its provenance. Also check `siblings_checked:` while the frontmatter is in
   hand: an entry with the field missing or blank was logged without the
   check, so before actioning it, do the check now (registry, tests and
   fallback in `observation-log.md`) and widen `skill:` if it was
@@ -389,7 +422,27 @@ when two independent agents flag the same ambiguity, the brief is the
 defect, not the agents: fix the brief and re-issue rather than
 adjudicating the two outputs.
 
-**Step 6 — mark ACTIONED.** In each applied observation's frontmatter set
+**Step 6 — re-scan, then mark ACTIONED.** Before any status is written,
+re-enumerate `observation-log/` and compare the listing against the file
+list built at Step 1. The queue is a snapshot of a shared, append-only
+store, and every downstream count and consistency check in this procedure
+is computed against the queue rather than the directory — so a stale queue
+produces a summary that is coherent, confident and incomplete, with no
+internal contradiction to trip over. Files in the new listing that were
+not in the Step 1 list arrived during the run: they are OPEN and were
+never triaged. Classify each rather than merely counting them: (a) it
+targets a skill whose staged copy from Step 5 is still open in this run →
+fold it in and action it (this is the common case — a review that has just
+touched a skill runs in the same window as the sessions most likely to be
+using it, and it is the case where a miss costs most, because the next
+review's base is then a staged copy whose provenance nobody re-derived);
+(b) otherwise → leave it OPEN for the next review and list it under the
+"arrived during this run" line of the Step 8 summary. Never let the delta
+pass silently, and never infer it from an id counter — a monotonic id
+surfacing a number above the scan's maximum is a side effect, not a
+detection mechanism. The check is one `ls` against a list already in hand.
+
+Then, in each applied observation's frontmatter set
 `status: actioned`, `resolved: YYYY-MM-DD` (today), and
 `resolution: Applied to [skill-name] (weekly review)` — editing only those
 fields, in that one file. The `resolved:` date is load-bearing: archival is
@@ -422,6 +475,10 @@ applied with the outstanding skill named — never left implicit]
 ### Parked
 [one line each: #id — title — unparks when: [condition]; plus any entry
 whose condition has been met and was returned to the queue this review]
+
+### Arrived during this run
+[from the Step 6 re-scan: #id — title — folded into [skill] / left OPEN
+for the next review; or "none" — the line is never omitted]
 
 ### Skipped (needs manual review)
 [items with reasons]
@@ -499,8 +556,12 @@ observation ids applied, and a per-change summary
 what the Session Start Protocol reads to announce "N staged updates
 awaiting review", so staged work is never quietly forgotten; the
 per-change summary is what lets the user review a full-file diff
-quickly, which is what raises the install rate. Remove an entry when the
-user installs the update or when the keep-two rule prunes its directory.
+quickly, which is what raises the install rate. Entries are removed by
+the staged-work reconciliation gate (Step 1, mirrored in Session Start
+step 6) when the staged copy proves identical to live or superseded by
+it, or when the keep-two rule prunes the directory — never "at install
+time", because no session observes the install; the session that reads
+the manifest owns its cleanup.
 The gate stays absolute — the fix for a safety gate people are tempted to
 bypass is reducing the friction that creates the temptation, not
 loosening the gate. An optional git-based staging medium is described in

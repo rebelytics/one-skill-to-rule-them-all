@@ -86,13 +86,36 @@ was handled without its reference loaded, log an observation.
 - `references/migration.md` — the one-time scripted conversion of a
   pre-3.0 single-file `log.md`. **Load only when the Session Start
   Protocol detects a legacy log.** Fresh installs never read it.
+- `references/starter-principles.md` — an optional, provenance-stripped
+  seed set of generic cross-cutting principles. **Load at first run when
+  offering the seed** (Session Start step 1); never read it once the
+  adopter's own principles file exists.
 
 ## Session Start Protocol
 
-1. **Storage.** If `skill-observations/observation-log/` (with its
-   `archive/` subdirectory) or
-   `skill-observations/cross-cutting-principles.md` don't exist,
-   create them (principles template: `references/skill-authoring.md`).
+1. **Storage.** The existence check for `skill-observations/` is also
+   the workspace-mount probe — one `ls` of the pinned path, run in this
+   turn. If it fails, the first response is the environment's folder-picker
+   tool (in Cowork, `request_cowork_directory`; elsewhere, its equivalent),
+   not the "no filesystem" branch: handoff-doc mode
+   (`references/environments.md`) is for environments that have no
+   filesystem at all, and it is reached too easily when a missing mount is
+   read as one. Never assert the mount's state — connected or not — from
+   an environment flag, the presence of a config file in context, or
+   memory of an earlier turn; a claim about mount state needs a probe in
+   the same turn. Once the path resolves: if
+   `skill-observations/observation-log/` (with its `archive/`
+   subdirectory) or `skill-observations/cross-cutting-principles.md`
+   don't exist, create them (principles template:
+   `references/skill-authoring.md`). When the principles file is being
+   created for the first time, offer one choice and act on the answer:
+   start empty, or seed it from `references/starter-principles.md` — a
+   provenance-stripped set of generic methodology principles shipped with
+   the bundle. Seeded entries carry `**Origin:** imported from starter set`
+   so the adopter's own reviews can prune them like any other rule. Never
+   pre-populate silently: the file's authority comes from the adopter's
+   own evidence trail, and unexamined imported rules contradict the
+   pruning principle the file itself carries.
    Create `skill-observations/last-review-date.txt` containing the literal
    value `never` if it doesn't exist — never write a date into it at setup;
    a date means a review actually ran. If a legacy single-file
@@ -109,6 +132,17 @@ was handled without its reference loaded, log an observation.
    `title`; also read the active principles. Hold them in awareness, don't
    surface unprompted. Frontmatter-only is the whole point of the per-file
    format: the scan stays cheap once hundreds of observations exist.
+
+   **This scan does not satisfy the per-skill check** (the grep run each
+   time a skill loads — `references/environments.md`, activation block).
+   Different scope (every skill vs one), different depth (frontmatter vs
+   body), different moment (session start vs the point the skill's rules
+   are applied). Both answer "have I looked at the log?", so running this
+   one discharges the felt obligation and makes the targeted one feel
+   redundant while leaving its function unperformed — awareness of a
+   hundred titles does not survive as recall of the one relevant body
+   twenty tool calls later. Retrieval has to happen where the decision is
+   made.
 
    **An empty scan in a log known to be non-empty is a broken command
    until proven otherwise**, never the finding "no relevant observations".
@@ -157,8 +191,16 @@ was handled without its reference loaded, log an observation.
    the scanned frontmatter against the installed skill set and mention, in
    one line, any that no longer resolve — a deleted skill can accumulate
    dozens of observations before a review discovers the target is gone.
-   If `skill-updates/PENDING.md` lists staged updates, say "N staged
-   updates awaiting review" in one line.
+   If `skill-updates/PENDING.md` lists staged updates, reconcile the list
+   before announcing it — installation happens outside any session, so no
+   session observes the install itself, and the session that reads the
+   ledger owns its cleanup. For each entry, `diff -rq` the staged copy
+   against the live skill and classify three ways (live legitimately moves
+   on, so a bare "differs" is not a verdict): identical → installed,
+   remove the entry; live strictly newer/superset → superseded, remove
+   with a note; staged content absent from live → NOT installed, keep the
+   entry, surface it, and base any new staging of that skill on the staged
+   copy. Then say "N staged updates awaiting review" in one line.
 7. **First run.** If the log is empty and the project has history
    (handover or decision docs, commit history, test scripts, an existing
    CLAUDE.md — which is largely a record of corrections nobody logged),
@@ -289,15 +331,37 @@ values, plus one: the highest numeric prefix in `observation-log/`, the
 highest in `observation-log/archive/`, and the number in
 `observation-log/archive/.id-floor` (the highest id ever issued — update it
 whenever you issue an id above it, so the counter can never restart from 1
-when the active directory is empty):
+when the active directory is empty). The same command first sweeps stale
+resolved files into `archive/` — archival is a side effect of deriving the
+id, not a separate duty (see Archival on Write):
 
 ```bash
 d=skill-observations/observation-log
+today=$(date +%F)          # archival rides inside this command (see below):
+for f in "$d"/*.md; do     # stale resolved files move before the id is read
+  [ -e "$f" ] || continue
+  hdr=$(awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
+             fm && /^---[[:space:]]*$/ {exit} fm' "$f")
+  case $hdr in
+    *"status: actioned"*|*"status: declined"*|*"status: superseded"*) ;;
+    *) continue ;;
+  esac
+  r=$(printf '%s\n' "$hdr" | sed -n 's/^resolved:[[:space:]]*//p' | head -1)
+  case $r in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;; *) continue ;; esac
+  [ "$r" != "$today" ] && \
+    [ "$(printf '%s\n%s\n' "$r" "$today" | sort | head -1)" = "$r" ] && \
+    mv "$f" "$d/archive/"
+done
 hi=$( { ls "$d" "$d/archive" 2>/dev/null | grep -oE '^[0-9]+'; cat "$d/archive/.id-floor" 2>/dev/null; } \
-     | sort -n | tail -1); : "${hi:=0}"
+     | sed 's/^0*\([0-9]\)/\1/' | sort -n | tail -1); : "${hi:=0}"
 [ "$hi" -eq 0 ] && [ -n "$(ls "$d"/*.md 2>/dev/null)" ] && { echo "ID COMMAND BROKEN — log is non-empty but no ids extracted"; exit 1; }
 next_id=$(( hi + 1 )); echo "$next_id" > "$d/archive/.id-floor"
 ```
+
+The `sed` strips the filename prefixes' zero-padding before the
+arithmetic — do not "simplify" it away: shell arithmetic reads a
+leading-zero number as octal, so `$(( 0105 + 1 ))` yields 70, and a
+prefix containing an 8 or 9 errors out.
 
 The guard line distinguishes "the log says zero" from "I could not read
 the log": a command that fails to empty rather than to error would
@@ -305,6 +369,18 @@ otherwise propose id 1 in a populated log. A new file never touches another entr
 overwrite or renumber anyone else's work. If two parallel sessions pick the
 same id, two files share a number — harmless; the next review renumbers one
 and logs a meta-observation.
+
+**Run the snippet immediately before EVERY write, including the first and
+only one of a session.** Having already read the log directory earlier for
+some other reason — the session-start frontmatter scan, a grep for
+observations naming the skills in use, a status check — does not substitute
+for it, and is the state in which skipping feels most reasonable. A filter
+and a maximum are different questions over the same data, and the answer to
+one is never evidence about the other; no ad-hoc listing reads `archive/`
+or `.id-floor`, which are two of the three inputs and the reason the
+command exists. If a collision happens anyway it is harmless but should be
+fixed on discovery: derive a correct id, `mv` the file to that prefix, and
+edit its `id:` frontmatter field to match.
 
 **Batch writes: resolve each id at its own write time.** When logging more
 than one observation in a session that may overlap a scheduled review or
@@ -416,13 +492,22 @@ structure): `references/skill-authoring.md`.
 
 ## Archival on Write
 
-On every write, first `mv` already-resolved files from `observation-log/`
-to `observation-log/archive/`. "Already resolved" is read from the file's
+Archival is not a preamble duty to remember before writing — it rides
+inside the id-derivation snippet above: the same command that computes the
+next id first `mv`s already-resolved files from `observation-log/` to
+`observation-log/archive/`, so the sweep runs whenever an id is issued and
+cannot be skipped without failing the write. (The prose form of this rule
+— "on every write, first archive" — under-fires: a duty attached as a
+preamble to another action inherits none of that action's enforcement; if
+a step must always accompany a tool call, put it inside the same command,
+not beside it in prose.) The scheduled review archives too, at its Step 1,
+as an independent backstop. "Already resolved" is read from the file's
 own frontmatter: `status: actioned`, `declined` or `superseded` AND a
 `resolved:` date **before today**. Files resolved today stay until the next
 day, whichever session resolved them — the grace period lives in the file,
 never in session memory. A resolved file with no readable `resolved:` date
-gets today's date written to that field instead of being archived. One
+gets today's date written to that field instead of being archived (the
+snippet skips it; make that one-field edit separately). One
 file per `mv`; no rewrite of anything else. Helper and rationale:
 `references/observation-log.md`.
 
@@ -505,12 +590,22 @@ that gets dropped; a stale `open` entry then invites redoing finished work
 over a section that has since moved on. The write is the enforcement,
 exactly as it is for logging.
 
+**Acting on only a subset of a multi-skill observation's `skill:` list?**
+Neither plain move is honest — left `open`, the finished portion gets
+re-applied by another session; marked `actioned`, the unfinished portions
+silently leave every future queue. Use the carrier pattern: note the claim
+in the body while the partial work is in progress, then mark the
+observation `actioned` with a `resolution:` naming which portions were
+applied, and log a carrier observation holding the remainder with only the
+outstanding skills in its `skill:` list. Full protocol:
+`references/observation-log.md`.
+
 ## Quick Reference
 
 | Question | Answer |
 |----------|--------|
 | When do I observe? | The whole session, including feedback and reflection phases |
-| How do I log? | Silently, immediately, as one file per observation named `NNNN-slug.md`; id = max(active, archive, `.id-floor`) + 1 |
+| How do I log? | Silently, immediately, as one file per observation named `NNNN-slug.md`; id = max(active, archive, `.id-floor`) + 1, derived by running the snippet immediately before each write — an earlier read of the log for any other purpose is not a substitute |
 | When do I surface? | End of session, or earlier if needed |
 | Status field? | Mandatory `status: open` frontmatter on every new observation; reviews treat a missing status as OPEN, never as nonexistent. Five values: `open`, `actioned`, `declined`, `superseded`, `parked` — `parked` = decided but blocked on an external precondition, so it leaves the queue, requires `parked_until:`, and never archives |
 | Does the target skill have siblings? | Resolve it against `skill-observations/skill-families.md` BEFORE writing; add every sibling the insight applies to to `skill:`, and record the verdict in the mandatory `siblings_checked:` field — including "checked, no propagation" |

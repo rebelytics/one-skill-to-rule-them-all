@@ -349,6 +349,24 @@ in layers so any one catches what others miss:
    Every pointer in a published document must resolve in the reader's
    world, not the author's.
 
+   Authoring-time corollary — sibling-sync and family notes. The family
+   machinery legitimately writes sync notes into skill files so shared
+   cores don't drift, and those notes are the expected shape of a
+   violation of this layer: the sync rule and the standalone rule are
+   each followed correctly and still jointly produce an unpublishable
+   skill neither anticipated. When adding a sibling-sync or family note
+   to an open-source skill that is published or a publication candidate,
+   phrase the family reference in capability language from the start
+   ("the sibling skills implementing this methodology for other
+   platforms") or point generically at the private family registry —
+   never name installed-but-unpublished skills, because the publishing
+   workflow's standalone scan blocks those names, the sync itself becomes
+   the publication blocker, and the only fix is rewording at the live
+   skill. When a maintenance mechanism writes cross-references into an
+   artefact, it must respect the publication boundary of the artefact it
+   writes into: internal registries can name internal things; public
+   artefacts reference them by capability, not by name.
+
 ## Timelessness — shared skills must not capture current state
 
 Any skill leaving the author's own maintenance loop (published, or shared

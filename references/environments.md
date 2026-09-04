@@ -5,8 +5,8 @@ in an environment without filesystem access.
 
 ## Recommended activation setup
 
-Three activation tiers exist, and only the strongest is enforced. Pick one
-knowingly; do not assume the middle one is a guarantee.
+Four activation tiers exist, and only the strongest is enforced. Pick
+knowingly; do not assume any of the middle ones is a guarantee.
 
 1. **Description matching** (weakest). The skill's frontmatter description
    competes with every other skill's for relevance to the opening message.
@@ -18,21 +18,41 @@ knowingly; do not assume the middle one is a guarantee.
    no hook mechanism this is the only tier that survives an unmounted or
    unreachable config file, which is why the description itself carries a
    session-start trigger.
-2. **Configuration instruction** (better, still probabilistic). A CLAUDE.md
+2. **User-level preferences** (folder-independent, still probabilistic).
+   Agent settings the user controls that are injected into every session's
+   system prompt regardless of which folder, if any, is connected (in
+   Cowork, the personal-preferences field in the app settings; other
+   agents' equivalents). This is the right home for a one-line
+   probe-then-request trigger — "before any other tool call, `ls` the
+   workspace path; if it fails, call the folder-picker tool; never state
+   whether the folder is connected without that probe" — because a config
+   file inside the workspace folder cannot fire in the very case it
+   targets: when no folder is connected, there is no config file. Verify
+   the channel once by asking a folder-less session to quote its
+   preferences block; a line that does not reach the agent is not a tier.
+3. **Configuration instruction** (better, still probabilistic). A CLAUDE.md
    or project-instruction block, shown below. Empirically skippable under
    the same conditions as tier 1, and silently absent when the file it
    lives in is not in context (no workspace folder mounted, a session
-   started outside the project). If `allow_cowork_file_delete` or a similar
+   started outside the project). An unmounted workspace is recoverable,
+   not terminal: where the environment offers a folder-picker tool
+   (Cowork's `request_cowork_directory`), the folder can still be
+   attached mid-session on request, and the Session Start Protocol should
+   be run the moment it is — only the part of the session before the
+   mount is lost. Ask early, but do not treat a declined or skipped
+   folder selection as irreversible. If `allow_cowork_file_delete` or a similar
    local-filesystem permission tool is present in the tool surface, the
    session runs on the user's machine and the config is reachable; treat
    "this session runs in the cloud, so the config was not loaded" as
-   unverified until the tool surface has been inventoried.
-3. **Harness hook** (the only enforced option). A session-start hook that
+   unverified until the tool surface has been inventoried — and treat the
+   converse the same way: an environment flag saying a folder is selected
+   is a hint, and only a probe of the path in the same turn is evidence.
+4. **Harness hook** (the only enforced option). A session-start hook that
    injects the instruction — and ideally the log state — into context on
    every session, e.g. Claude Code's `SessionStart` hook returning
    `hookSpecificOutput.additionalContext`. Even a hook can only inject a
    prompt; choosing to invoke a skill remains a model decision. Cowork has
-   no hook mechanism; there, tiers 1 and 2 are all there is.
+   no hook mechanism; there, tiers 1 to 3 are all there is.
 
 **Word the trigger mechanically, not judgementally.** "Task-oriented
 session" asks the agent to classify the session at its first turn, before
@@ -62,9 +82,15 @@ and why"). This is the activation backstop: it forces a look at the log,
 so a session that silently skipped the protocol is discovered at the
 first task boundary instead of never.
 
-When loading any skill, check the observation log for OPEN observations
-tagged to that skill. Apply their insights to the current work, even if
-the skill file hasn't been updated yet.
+Loading a skill is not complete until you have queried the observation
+log for OPEN observations naming it and read their bodies:
+  grep -l "skill:.*<skill-name>" \
+    [ABSOLUTE PATH]/skill-observations/observation-log/*.md
+Apply their insights to the current work, even if the skill file hasn't
+been updated yet. Run this at every skill load, however many skills load
+in one session. The session-start scan does not cover it: that is a
+frontmatter sweep over every observation at session start, this is a
+body-level lookup for one skill at the moment its rules are applied.
 
 The observation log for this project lives at:
   [ABSOLUTE PATH]/skill-observations/observation-log/
@@ -282,8 +308,9 @@ regimes:
 
 This skill consists of `SKILL.md`, the reference files it lists
 (`weekly-review.md`, `skill-authoring.md`, `environments.md`,
-`observation-log.md`, `signals.md`, `migration.md`) and
-`scripts/migrate-log.py`. If a referenced file is missing, the install is
+`observation-log.md`, `signals.md`, `migration.md`,
+`starter-principles.md`) and `scripts/migrate-log.py`. If a referenced
+file is missing, the install is
 incomplete: proceed using the rules in `SKILL.md`, tell the user which
 files are missing, and point them to the full bundle at the canonical
 source (for the published version, the repository named in the attribution
