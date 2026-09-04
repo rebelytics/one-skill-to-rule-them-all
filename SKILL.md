@@ -193,15 +193,31 @@ was handled without its reference loaded, log an observation.
    `never` = no review has run yet. A missing file is abnormal (step 1
    creates it) — recreate it with `never`, don't invent a date. If the
    value is `never` or older than 7 days AND there are OPEN observations:
-   in an interactive session, offer the review in one line ("the
-   observation backlog hasn't been reviewed [in N days / yet] — run it now,
-   or carry on with your task?") and proceed with the user's task unless
-   they opt in; never gate their work on the review. Only a
+   in an interactive session, offer the review in one line and proceed
+   with the user's task unless they opt in; never gate their work on the
+   review. Scale the offer's CONTENT with the backlog, never its
+   frequency: up to ~15 open observations, offer the full review ("the
+   backlog hasn't been reviewed [in N days / yet] — N open; run it now, or
+   carry on?"); above that, offer a bounded slice whose unit of work stays
+   constant as the backlog grows — "review the 10 oldest", "review just
+   the ones targeting <the skill most named>" — and state both numbers,
+   how many are open and roughly how many distinct findings they
+   represent (cluster on the `title` and `skill` fields you just scanned).
+   A backlog that is never drained does not fail loudly; it fails by
+   becoming too expensive to drain, so the per-session behaviour that is
+   correct (never block the user) sums to a review nobody accepts. Only a
    scheduled/autonomous run loads `references/weekly-review.md` and runs
    the review unprompted.
 4. **Activation.** Once per session: if no CLAUDE.md (or equivalent)
    activation instruction for this skill exists, briefly suggest adding one
-   (see `references/environments.md`). Skip if already configured.
+   (see `references/environments.md`). Skip if already configured. Be clear
+   about what this step is: it runs only after the skill has been invoked,
+   so it verifies a working setup and structurally cannot detect the
+   missing one — it is not the safety net for a never-activated install.
+   That case is caught only from outside the runtime: the install-time
+   verification and the external diagnostic in `references/environments.md`
+   (no observation-log directory after sessions of real work), and the
+   review's regression check for a tier that was present and is gone.
 5. **Concurrency.** There is no shared log file to guard: each observation
    is its own file, so creating one never collides with or overwrites
    another session's entry. Before changing the *status* of an existing
@@ -277,6 +293,19 @@ rule, step or principle rather than fix this task? Is it likely to recur?
 Mostly no → task context, not an observation. Before minting a
 `proposes_skill` name, check the existing candidates and reuse a fitting
 one — independently logged proposals for one skill rarely share a name.
+
+**Check for a restatement before writing.** Before creating the file,
+list the open observations that name the same target skill (the scan at
+session start already holds their titles; otherwise
+`grep -l "skill:.*<skill>" observation-log/*.md`) and read those titles.
+If the finding is the same one restated — the same rule, the same
+failure shape, a different example — extend the existing entry instead:
+append the new instance to its body and add the session to its
+`session_context`, editing that one file. Duplication is only visible in
+aggregate; measured on one log, roughly forty of ninety-one open entries
+were one finding restated, and a dozen separately minted skill proposals
+described two skills. A near-duplicate costs a capture every session and
+a triage every review, and adds nothing the first entry did not.
 
 **Validate the target at write time.** A name in `skill:` must be a skill
 that exists now; if it doesn't, the observation proposes a skill instead.

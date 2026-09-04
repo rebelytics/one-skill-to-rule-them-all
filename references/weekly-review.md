@@ -194,8 +194,19 @@ fallback active. No → write today's date to
 firings within the window re-surface the offer). No scheduler available in
 this environment (per the definition above) → skip silently.
 
-**Step 1 — load.** Archive observation files resolved in *previous*
-sessions (see Archival on Write in SKILL.md). Read only the frontmatter of
+**Step 1 — load.** First, the activation regression check — the one
+half of "is activation in place?" a review can reach: a review only runs
+when the skill loaded, so it cannot detect an install that never
+activated, but it can detect a tier that WAS in place and is no longer
+(a rewritten CLAUDE.md, a hooks file replaced by a settings sync). Read
+the activation config named in `references/environments.md` — the
+instruction block in CLAUDE.md or its equivalent, and the session-start
+hook where the harness has one — and if a tier that a previous review
+recorded as present is missing, say so in the summary's first line and
+re-suggest the block; record the tiers found in
+`skill-observations/activation-tiers.txt` so the next review has a
+baseline to compare against. Then archive observation files resolved in
+*previous* sessions (see Archival on Write in SKILL.md). Read only the frontmatter of
 each file in `observation-log/` — not the bodies — to build the work queue;
 load a body only when you actually action that observation in Step 5. This
 frontmatter-first pass is what keeps the review cheap as the backlog grows.
@@ -254,7 +265,16 @@ legitimately moves on, so a bare "differs" is not a verdict:
   superseded; remove the entry with a note.
 - **(c) the staged copy carries content absent from live** → NOT
   installed; surface it, and treat the staged copy — not live — as the
-  base for any new staging of that skill in this review.
+  base for any new staging of that skill in this review. Also list, in
+  the summary, the observations whose `resolution:` names that staged
+  path (`grep -l "skill-updates/<anchor>/<skill>" observation-log/*.md
+  observation-log/archive/*.md`): they were marked `actioned` at staging
+  and their work has not landed. They stay `actioned` — the status
+  describes the review's act, and re-opening would re-queue work already
+  done — but the summary carries them under "actioned, awaiting install",
+  and a staged copy that reaches its SECOND review un-installed is
+  escalated as a decision (install it, or discard it and re-open its
+  observations) rather than carried forward a third time.
 
 Reconcile in BOTH directions every time: lingering-done (installed but
 still listed) and missing-done (staged but never installed) fail
@@ -540,8 +560,13 @@ detection mechanism. The check is one `ls` against a list already in hand.
 
 Then, in each applied observation's frontmatter set
 `status: actioned`, `resolved: YYYY-MM-DD` (today), and
-`resolution: Applied to [skill-name] (weekly review)` — editing only those
-fields, in that one file. The `resolved:` date is load-bearing: archival is
+`resolution: "Staged for [skill-name] at skill-updates/<anchor>/[skill-name] (weekly review)"`
+— editing only those fields, in that one file. The resolution names the
+staged path deliberately: `actioned` at this point means "applied to a
+staged copy", and handing an artefact over and having it taken up are two
+different facts — the first must not close the status of the second. The
+staged path is what lets the next review find every observation whose
+work is sitting un-installed (below). The `resolved:` date is load-bearing: archival is
 gated on it (files archive only when it's before today), so a dateless mark
 breaks the cross-session grace period. Do NOT archive same-session — the
 next write on a later day archives them.
