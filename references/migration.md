@@ -129,7 +129,53 @@ Run from the workspace folder. Python 3.8+, no dependencies.
    fabricate precision the records never had, and nothing reads them on a
    normal turn.
 
-8. **Re-check anything that mentions the old path.** Other skills, a
+8. **Enumerate the machine's other workspaces before recording the
+   migration anywhere.** Everything above converts exactly one workspace
+   folder. When the skill is installed at user/global scope, other
+   workspaces may hold their own `skill-observations/` anchor still on
+   the legacy layout. Search wherever your workspace folders anchor —
+   both supported layouts, the identity root and a managed persistence
+   directory under it (`references/environments.md`), which is why the
+   search is not depth-bounded. In Claude Code, for example:
+
+   ```bash
+   find ~/.claude/projects -name log.md -path '*/skill-observations/*'
+   ```
+
+   **Ask the scope question before converting a hit.** Several legacy
+   logs that observe the same globally installed skills are not several
+   scopes; they are the silent fork this skill warns about ("globally
+   installed skills need one path shared across projects, tools and
+   agents"). Converting each in place preserves that fork, with two id
+   spaces that already collide. Consolidate those onto one anchor first
+   — per "Before creating a log, search for one" in
+   `references/environments.md`, leaving a pointer file at each
+   abandoned location — and run this procedure once, on the surviving
+   log. Only genuinely distinct observed scopes migrate separately.
+
+   **Every live `log.md` needs reconciling, including one that sits
+   beside an `observation-log/`.** That pair is not a converted
+   workspace: it is a conversion that stopped before step 7, or a stale
+   pre-3.0 session that recreated the retired file. Nothing else catches
+   it — the Session Start Protocol migrates only when `observation-log/`
+   is absent — so entries unique to that file are never imported and
+   never scanned. Run the check-only pass over it, convert what the
+   directory is missing, and retire the file as in step 7; or list it
+   explicitly as pending.
+
+   A cleanly unconverted workspace (a `log.md` with no
+   `observation-log/`) loses no data if you skip it — the Session Start
+   Protocol still catches that case lazily, on its next session there —
+   but "lazily" can be days, and nothing marks it as unconverted in the
+   meantime.
+
+   The same scope rule applies to the record of the migration: a
+   completion note written into a document that reaches beyond one
+   workspace — a machine-global CLAUDE.md, a team runbook — must name the
+   workspace(s) it covers, because "migration done" in a global document
+   reads as "done everywhere" to every future reader.
+
+9. **Re-check anything that mentions the old path.** Other skills, a
    CLAUDE.md, a scheduled task or a review template may name
    `skill-observations/log.md`. Point them at the directory; "the
    observation log" as a phrase stays correct.
