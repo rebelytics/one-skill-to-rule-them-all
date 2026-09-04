@@ -597,6 +597,18 @@ or the trial cannot distinguish "not yet observed" from "not happening".
 
 ## New skills
 
+**Before authoring a skill for a library, tool or project, check whether
+the project already ships one.** The reflex on "make a skill for X" is to
+read X's documentation and write a `SKILL.md` from scratch; many projects
+now carry their own agent skill in-repo — commonly under `agent-skill/`,
+`.claude/skills/`, `skills/`, or named in the README — and hand-authoring
+beside it duplicates work, drifts from the maintainers' version and misses
+their updates. One search of the upstream repository (those paths, plus
+"skill" in the README and release notes) settles it. If an official skill
+exists, install it and put only the local delta into a companion, exactly
+as for any other upstream-maintained skill (weekly-review.md, Step 2);
+if it does not, author, and consider offering the result upstream.
+
 Use the skill-creator when available, passing the observation(s) as the
 brief. Determine type early: open-source → strip and generalise; internal →
 include specifics freely; uncertain → default open-source and let the user
