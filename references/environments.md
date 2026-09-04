@@ -190,7 +190,7 @@ asking the agent to go and look:
 #!/bin/sh
 # SessionStart hook: inject activation + review state as additionalContext.
 d="$OBS_WORKSPACE/skill-observations"      # the pinned absolute path
-open=$(ls "$d/observation-log"/*.md 2>/dev/null | wc -l | tr -d ' ')
+open=$(find "$d/observation-log" -maxdepth 1 -name '*.md' -exec grep -l '^status: open$' {} + 2>/dev/null | wc -l | tr -d ' ')
 last=$(cat "$d/last-review-date.txt" 2>/dev/null || echo never)
 msg="Invoke the task-observer skill before the first tool call."
 if [ "$open" -gt 0 ]; then
@@ -200,9 +200,17 @@ fi
 printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$msg"
 ```
 
-Adapt the date comparison to the harness's shell (ISO dates sort
-lexically, so `[ "$last" \< "$(date -d '-7 days' +%F)" ]` or the BSD
-equivalent). Two details that matter when building one: `grep -c` exits 1
+The count is of files whose `status` field reads `open` — not of files
+in the directory. Resolved entries deliberately stay in `observation-log/`
+until the day after they were resolved (the grace period lives in the
+file, not in session memory), and parked entries are decided and out of
+the work queue, so a raw file count overstates the backlog by every entry
+the last review just closed, for a day, in every session. Compare dates
+without `<` in `[ ]`: ISO dates sort lexically, so
+`[ "$(printf '%s\n%s\n' "$last" "$cutoff" | sort | head -1)" = "$last" ]`
+is true when `$last` is not later than `$cutoff`, in every POSIX shell
+(`\<` is a bash/ksh extension that zsh rejects and `sh` does not know).
+Two details that matter when building one: `grep -c` exits 1
 on zero matches while still printing `0`, so `$(grep -c … || echo 0)`
 yields two values — capture the output and ignore the exit code; and prove
 the reminder branch fires by running the hook against fixtures at `never`,
