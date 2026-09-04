@@ -536,6 +536,15 @@ a two-tier check:
    changes, list-to-prose adaptation, re-wrapped lines splitting a phrase
    across newlines), not real losses.
 4. Word-count sanity check per file.
+5. Normalise line endings before any of the above. A checkout made with
+   `core.autocrlf=true`, or a download that kept LF beside a clone that
+   rewrote to CRLF, makes `diff -rq` report every text file changed and
+   `grep -qF` score every line as missing — while the two PNGs in the
+   same bundle compare identical, which is the tell. Compare with
+   `diff --strip-trailing-cr` (or `dos2unix` / `tr -d '\r'` into temp
+   copies) and strip the `\r` from each `$line` before grepping; a
+   verification whose only difference is the line terminator has found
+   nothing.
 
 **Cross-reference-dense monoliths: keep section numbers global, add a
 map.** When the document being split is dense with internal
