@@ -92,9 +92,14 @@ in one session. The session-start scan does not cover it: that is a
 frontmatter sweep over every observation at session start, this is a
 body-level lookup for one skill at the moment its rules are applied.
 
-The observation log for this project lives at:
-  [ABSOLUTE PATH]/skill-observations/observation-log/
-Use that path. Never resolve the workspace from the current working
+The task-observer workspace for this project is:
+  [ABSOLUTE PATH]
+Every path the skill uses derives from that root and nothing else:
+  [ABSOLUTE PATH]/skill-observations/observation-log/   (the log)
+  [ABSOLUTE PATH]/skill-observations/cross-cutting-principles.md
+  [ABSOLUTE PATH]/skill-updates/                        (staging root)
+  [ABSOLUTE PATH]/skill-updates/PENDING.md              (staging manifest)
+Never resolve any of them from the current working
 directory — a cwd inside an ephemeral checkout (a git worktree, a temporary
 clone) is torn down and takes the log with it. Never place the workspace
 inside a skills-discovery directory or any path linked into one. If this
@@ -105,7 +110,14 @@ location; do not derive one per session, tool or project.
 
 Fill in the path when installing. Pinning turns anchoring into a one-time
 decision instead of one the agent re-litigates every session with a fresh
-chance to get it wrong. Scope the workspace to what is being observed:
+chance to get it wrong. Pin the ROOT, and list the derived paths: a pin
+that names only the observation-log directory — the place split-brain was
+first noticed — leaves the staging root, the manifest and the principles
+file to be re-derived by every session, and parallel sessions resolve
+them plausibly and differently (observed: two sessions staged under
+`skill-observations/skill-updates/`, beside the log, while a third staged
+under `skill-updates/` at the root — three writers, two staging roots,
+one manifest that saw half the work). Scope the workspace to what is being observed:
 skills installed globally are observed from every project, so their log
 must be one absolute path shared across projects and tools — a per-project
 or per-tool workspace scatters observations about global skills across
