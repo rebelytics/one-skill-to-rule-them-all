@@ -231,7 +231,9 @@ file (state plainly that without the routing entry nothing ever loads the
 companion — a fix routed somewhere nothing loads is not a fix); or routing
 the content straight into the instruction file, which loads
 unconditionally. For (b) with an upstream, also offer an upstream issue or
-PR per the attribution block. Grow the (c) list when an update fails for
+PR per the attribution block. Choosing the companion route may mean
+creating the `{skill}-extras` skill in this review, which the Constraints
+allow as the one exception to "no new skills in a review". Grow the (c) list when an update fails for
 permissions; grow the (b) list when a change you made has vanished.
 
 **Step 3 — cross-check observations.** Evaluate every OPEN observation
@@ -322,6 +324,18 @@ skills).
 
 **Step 5 — apply.** Begin with the copy, not the edit: for each skill
 with approved/non-escalated items,
+
+Where an approved item's destination is an upstream report — an issue or
+PR against a skill someone else maintains — drafting that report IS the
+apply step for it, so the feedback pre-flight in
+`references/skill-authoring.md` runs here, before the draft is written:
+duplicate search across the upstream's issues and pull requests, the
+maintainer's preferred channel, upstream-HEAD verification. A pre-flight
+with no call site runs at send time, after the draft has been staged and
+listed as an outstanding item, which is when finding the duplicate costs
+the most. An empty duplicate search releases the draft only after a
+positive control: search for a term you know an existing issue contains,
+and if that returns nothing the search is broken, not clean.
 
 Choose the anchor first: if `[today]/[skill-name]` already exists, apply the
 same-day rule under Delivery — integrate another writer's pending copy, or give
@@ -518,7 +532,12 @@ Wait for the user to acknowledge before other work.
 - Don't modify observation files beyond their `status`, `parked_until`,
   `resolved`, and `resolution` frontmatter fields.
 - Don't create new skills in a review — note candidates for the user to
-  action via the skill-creator.
+  action via the skill-creator. The one exception is the `{skill}-extras`
+  companion for a read-only or volatile target (Step 2): it is a routing
+  container for approved deltas, not a candidate skill, and creating it
+  when the user chooses that route is part of applying the observation.
+  It is still staged, never installed, by the review; and it still needs
+  the routing entry, or nothing loads it.
 - Unsure how to integrate an observation → skip it and say so in the
   summary.
 - Treat internal observations with the same rigour as open-source.
@@ -567,8 +586,16 @@ copies from the read-only mount, `chmod -R u+w` the staged path first —
 the mount's read-only mode travels with the copy, for directories as
 well as files. Do not edit skill files in place — nothing goes live
 until the user installs it. **Keep-two rule:** for any skill, keep only
-the two most recent date directories under `skill-updates/`; delete
-older ones.
+the two most recent staged copies under `skill-updates/`; move the
+older ones to `_to_delete/`. The rule is scoped to staged skill copies,
+not to date directories: before pruning a directory, list what else is in
+it — an assembly script, a verification script, working notes — and move
+anything that is not a staged skill copy aside first, or leave the
+directory and prune only the copies. A prune that fires correctly on the
+oldest directory deletes everything in it, and a missing tool is noticed
+the next time it is needed, never at the moment of deletion. Rounds, not
+days, are what the rule counts (a same-day second round is its own
+copy).
 
 **The dated staging folder is multi-writer.** `skill-updates/<date>/` is
 a namespace keyed only by date, so a manual session and a scheduled run
