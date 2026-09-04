@@ -118,8 +118,15 @@ just update the timestamp. A brand-new install must never get a setup
 prompt before it has done any work. Otherwise: check
 `skill-observations/scheduled-review-decline.txt`: if under 30 days old and
 the fallback isn't firing repeatedly, skip. Check for a registered
-scheduled task (scheduler presence or
-`skill-observations/scheduler-registered.txt`); if found, skip. Before
+scheduled task (`skill-observations/scheduler-registered.txt`, or the
+platform's scheduler queried directly: `crontab -l` on Unix; `launchctl
+list` on macOS where launchd is used; `Get-ScheduledTask` in PowerShell
+or `schtasks /Query` from any Windows shell; the app's Scheduled tasks
+page in Cowork); if found, skip. "No scheduler available" means the
+platform's own scheduler was queried and is absent — cron missing on
+Windows is not that; Task Scheduler is the scheduler there, and a check
+worded around cron alone marks every Windows install as schedulerless
+and silently never offers the review. Before
 offering, check reachability (see the regimes above): if the platform's
 scheduler runs where it cannot reach the workspace folder (regime 2), do
 NOT offer registration — recommend the calendar-reminder-plus-manual-
@@ -137,7 +144,7 @@ while no review ever runs. Tell the user registration failed and leave the
 fallback active. No → write today's date to
 `scheduled-review-decline.txt` (suppresses for 30 days; repeated fallback
 firings within the window re-surface the offer). No scheduler available in
-this environment → skip silently.
+this environment (per the definition above) → skip silently.
 
 **Step 1 — load.** Archive observation files resolved in *previous*
 sessions (see Archival on Write in SKILL.md). Read only the frontmatter of
