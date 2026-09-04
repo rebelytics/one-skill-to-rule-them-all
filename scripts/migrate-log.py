@@ -93,10 +93,23 @@ def split_top_level(text, seps=";"):
 
 
 def slugify(title, maxlen=60):
-    s = title.lower()
-    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+    """Kebab-case slug that keeps SOME signal from any script.
+
+    The directory listing is the index, so a slug must carry the title's
+    meaning in every language: ASCII-only stripping turned a Korean corpus
+    into thirteen `untitled` files. Latin accents are folded to their base
+    letters (NFKD, combining marks dropped); other scripts keep their word
+    characters, since modern filesystems and git handle UTF-8 names.
+    """
+    import unicodedata
+    s = unicodedata.normalize("NFKD", title)
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))
+    s = unicodedata.normalize("NFC", s).lower()   # recompose (Hangul jamo -> syllables)
+    # word characters of any script stay; everything else becomes a hyphen
+    s = re.sub(r"[^\w]+", "-", s, flags=re.UNICODE).replace("_", "-").strip("-")
     if len(s) > maxlen:
-        s = s[:maxlen].rsplit("-", 1)[0]
+        cut = s[:maxlen].rsplit("-", 1)[0]
+        s = cut or s[:maxlen]
     return s or "untitled"
 
 
@@ -465,6 +478,11 @@ def main():
     with open(os.path.join(arch, ".id-floor"), "w") as fh:
         fh.write(f"{floor}\n")
 
+    slugs = [slugify(r["title"]) for r in records]
+    collapsed = sum(1 for x in slugs if x == "untitled")
+    if records and collapsed / len(records) > 0.2:
+        print(f"\nWARNING: {collapsed}/{len(records)} slugs collapsed to 'untitled' — "
+              "the listing is no longer an index; check the titles' script and the slug rule")
     print(f"\nwrote {len(records)} files to {out}/")
     print(f"id floor: {floor}  (-> {os.path.join(arch, '.id-floor')})")
     flagged = [r for r in records if set(r["flags"]) & REVIEW_FLAGS]
