@@ -249,6 +249,19 @@ from a single unvalidated observation, contradictory rules, a rule the
 agent consistently fails to follow — convert to structural enforcement or
 remove. Full catalogue with examples: `references/signals.md`.
 
+**An unresolved defect is an observation, at a bounded point.** When a
+defect that is not itself the deliverable is consuming the session — one
+more hypothesis, one more root-cause probe — there is a point at which the
+right output is a precise, evidenced problem report, logged as an
+observation (or as an issue where the defect belongs to someone else's
+code) and the deliverables resumed. Set that point before the second
+hypothesis, not after the fifth: a report that names the symptom, what was
+ruled out and the cheapest next test is a legitimate deliverable, and it
+is what the next session or the upstream maintainer needs; the fix found
+in a file the project's own rules protect from unapproved edits was never
+going to ship from this session anyway. This skill does not carry
+debugging methodology — only the observation-capture rule at the boundary.
+
 **Do NOT log:** one-off corrections that don't generalise; preferences
 already captured in a skill; tool bugs unrelated to methodology;
 observations that would need proprietary client information to be useful
@@ -434,6 +447,20 @@ range and hardcode sequential numbers into a batch. A batch append is N
 separate races, not one; pre-baked numbers collapse N independent
 max-checks into a single stale read (observed: a hardcoded id collided
 with one a parallel review issued between the check and the write).
+
+**Every instrument gets the same guard: an empty or zero result is a
+claim about the instrument until an independent probe shows the
+population is empty.** `SCAN COMMAND BROKEN` and `ID COMMAND BROKEN` are
+two instances of one rule, not two rules — a frontmatter scan, an id
+derivation, a status grep, a count in a hook, a query in a script all
+report on two possibilities at once (the data is absent, or the question
+never got asked), and only the second is a defect that a "0" conceals.
+So the guard is a property every new instrument arrives with, never a
+line added after its first silent failure: pair each number-or-list
+producing command with a second count derived by a different means from
+a literal path, and halt on the disagreement. A guard enumerated per
+snippet is unguarded for the next snippet by construction; a guard stated
+as a property of instruments covers the one nobody has written yet.
 
 **A structural probe that comes back empty where content existed before is
 a stop signal, not a create.** If the directory or file you logged to
