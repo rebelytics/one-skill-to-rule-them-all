@@ -328,6 +328,7 @@ def to_record(entry, known_skills):
         "flags": flags,
         "body": entry["body"],
         "source": entry["source"],
+        "source_id": entry["id"],
     }
 
 
@@ -368,13 +369,50 @@ def render(rec):
         fm.append("skill_qualifiers:")
         for k, v in rec["skill_qualifiers"].items():
             fm.append(f"  {k}: {y(v if isinstance(v, str) else '; '.join(v))}")
+    # v3.2.0 makes `siblings_checked` mandatory at creation time; a legacy
+    # entry never had one. For a RESOLVED entry say so explicitly — nothing
+    # will backfill it, and an explicit value tells a reader why it is
+    # missing. An OPEN entry keeps the field absent on purpose: the review's
+    # sibling backfill triggers on a missing or blank field, and a sentinel
+    # there would let an under-scoped legacy entry be actioned unexamined.
+    src = os.path.basename(rec["source"])
+    if rec["status"] != "open":
+        fm.append(f"siblings_checked: {y('not checked — migrated from ' + src + ' (entry predates the family registry)')}")
     if rec.get("override_reason"):
         fm.append(f"migration_override: {y(rec['override_reason'])}")
+    # Provenance: which file and which header number the entry came from.
+    # Indispensable once an archive with its own numbering is renumbered
+    # through an `id` override (an abandoned log anchor, a consolidated
+    # daily archive) — the filename then no longer says where it was.
+    fm.append(f"migrated_from: {y(src + '#' + str(rec['source_id']))}")
     needs = sorted(set(rec["flags"]) & REVIEW_FLAGS)
     if needs:
         fm.append(f"migration_note: {y('needs review: ' + ', '.join(needs))}")
     fm.append("---")
     return "\n".join(fm) + "\n\n" + rec["body"] + "\n"
+
+
+def files_for_id(dirs, rec_id):
+    """Every file in `dirs` that the v3 layout would read as observation
+    `rec_id`: NNNN- prefix and .md suffix. Directory names are listed
+    literally (never a glob pattern), and case aliases are decided by the
+    filesystem, not by the platform name: a `0007-x.MD` counts when the
+    filesystem resolves the spelling `0007-x.md` to an existing entry — true
+    on a case-folding volume (Windows, macOS APFS by default), false on a
+    case-sensitive one, where the layout's scans would not see it either."""
+    prefix = f"{rec_id:04d}-"
+    hits = []
+    for d in dirs:
+        if not os.path.isdir(d):
+            continue
+        for n in sorted(os.listdir(d)):
+            if not n.startswith(prefix):
+                continue
+            if n.endswith(".md"):
+                hits.append(os.path.join(d, n))
+            elif n.lower().endswith(".md") and os.path.lexists(os.path.join(d, n[:-3] + ".md")):
+                hits.append(os.path.join(d, n))
+    return hits
 
 
 def id_floor_from(paths):
@@ -416,6 +454,9 @@ def main():
     ap.add_argument("--id-floor-from", action="append", default=[])
     ap.add_argument("--known-skills")
     ap.add_argument("--overrides", help="JSON file of manual resolutions, keyed by id")
+    ap.add_argument("--archive-resolved", action="store_true",
+                    help="write entries that are resolved with a date to <out>/archive/ "
+                         "(the v3 layout's home for them) instead of <out>/")
     args = ap.parse_args()
 
     known = set()
@@ -466,15 +507,48 @@ def main():
         return
 
     out = args.out or "observation-log"
+    arch = os.path.join(out, "archive")
     os.makedirs(out, exist_ok=True)
+    os.makedirs(arch, exist_ok=True)
+    archived = 0
     for r in records:
         fn = f"{r['id']:04d}-{slugify(r['title'])}.md"
-        with open(os.path.join(out, fn), "w", encoding="utf-8") as fh:
+        # Resolved entries belong under archive/ in the v3 layout. Routing
+        # them there directly keeps a converted archive out of the active
+        # scan and lets one run land a mixed log where each entry belongs.
+        resolved = args.archive_resolved and r["status"] != "open" and r["resolved"]
+        dest = os.path.join(arch if resolved else out, fn)
+        # A collision is decided on the id in BOTH directories, not on the
+        # exact filename in one: an earlier run may have written the same id
+        # under another slug or into the other directory, and the archival
+        # sweep would later move one copy over the other with a plain mv.
+        taken = files_for_id((out, arch), r["id"])
+        if taken:
+            sys.exit(f"refusing to write {dest}: id {r['id']} already exists as {taken[0]} — "
+                     "use an `id` override or a fresh --out")
+        # Create exclusively, never truncate: the listing above compares
+        # names, but only the filesystem knows which names it treats as the
+        # same file (a case-folding volume resolves 0007-x.md to an existing
+        # 0007-x.MD). "x" lets the OS answer that, on every platform.
+        try:
+            fh = open(dest, "x", encoding="utf-8")
+        except FileExistsError:
+            sys.exit(f"refusing to write {dest}: a file by that name already exists "
+                     "(possibly under a case-aliased spelling) — use an `id` override or a fresh --out")
+        with fh:
             fh.write(render(r))
+        archived += bool(resolved)
 
-    floor = max([r["id"] for r in records] + [id_floor_from(args.id_floor_from)])
-    arch = os.path.join(out, "archive")
-    os.makedirs(arch, exist_ok=True)
+    # The floor may only ever rise. A second conversion into an existing
+    # observation-log (an archive converted after the live log) must not
+    # rewind the counter below what that log already issued.
+    existing = 0
+    try:
+        with open(os.path.join(arch, ".id-floor"), encoding="utf-8") as fh:
+            existing = int(fh.read().strip() or 0)
+    except (OSError, ValueError):
+        pass
+    floor = max([r["id"] for r in records] + [id_floor_from(args.id_floor_from), existing])
     with open(os.path.join(arch, ".id-floor"), "w") as fh:
         fh.write(f"{floor}\n")
 
@@ -483,8 +557,11 @@ def main():
     if records and collapsed / len(records) > 0.2:
         print(f"\nWARNING: {collapsed}/{len(records)} slugs collapsed to 'untitled' — "
               "the listing is no longer an index; check the titles' script and the slug rule")
-    print(f"\nwrote {len(records)} files to {out}/")
-    print(f"id floor: {floor}  (-> {os.path.join(arch, '.id-floor')})")
+    print(f"\nwrote {len(records)} files to {out}/"
+          + (f" ({archived} resolved entries under archive/)" if args.archive_resolved else ""))
+    top = max([r["id"] for r in records] + [0])
+    print(f"id floor: {floor}  (-> {os.path.join(arch, '.id-floor')}"
+          + (f"; kept the existing floor {existing}" if existing > top else "") + ")")
     flagged = [r for r in records if set(r["flags"]) & REVIEW_FLAGS]
     if flagged:
         print(f"\n{len(flagged)} file(s) carry migration_note and need review:")

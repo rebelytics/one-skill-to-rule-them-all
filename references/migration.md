@@ -28,6 +28,8 @@ writes `observation-log/NNNN-<slug>.md` with YAML frontmatter:
 | `**Skill:** New skill candidate: name` | `proposes_skill: ["name"]`; `skill` stays empty unless the entry also names an existing skill it could extend |
 | `**Type:**`, `**Phase/Area:**`, `**Session context:**`, `**Reference file:**` | `type`, `area`, `session_context`, `reference` |
 | Everything else | Stays in the body verbatim — only the labels above are lifted |
+| *(always)* | `migrated_from: "<file>#<header number>"` — provenance, so a renumbered entry still says where it came from |
+| *(resolved entries)* | `siblings_checked: "not checked — migrated from <file> …"` — the field 3.2.0 requires, stated as what it is; an OPEN entry keeps it absent so the review's sibling backfill still fires |
 
 Two rules protect the fields the format exists to make reliable:
 
@@ -102,32 +104,77 @@ Run from the workspace folder. Python 3.8+, no dependencies.
    python3 scripts/migrate-log.py --convert skill-observations/log.md \
      --out skill-observations/observation-log \
      --id-floor-from skill-observations/archive \
-     --overrides overrides.json
+     --overrides overrides.json --archive-resolved
    ```
+
+   `--archive-resolved` writes entries that are resolved with a date to
+   `observation-log/archive/` directly, where the v3 layout keeps them;
+   without it every entry lands in the active directory and the first
+   archival sweep moves them. The script refuses to overwrite a file that
+   already exists at the target id, and it never lowers an existing
+   `.id-floor` — a second run into a populated log can only raise it.
 
 6. **Verify.** The report's file count must equal the number of
    `### Observation` headers in `log.md`:
 
    ```bash
    grep -c '^### Observation' skill-observations/log.md
-   ls skill-observations/observation-log/*.md | wc -l
+   ls skill-observations/observation-log/*.md skill-observations/observation-log/archive/[0-9]*.md | wc -l
    ```
+
+   The second count spans both directories because `--archive-resolved`
+   writes resolved entries under `archive/`; on a target that already held
+   files, subtract what was there before the run.
 
    Spot-check three files against their originals, including one that was
    resolved and one that carried a qualifier.
-7. **Move legacy archives under the new layout** so one directory holds
-   the whole history, and retire the old file so nothing scans it:
+7. **Convert the legacy archives too, then retire every converted file.**
+   An archive that stays monolithic is not "history nobody reads": it is
+   invisible to every mechanism the per-file layout exists for. The
+   per-skill check greps `skill:` and sees `**Skill:**` as nothing; the
+   restatement check reads titles from files and never meets a `###
+   Observation` header; an audit that cites evidence by `NNNN` id cannot
+   cite an entry that has none. Measured on one adopter's log: the first
+   21 observations of a project — its canonical numbering, cited from its
+   configuration — sat in two daily archives, and a rule audit that counted
+   incidents by id could not see them; a second incident that would have
+   kept a rule stayed uncounted until a reviewer read the archive by hand.
+   Run the check-only pass over the archives (step 3 already does); convert
+   the ones that parse losslessly, routing resolved entries to `archive/`:
 
    ```bash
-   mv skill-observations/archive/*.md skill-observations/observation-log/archive/
-   rmdir skill-observations/archive
-   mv skill-observations/log.md skill-observations/log.md.migrated
+   before=$(ls skill-observations/observation-log/*.md skill-observations/observation-log/archive/[0-9]*.md 2>/dev/null | wc -l)
+   python3 scripts/migrate-log.py --convert skill-observations/archive/*.md \
+     --out skill-observations/observation-log \
+     --id-floor-from skill-observations/archive --archive-resolved \
+   && after=$(ls skill-observations/observation-log/*.md skill-observations/observation-log/archive/[0-9]*.md 2>/dev/null | wc -l) \
+   && [ $((after - before)) -eq "$(grep -ch '^### Observation' skill-observations/archive/*.md | awk '{s+=$1} END{print s+0}')" ] \
+   && for f in skill-observations/archive/*.md; do mv "$f" "$f.migrated"; done \
+   && mv skill-observations/log.md skill-observations/log.md.migrated
    ```
 
-   Legacy archives stay in their monolithic format. They were written
-   under conventions that changed several times; converting them would
-   fabricate precision the records never had, and nothing reads them on a
-   normal turn.
+   The chain retires nothing unless the conversion exited 0 AND the file
+   count grew by exactly the number of headers converted (counted per file
+   and summed — a concatenation would glue the last line of a file without
+   a final newline to the next file's header and miscount): a refused
+   collision or a crash leaves every archive in place, unconverted and
+   still named `.md`, instead of renaming history the new layout never
+   received.
+
+   Two cases need a decision first, not a guess. **An archive whose numbering
+   collides with the canonical one** (an abandoned log anchor, consolidated
+   into the archive with its own `### Observation 3`) is converted in a
+   separate run with an `id` override per entry — new ids above the current
+   floor — so its entries keep their content and gain an address; the
+   `migrated_from` field records the original file and number. **An archive
+   that does not parse losslessly** (formats that changed several times,
+   entries without a status) stays monolithic under
+   `observation-log/archive/` with a `migration_note` in the report; that is
+   the case the "would fabricate precision" caution was written for, and it
+   is decided per file by the check pass, not for archives as a class.
+   Keep the retired originals beside the converted files (`.migrated`) until
+   a review has spot-checked three converted entries against them, including
+   one that was renumbered.
 
 8. **Enumerate the machine's other workspaces before recording the
    migration anywhere.** Everything above converts exactly one workspace
