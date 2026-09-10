@@ -365,6 +365,34 @@ diff -rq "$live" "$s"      # must be identical before any edit
 # then make EVERY edit against the staged path
 ```
 
+**Seed from the CURRENT state, which for a shared artefact is upstream — not
+the local file.** That `diff` proves the staged copy started from live; it is
+silent on whether live is current, and it passes trivially in exactly the state
+it looks like it is guarding. "Edit a copy, not the original" answers what you
+may damage, not what you are building on, and for any skill with an upstream —
+a repository it is installed or refreshed from, including one the user
+themselves commits to from several machines or sessions — the live directory is
+itself a copy that does not announce how far behind it is. A stale local file
+looks exactly like a fresh one. So before seeding, fetch the upstream revision
+of every file about to be edited and diff it against live: identical → seed
+from live and record the revision; divergent → pull upstream first, seed from
+that, and re-check whether the observation is already addressed there, because
+a maintainer who fixed it differently and better is the common case. The
+session editing a skill is a parallel writer like any other, so this is the
+write-time state check the procedure already requires of shared logs, applied
+to the agent's own tools. Name the revision staged from in the Step 8 summary.
+
+Two things fall out of the same fetch. It settles **section-level provenance** —
+whether the passage being edited is upstream content or a local addition —
+which is what the Approval policy needs in order to route between an upstream
+report and a fork-local edit. And **an unreachable upstream needs a positive
+control before it is called unreachable**: fetch a path known to exist (the
+repository README) before concluding the network is the problem, because a 404
+on a guessed skill path with a 200 on the README means the path assumption is
+wrong. Without that control the honest-looking conclusion is "upstream
+unreachable, seeding from live", which is this failure reached by a route that
+feels diligent.
+
 Two details in that snippet are load-bearing and were both wrong in an
 earlier version. Strip the prefix **without** a trailing slash — `${d#$live}`,
 not `${d#$live/}`. The pattern with the slash strips correctly for every
