@@ -1,0 +1,37 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-marketplace.json",
+  "name": "one-skill-to-rule-them-all",
+  "description": "Marketplace for the task-observer meta-skill — monitors task execution to continuously discover and improve reusable skills.",
+  "owner": {
+    "name": "Eoghan Henn",
+    "url": "https://rebelytics.com"
+  },
+  "version": "3.2.0",
+  "plugins": [
+    {
+      "name": "task-observer",
+      "displayName": "Task Observer — One Skill to Rule Them All",
+      "description": "Monitors task execution for skill improvement opportunities. Use during ANY multi-step task, agentic workflow, or work session. Captures patterns, user corrections, workflow insights, and methodology worth preserving as reusable skills. Also known as \"One Skill to Rule Them All\".",
+      "version": "3.2.0",
+      "source": {
+        "source": "github",
+        "repo": "rebelytics/one-skill-to-rule-them-all"
+      },
+      "author": {
+        "name": "Eoghan Henn",
+        "url": "https://rebelytics.com"
+      },
+      "homepage": "https://github.com/rebelytics/one-skill-to-rule-them-all",
+      "repository": "https://github.com/rebelytics/one-skill-to-rule-them-all",
+      "license": "CC-BY-4.0",
+      "keywords": [
+        "skills",
+        "meta-skill",
+        "observation",
+        "improvement",
+        "workflow",
+        "productivity"
+      ]
+    }
+  ]
+}
