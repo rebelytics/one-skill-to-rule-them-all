@@ -589,7 +589,11 @@ the staged copy for the substance of each suggested improvement and
 classify it as already-applied / partially-applied / outstanding — an
 `open` status is not evidence the work is outstanding, and applying an
 already-applied observation over a section that has since been refined
-regresses the skill in the name of improving it. Mark already-applied
+regresses the skill in the name of improving it. The classification is
+made per point of the body, naming the line that covers each: an entry
+is already-applied only when every point has its line, and one point
+without a line makes it partially-applied, whatever the title suggests
+(SKILL.md, Acting on Observations). Mark already-applied
 entries `actioned` with a resolution noting that a prior session applied
 them, and leave the section alone. Then
 produce an updated SKILL.md: integrate insights into the sections where

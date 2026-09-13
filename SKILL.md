@@ -773,6 +773,16 @@ often the refinement, not the echo. Apparent agreement suppresses
 verification more effectively than disagreement does, so this rule binds
 hardest exactly where it feels least necessary.
 
+**A change you did not make resolves an observation point by point,
+never title against title.** When an upstream release, a sibling
+session's edit or a fix that arrived by merge appears to cover an
+observation, list the points its body makes and name, for each, the
+line of the diff that covers it; a point with no line stays open and
+moves to a carrier observation (below). Holding the fix's title against
+the observation's title measures the overlap of two headings, not
+coverage of the content — and the uncovered remainder leaves every
+queue, because the entry is marked resolved.
+
 When acting: small, clearly-additive, low-risk changes (a new rule, a
 clarification, a factual fix) may be applied without waiting for the next
 review — "directly" means *now*, not *in place*: the edit is still made on
