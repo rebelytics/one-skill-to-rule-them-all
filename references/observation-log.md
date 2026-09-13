@@ -65,7 +65,7 @@ parsed=$(find "$d" -maxdepth 1 -name '*.md' -exec awk 'FNR==1 {if (/^---[[:space
 suspect=$(find "$d" -maxdepth 1 -name '*.md' -exec awk 'FNR==1 && /^---[[:space:]]*$/ {fm=1; next}
   fm && /^---[[:space:]]*$/ {fm=0; nextfile}
   fm && /^[a-z_]+: [^"\047[|>].*: / {print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')   # values with an unquoted ": " — invalid YAML
-for f in $(find "$d" -maxdepth 1 -name '*.md' | sort); do
+find "$d" -maxdepth 1 -name '*.md' | LC_ALL=C sort | while IFS= read -r f; do  # quote + IFS=: never word-split a path containing a space
   awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
        fm && /^---[[:space:]]*$/ {exit}
        fm' "$f"
@@ -239,21 +239,25 @@ stale resolved files to `archive/`, so archival happens as a side effect
 of a step no write can skip.
 
 ```bash
-d="[ABSOLUTE PATH]/skill-observations/observation-log"   # the pinned workspace path, never relative to the cwd
+d="[ABSOLUTE PATH]/skill-observations/observation-log"   # the pinned workspace path, never relative to the cwd; it may contain a space, so keep it quoted; bash, not sh
 today=$(date +%F)          # archival rides inside this command (see below):
-for f in $(find "$d" -maxdepth 1 -name '*.md'); do   # stale resolved files move before the id is read
-  hdr=$(awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
-             fm && /^---[[:space:]]*$/ {exit} fm' "$f")
-  case $hdr in
-    *"status: actioned"*|*"status: declined"*|*"status: superseded"*) ;;
-    *) continue ;;
-  esac
-  r=$(printf '%s\n' "$hdr" | sed -n 's/^resolved:[[:space:]]*//p' | head -1)
-  case $r in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;; *) continue ;; esac
-  [ "$r" != "$today" ] && \
-    [ "$(printf '%s\n%s\n' "$r" "$today" | sort | head -1)" = "$r" ] && \
-    mv "$f" "$d/archive/"
-done
+n_files=$(find "$d" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')
+seen=$(find "$d" -maxdepth 1 -name '*.md' -print0 | { n=0   # -print0/-d '': never word-split a path containing a space — `read -d` is a bash extension, so this loop requires bash
+  while IFS= read -r -d '' f; do   # stale resolved files move before the id is read
+    n=$(( n + 1 ))
+    hdr=$(awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
+               fm && /^---[[:space:]]*$/ {exit} fm' "$f")
+    case $hdr in   # (pattern) arms: bash 3.2 cannot parse a bare pattern) inside $( )
+      (*"status: actioned"*|*"status: declined"*|*"status: superseded"*) ;;
+      (*) continue ;;
+    esac
+    r=$(printf '%s\n' "$hdr" | sed -n 's/^resolved:[[:space:]]*//p' | head -1)
+    case $r in ([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;; (*) continue ;; esac
+    [ "$r" != "$today" ] && \
+      [ "$(printf '%s\n%s\n' "$r" "$today" | sort | head -1)" = "$r" ] && \
+      mv "$f" "$d/archive/"
+  done; printf %s "$n"; })
+[ "$n_files" -gt 0 ] && [ "${seen:-0}" -eq 0 ] && { echo "ARCHIVAL SWEEP BROKEN — $n_files files present, 0 examined"; exit 1; }
 hi=$( { ls "$d" "$d/archive" 2>/dev/null | grep -oE '^[0-9]+'; cat "$d/archive/.id-floor" 2>/dev/null; } \
      | sed 's/^0*\([0-9]\)/\1/' | sort -n | tail -1); : "${hi:=0}"
 [ "$hi" -eq 0 ] && [ -n "$(find "$d" -maxdepth 1 -name '*.md')" ] && { echo "ID COMMAND BROKEN — log is non-empty but no ids extracted"; exit 1; }
@@ -271,7 +275,11 @@ wrong id — and a prefix containing an 8 or 9 (e.g. `0108`) is an invalid
 octal constant and errors the whole derivation.
 
 `ls`, `awk`, `sed -n`, `grep -oE`, `sort -n`, `mv` and `printf` are POSIX;
-the snippet runs unchanged on macOS, Linux and Git Bash. The date
+the loop's `read -r -d ''` is not, so the snippet needs bash — and on
+macOS that means bash 3.2 (`/bin/bash`), which is why every case arm is
+written `(pattern)`: 3.2 cannot parse a bare `pattern)` inside `$( … )`.
+With that form the snippet runs unchanged under bash on macOS, Linux and
+Git Bash. The date
 comparison relies on ISO dates sorting lexically, so it needs no `date`
 arithmetic. A skill that hands the agent a
 shell command owns that command's portability: lead with the portable
