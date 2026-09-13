@@ -301,6 +301,17 @@ is modified or may have drifted, verify the problem still exists at
 upstream HEAD before reporting it; (4) match the repository's house style
 for reports.
 
+**Pre-send gate — run on the finished draft, after the pre-flight.** The
+pre-flight decides whether and where a report goes; nothing reads the
+finished text for what must not be in it, and a check that only confirms
+required parts is passed by adding, never by leaving out. Before sending,
+search the finished draft for every identifier the workspace keys carry
+— the project or client name in each participating workspace root,
+hostnames, account identifiers — expecting 0 hits, with a positive
+control on a text known to contain one. A generic path segment the skill
+itself names (`skill-observations`, `observation-log`) is not an
+identifier and stays off the list.
+
 ## Confidentiality layers
 
 The open-source/internal boundary is a confidentiality boundary; enforce it
