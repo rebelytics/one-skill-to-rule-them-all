@@ -281,7 +281,12 @@ every review, while the frontmatter is already in hand: (a) re-check each
 has been met, set the entry back to `status: open`, clear `parked_until:`, and
 carry it into this review's queue; (b) list every still-parked entry in the
 Step 8 summary in ONE LINE each — id, title, unpark condition — so a parked
-backlog stays visible without re-entering the work queue.
+backlog stays visible without re-entering the work queue. A condition
+phrased on the state of a vehicle — a PR merged or closed, a ticket
+resolved — is re-checked on the result it was meant to deliver, the text
+of the target artefact, because the result routinely arrives by another
+path (SKILL.md, How to Log); a refresh of an upstream-maintained skill is
+that check for every entry parked on it.
 
 **Staged-work reconciliation gate.** Installation is a manual, per-item
 act that happens outside any session, so no session observes it and

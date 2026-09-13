@@ -645,6 +645,18 @@ observe). If the condition cannot occur, the entry is not waiting: close it on
 the substitute evidence available today, or park it on a trigger that can
 actually fire.
 
+**A condition that waits on someone else's process names the result,
+never your own vehicle.** "Rule X is in main's SKILL.md" is answered by
+reading the target artefact; "PR #N is merged or closed" waits on a path
+the other party need not take — a maintainer folds the change into their
+own commit, cherry-picks it or rewrites it, and the PR stays open or is
+closed as overtaken while the result the entry waited for has fully
+arrived. This is the dual of the check above: not "can the condition
+occur at all" but "can the result arrive without the condition firing?"
+For a contribution to a repository someone else maintains the answer is
+always yes, so the condition is phrased on the text of the target and
+re-checked by reading it.
+
 **Context preservation:** if an observation depends on session-local data
 (uploads, API output), save that context into the workspace first and set
 `reference:` to its path — an observation whose evidence dies with the
