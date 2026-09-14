@@ -778,10 +778,12 @@ never title against title.** When an upstream release, a sibling
 session's edit or a fix that arrived by merge appears to cover an
 observation, list the points its body makes and name, for each, the
 line of the diff that covers it; a point with no line stays open and
-moves to a carrier observation (below). Holding the fix's title against
-the observation's title measures the overlap of two headings, not
-coverage of the content — and the uncovered remainder leaves every
-queue, because the entry is marked resolved.
+moves to a carrier observation (below). A point that joins several
+conditions (A and B) counts as one point per condition — a line that
+matches the second half does not cover the first. Holding the fix's
+title against the observation's title measures the overlap of two
+headings, not coverage of the content — and the uncovered remainder
+leaves every queue, because the entry is marked resolved.
 
 When acting: small, clearly-additive, low-risk changes (a new rule, a
 clarification, a factual fix) may be applied without waiting for the next

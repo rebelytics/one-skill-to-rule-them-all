@@ -592,10 +592,15 @@ already-applied observation over a section that has since been refined
 regresses the skill in the name of improving it. The classification is
 made per point of the body, naming the line that covers each: an entry
 is already-applied only when every point has its line, and one point
-without a line makes it partially-applied, whatever the title suggests
-(SKILL.md, Acting on Observations). Mark already-applied
+without a line makes it partially-applied, whatever the title suggests;
+a point that joins several conditions (A and B) counts as one point per
+condition (SKILL.md, Acting on Observations). Mark already-applied
 entries `actioned` with a resolution noting that a prior session applied
-them, and leave the section alone. Then
+them, and leave the section alone. For a partially-applied entry, add
+only the points without a line, never restate the ones that have one —
+a second copy of a present rule drifts from the first — and name both
+in the resolution: the points a prior session applied and the ones
+added now. Then
 produce an updated SKILL.md: integrate insights into the sections where
 they belong (never append an observations list at the bottom); preserve
 structure, voice, and attribution; place new rules where they logically
