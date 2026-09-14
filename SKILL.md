@@ -371,6 +371,30 @@ one-entry `skill:` list is byte-identical whether the siblings were
 evaluated or never considered, and only the recorded field makes the
 *absence* of the judgement visible to a review or a drift audit.
 
+**Log your own rule violations, and let the restatement check do the
+counting.** Breaking a rule that a skill or a project instruction file
+documents is a first-class observation, not an embarrassment to move past:
+it is the only evidence that the rule's *enforcement* is too weak, and
+nobody but the agent can see it. Log it in the same turn, and name which
+protection was actually in play — was the rule merely written down, was it
+loaded into context, was there a checkpoint? The restatement check above
+already surfaces the earlier entry when one exists, so the count arrives
+without extra work; what is missing is what to do once it does.
+
+**Second violation of the same rule: stop proposing text.** A rule that has
+failed twice with no intervening `actioned` fix does not have a wording
+problem, it has a protection problem. From the second occurrence onward the
+proposed improvement must be a structural barrier — a hook that refuses the
+call, a lint rule, a default that makes the wrong path unavailable — not a
+clearer sentence, a bolder warning, or the same rule moved somewhere more
+prominent. Rewriting a rule a third time is the failure mode this
+checkpoint exists to prevent, and it reads as diligence while changing
+nothing. A rule in context is re-interpreted on every run and competes with
+whatever else pulls in the moment; a barrier at the tool boundary does not
+compete, it refuses. Prefer the barrier wherever the rule guards against
+silent corruption — the class where the absence of an error is not evidence
+of success.
+
 ## How to Log
 
 Write the observation file **silently, within the same turn or the next** —
@@ -816,6 +840,7 @@ outstanding skills in its `skill:` list. Full protocol:
 | Citing an observation number? | From the `id:` frontmatter field (= the `NNNN-` filename prefix); never a `grep -n` line number; sanity-check against the known id range |
 | Open-source or internal? | Default open-source; the boundary is confidential |
 | Small fix or substantial? | Additive → apply directly; restructuring/new skill → `references/skill-authoring.md` |
+| Same rule broken twice? | The fix is a structural barrier (hook, lint, default) — never a third rewording |
 | Changing an observation (status/archival)? | Re-read that one file, edit only its frontmatter, or `mv` it to `observation-log/archive/` — no shared-file rewrite |
 | Upgrading from a single-file `log.md`? | Scripted, once — `references/migration.md` |
 | Weekly review? | Trigger check at session start; procedure in `references/weekly-review.md` |
