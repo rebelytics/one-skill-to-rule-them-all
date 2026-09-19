@@ -381,20 +381,21 @@ in more than one. Then, before anything is presented:
   under-scoped. Count these — "N observations logged without a sibling
   check" is a health metric of the logging practice, not a per-entry
   nuisance.
-- **Already-applied check.** Before proposing anything for an OPEN
-  observation, measure whether its improvement already exists: read the
-  file the observation actually targets (its `skill:` entries, its
-  `target_file:` entries, the code or register it names), never a proxy
-  such as a routine's own SKILL.md when the observation asks for the
-  register that routine reads. When the remedy is in place, report
-  "already applied at <path>" and close the entry (`status: actioned`,
-  `resolved:` today, `resolution: "Already applied at <path> (found at
-  review)"`) instead of re-proposing it. Count these: "N of M already
-  applied" is a health metric of the logging practice, the same way the
-  sibling-check count is. (Measured on a first review of 27 entries: 10
-  already applied; one entry reported as unresolved because the wrong
-  file had been read — the delta it asked for sat in the register the
-  routine declares, not in the routine's SKILL.md.)
+- **Presence check, here, against the real target.** Step 5 greps the
+  staged copy for each improvement before writing; run that same
+  already-applied / partially-applied / outstanding classification here
+  too, before anything is presented, because in an interactive review the
+  user approves at this step and Step 5 never sees an entry the user was
+  asked to approve twice. And run it against the file the observation
+  actually targets — its `skill:` entries, its `target_file:` entries, the
+  code or register it names — never a proxy such as a routine's own
+  SKILL.md when the entry asks for the register that routine declares.
+  Close what is in place (`status: actioned`, `resolved:` today,
+  `resolution: "Already applied at <path> (found at review)"`) and count
+  it: "N of M already applied" is a health metric of the logging practice,
+  the same way the sibling-check count is. (Measured on a first review of
+  27 entries: 10 already applied; one reported as unresolved because the
+  routine's SKILL.md had been read instead of its register.)
 - **Confidentiality pass over the log itself.** For every OPEN
   `open-source` observation, check the Issue and Improvement fields for
   client-identifying specifics no longer needed for context and strip
