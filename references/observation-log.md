@@ -42,6 +42,7 @@ means this directory.
 | `type` | `open-source` or `internal` (see Taxonomy in the core skill). |
 | `skill` | **Always a list**, even with one entry, so no consumer ever branches on string-vs-list. First entry is primary. May be empty. |
 | `proposes_skill` | List of new-skill candidates by working name. Independent of `skill`; either may be empty, both may be filled. |
+| `target_file` | List of paths, for observations whose right home is not a skill: an instructions file, a memory note, an agent brief, the register a routine reads. Name the file the fix will actually be written to, so a review can go there instead of remapping the entry onto the nearest skill. Measured on a first review of 27 legacy entries: 15 named a non-skill in `Skill:` ("browser verification protocol", "documentation hygiene") and every one had to be resolved to a path by hand before Step 3 could start. |
 | `siblings_checked` | **Mandatory, never blank.** Records that the sibling check happened and what it concluded: the family name, the members evaluated, and the verdict (propagated / instance-specific). `none` only where the target belongs to no family. Missing or empty = logged without a sibling check, and reviews count it as such. |
 | `area` | The part of the skill or workflow concerned. |
 | `date` | Date logged, `YYYY-MM-DD`. |

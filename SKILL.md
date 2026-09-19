@@ -585,6 +585,11 @@ skill: [skill-a, skill-b]        # existing skills this improves — always a
 proposes_skill: []               # new skills this argues for, by working
                                  # name; an observation can fill either
                                  # list or both
+target_file: []                  # when the right home is not a skill at
+                                 # all: the instructions file, a memory
+                                 # note, an agent brief, the register a
+                                 # routine reads — the path the fix will
+                                 # actually be written to; may be empty
 siblings_checked: "family-name: a, b — shared, both added"
                                  # MANDATORY, never blank: the family name,
                                  # the members evaluated and the verdict —
@@ -791,7 +796,15 @@ in-session must have its frontmatter updated — `status: actioned`,
 ends. The work and the bookkeeping are two acts, and the second is the one
 that gets dropped; a stale `open` entry then invites redoing finished work
 over a section that has since moved on. The write is the enforcement,
-exactly as it is for logging.
+exactly as it is for logging. "Acted on" includes the fix that lands as
+ordinary work — the rule written into the instructions file, the code
+corrected, the note added — while the observation that asked for it is
+not in mind; and a later session that finds the remedy already in place
+closes the entry the same way, with `resolution: "Already applied at
+<path> (found <date>)"`. Neither case looks like acting on an
+observation, which is why both are missed. (Measured on a first review of
+27 entries: 10 were already applied elsewhere with `status: open`, and
+each cost the review a re-measurement before it could propose anything.)
 
 **Acting on only a subset of a multi-skill observation's `skill:` list?**
 Neither plain move is honest — left `open`, the finished portion gets

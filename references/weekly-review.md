@@ -349,9 +349,12 @@ permissions; grow the (b) list when a change you made has vanished.
 against every skill — not just the skills named in its `skill:` list;
 Principles often generalise. Build skill → [relevant observations], seeding
 it from the frontmatter: every entry in an observation's `skill:` list puts
-it in that skill's bucket (the first entry is primary), and every entry in
-`proposes_skill:` puts it under a new-skill candidate of that name. An
-observation may appear in both. Then, before anything is presented:
+it in that skill's bucket (the first entry is primary), every entry in
+`proposes_skill:` puts it under a new-skill candidate of that name, and
+every entry in `target_file:` puts it under that file — a bucket the
+review applies to like a skill (staged, never edited in place), instead
+of remapping the entry onto the nearest skill. An observation may appear
+in more than one. Then, before anything is presented:
 
 - **Consolidate new-skill candidates by the problem they solve, not by
   name.** Independently logged proposals for the same skill will not look
@@ -378,6 +381,20 @@ observation may appear in both. Then, before anything is presented:
   under-scoped. Count these — "N observations logged without a sibling
   check" is a health metric of the logging practice, not a per-entry
   nuisance.
+- **Already-applied check.** Before proposing anything for an OPEN
+  observation, measure whether its improvement already exists: read the
+  file the observation actually targets (its `skill:` entries, its
+  `target_file:` entries, the code or register it names), never a proxy
+  such as a routine's own SKILL.md when the observation asks for the
+  register that routine reads. When the remedy is in place, report
+  "already applied at <path>" and close the entry (`status: actioned`,
+  `resolved:` today, `resolution: "Already applied at <path> (found at
+  review)"`) instead of re-proposing it. Count these: "N of M already
+  applied" is a health metric of the logging practice, the same way the
+  sibling-check count is. (Measured on a first review of 27 entries: 10
+  already applied; one entry reported as unresolved because the wrong
+  file had been read — the delta it asked for sat in the register the
+  routine declares, not in the routine's SKILL.md.)
 - **Confidentiality pass over the log itself.** For every OPEN
   `open-source` observation, check the Issue and Improvement fields for
   client-identifying specifics no longer needed for context and strip
