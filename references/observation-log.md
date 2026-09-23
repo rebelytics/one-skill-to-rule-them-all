@@ -15,6 +15,7 @@ empty.
 ## Contents
 
 - Layout
+  - Workspace creation
 - Frontmatter fields
   - Unquoted `: ` in a prose value — how far it drifts before anyone notices
   - A park condition names the result, never your own vehicle
@@ -64,6 +65,55 @@ skill (How to Log). There is no central index to keep in sync: the
 directory listing is the index, and the frontmatter is the metadata.
 "The observation log", wherever this skill or any other skill says it,
 means this directory.
+
+### Workspace creation
+
+One idempotent command, then an assertion. Session Start step 1 points
+here: run this, do not work down the tree above by hand.
+
+```bash
+d="[ABSOLUTE PATH]/skill-observations"   # the pinned path, quoted: it may contain a space; bash, not sh
+mkdir -p "$d/observation-log/archive"
+# the literal `never`, never a date — a date means a review actually ran
+[ -e "$d/last-review-date.txt" ] || printf 'never\n' > "$d/last-review-date.txt"
+[ -e "$d/cross-cutting-principles.md" ] || printf '# Cross-Cutting Principles\n\n## Active Principles\n' > "$d/cross-cutting-principles.md"
+for f in observation-log observation-log/archive last-review-date.txt cross-cutting-principles.md; do
+  [ -e "$d/$f" ] || { echo "WORKSPACE SETUP INCOMPLETE: $f"; exit 1; }
+done
+```
+
+`mkdir -p` creates the parent, so `observation-log/` needs no separate line;
+both `[ -e ]` guards make the command safe to re-run on an existing
+workspace, which is what lets step 1 run it unconditionally rather than
+deciding first whether setup is needed.
+
+**Why a command and not the prose list it replaces.** Observed on a fresh
+user-scope install: a session created `skill-observations/` and
+`observation-log/` and nothing else. The next session could not tell —
+step 1's probe is an `ls` of the pinned path, the path resolved,
+`observation-log/` was there, and nothing re-checks the siblings. The
+workspace looked set up from outside for as long as nobody looked closer.
+
+The assertion loop is the half that matters, because the four artefacts
+fail differently and only one of them complains:
+
+| Missing | How it surfaces |
+|---|---|
+| `observation-log/` | immediately, at the first scan |
+| `archive/` | at the first write, when the id snippet reads `.id-floor` or `mv`s into it |
+| `cross-cutting-principles.md` | at the first review |
+| `last-review-date.txt` | **never** — step 3 silently skips the review trigger |
+
+The last row is the reason the guard is worth its lines: the failure mode
+of the one step whose whole job is to fire periodically is that it never
+fires and nothing says so.
+
+This is the same shape the skill already solved for archival, and solved
+the same way — a duty written as prose next to another action inherits none
+of that action's enforcement, so the archival sweep was folded *into* the
+id-derivation snippet ("If a step must always accompany a tool call, put it
+inside the same command", Archival on Write). Step 1's creation is the
+remaining place where that reasoning had not been applied.
 
 ## Frontmatter fields
 

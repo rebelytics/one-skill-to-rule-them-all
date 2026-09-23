@@ -135,11 +135,12 @@ was handled without its reference loaded, log an observation.
    backup, and which channel the primary one belongs in, is in
    `references/environments.md` ("Activation config — late, intermittent,
    and why the guard cannot live inside it"); load it when setting up or
-   diagnosing activation. Once the path resolves: if
-   `skill-observations/observation-log/` (with its `archive/`
-   subdirectory) or `skill-observations/cross-cutting-principles.md`
-   don't exist, create them (principles template:
-   `references/skill-authoring.md`). Then the **starter-set
+   diagnosing activation. Once the path resolves, create the workspace
+   artefacts by RUNNING the one idempotent command in
+   `references/observation-log.md` ("Workspace creation"), which creates
+   all four and then asserts each — never by working down a list by hand:
+   a partial workspace is indistinguishable from a complete one at the
+   granularity this step inspects. Then the **starter-set
    reconciliation**, due whenever
    `skill-observations/starter-principles-reviewed.txt` is absent or holds a
    starter-set version older than the one in
@@ -149,9 +150,7 @@ was handled without its reference loaded, log an observation.
    once in one line, import only what the adopter picks, then write the
    shipped version into the marker file so the offer never repeats until the
    set changes. Never pre-populate silently.
-   Create `skill-observations/last-review-date.txt` containing the literal
-   value `never` if it doesn't exist — never write a date into it at setup;
-   a date means a review actually ran. If a legacy single-file
+   If a legacy single-file
    `skill-observations/log.md` exists and `observation-log/` does not, this
    is an upgrade from a pre-3.0 install: load `references/migration.md` and
    run the scripted conversion before writing anything else. Before
