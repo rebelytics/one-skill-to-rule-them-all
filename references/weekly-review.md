@@ -439,6 +439,13 @@ more than one. Then, before anything is presented:
   when the entry asks for the register that routine declares. Close what
   is already applied, with a resolution naming where it was found.
 
+- **Fix the system that owns the problem.** Before adding a skill rule,
+  check whether a code, configuration or CI change would remove the
+  failure. If so, recommend that fix: name the file, the change and how to
+  verify it. Keep a workaround instruction only while it is needed, and
+  identify the fix that will let a later review remove it. Implementing
+  that fix still follows the user's scope and the approval policy.
+
 - **Consolidate new-skill candidates by the problem they solve, not by
   name.** Independently logged proposals for the same skill will not look
   alike, because each is named after the task that surfaced it; eleven
@@ -470,8 +477,14 @@ more than one. Then, before anything is presented:
   them. The log is the artefact most likely to be shared casually, and
   the authoring-time sweeps never see it.
 
-Interactive: present all of it and await approval. Autonomous: apply the
-approval policy above and continue.
+Interactive: save the full decision list in the review record. In chat,
+show at most three recommended next steps, ordered by impact. For each,
+state **problem → concrete change → verification** in plain language;
+name whether the change belongs in a skill, agent instructions, or tooling.
+Link the full list and say how many decisions remain. Group duplicates and
+exclude already-fixed items before choosing the three. Await approval for
+the proposed work; a short list does not authorize the rest of the backlog.
+Autonomous: apply the approval policy above and continue.
 
 **Cluster by decision BEFORE the escalation list is written.** An
 append-only log accumulates convergent entries by construction: the same
@@ -763,6 +776,11 @@ structure, voice, and attribution; place new rules where they logically
 live. Follow the editing rules in `references/skill-authoring.md` (live
 file as base, staging, diff-before-overwrite).
 
+Rewrite additions for the skill's reader rather than copying observation
+prose: put the rule first, use one idea per sentence and at most one example
+per change. Re-check the draft against the observation so the shorter wording
+preserves every required behaviour and verification step.
+
 **Scaling note — fan out when the apply-phase is large.** When the
 apply-phase spans more than ~3 skills or ~10 observations, delegate Step 5
 to parallel subagents clustered by skill rather than applying everything
@@ -900,7 +918,12 @@ next write on a later day archives them.
 `skill-observations/last-review-date.txt`.
 
 **Step 8 — deliver and summarise.** Stage updated skills (see Delivery
-below), then present:
+below). Save the complete record under
+`[workspace folder]/skill-observations/reviews/[date]/REVIEW.md`, using the
+template below. In chat, report what changed and its verification, followed
+by at most three remaining next steps in the Step 3 format. Link the record
+for the full accounting. Distinguish proposed, staged and installed changes;
+an observation count alone is not an outcome.
 
 ```markdown
 ## Weekly Skill Review Complete — [date]
