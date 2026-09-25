@@ -179,6 +179,11 @@ environment mints a separate project identity per checkout, or more than
 one agent works this project, the pinned path above is the single shared
 location; do not derive one per session, tool or project.
 
+The user's repositories live under:
+  [PROJECTS ROOT]
+(the root the sibling check sweeps before declaring a skill absent;
+observation-log.md, "Skill families and the sibling check").
+
 A subagent dispatched by a session that already runs this protocol does
 not run it again and does not write to the log. The controller observes,
 because only it sees the whole task and its review; a subagent that

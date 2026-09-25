@@ -833,6 +833,27 @@ says of targets. Enumerate the scopes by glob rather than a recursive
 trees runs for minutes, and guard the enumeration: an empty result tells
 you about the instrument before it tells you about the library.
 
+```bash
+root="[PROJECTS ROOT]"   # absolute path of the directory holding the user's repositories
+[ -d "$root" ] || { echo "SWEEP BROKEN — projects root $root does not exist"; exit 1; }
+list=$(for d in "$root"/*/.claude/skills/*/ "$root"/*/*/.claude/skills/*/; do [ -f "$d/SKILL.md" ] && echo "${d%/}"; done)
+n=$(printf '%s\n' "$list" | grep -c .); p=$(for d in "$root"/*/ "$root"/*/*/; do [ -d "$d" ] && echo; done | wc -l | tr -d ' ')
+echo "project skills: $n (in $p directories under $root, two levels deep)"
+printf '%s\n' "$list" | grep "/<skill-name>$"                                            # by name
+printf '%s\n' "$list" | while IFS= read -r d; do if [ -n "$d" ]; then grep -Il -i -- "<term from the body>" "$d/SKILL.md" || :; fi; done   # by problem; a non-match is not an error
+```
+
+Globs two levels under the root, one `grep` per project skill — bounded
+by the skills found, never by the tree beneath them. `project skills: 0`
+over a root that holds directories is an answer about this machine only
+if those directories are the repositories you meant; `0 directories` is
+a wrong root. Add the equivalent directory of any other tool the user
+runs skills from (its project-level skills directory, in place of
+`.claude/skills`); the activation block pins the root as
+`[PROJECTS ROOT]`, substituted at install like `[ABSOLUTE PATH]`. Run the
+sweep before a `proposes_skill:` write, and name its root and count in
+`siblings_checked:`.
+
 **3. Record the verdict** in `siblings_checked:`. The field exists because
 the two states of a one-entry `skill:` list — siblings evaluated and
 correctly excluded, versus siblings never considered — are byte-identical,
