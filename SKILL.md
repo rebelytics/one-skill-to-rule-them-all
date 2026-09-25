@@ -83,11 +83,7 @@ was handled without its reference loaded, log an observation.
   helper snippets, archival details, and the reasoning behind the rules.
   **Load when setting up the log for the first time, when archiving, when
   an id or frontmatter looks wrong, or before changing how anything reads
-  the log.**
-  Also load it, as the pointers below direct, before resolving, dismissing
-  or citing an observation, when setting `parked` or `reference:`, before
-  adding or changing an enforcement trigger or writing a new instrument
-  over the log, and whenever a scan, sweep or id probe comes back empty.
+  the log** — and wherever a pointer below names it.
 - `references/signals.md` — the full catalogue of what is and isn't worth
   logging. **Load when unsure whether something is an observation, or when
   sorting many candidates.**
@@ -496,6 +492,8 @@ parked_until:           # MANDATORY when status is parked, empty otherwise:
 resolved:               # date resolved; leave empty while OPEN
 resolution:             # what was done — set only when actioned/declined
 reference:              # optional — path to saved session-local evidence
+commands_verified:      # MANDATORY when the body quotes a command — each
+                        #   `run` with its result, or `NOT RUN` with why; else none
 ---
 
 **Issue:** [What happened — specific enough to understand weeks later

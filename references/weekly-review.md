@@ -670,7 +670,11 @@ more than one. Then, before anything is presented:
   nuisance. Count the `assumed` exclusions the same way, from the
   frontmatter alone, and open each such sibling before actioning the
   entry: an exclusion grounded on `assumed` is a review item, not a
-  verdict (`observation-log.md`, "Record the verdict").
+  verdict (`observation-log.md`, "Record the verdict"). Check
+  `commands_verified:` in the same pass: a body that quotes a command
+  with the field missing or blank quotes a command nobody ran — run it
+  now, or record `NOT RUN` with why, before the entry is actioned or
+  cited.
 - **Confidentiality pass over the log itself.** For every OPEN
   `open-source` observation, check the Issue and Improvement fields for
   client-identifying specifics no longer needed for context and strip
