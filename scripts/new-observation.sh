@@ -31,8 +31,8 @@
 # see it) → noclobber create → floor write (after the create, so a run that
 # creates nothing never moves it) → print the path.
 #
-# bash, not sh: `read -r -d ''` is a bash extension. Runs on bash 3.2 (stock
-# macOS): case patterns inside $( ) are parenthesised for that reason.
+# bash, not sh: the `10#` arithmetic is a bash extension. Runs on bash 3.2
+# (stock macOS): case patterns are parenthesised for that reason.
 
 set -u
 
@@ -67,24 +67,16 @@ today=$(date +%F)
 
 # --- archival sweep: stale resolved files move before the id is read --------
 n_files=$(find "$d" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')
-seen=$(find "$d" -maxdepth 1 -name '*.md' -print0 | { n=0
-  while IFS= read -r -d '' f; do
-    n=$(( n + 1 ))
-    hdr=$(awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
-               fm && /^---[[:space:]]*$/ {exit} fm' "$f")
-    case $hdr in
-      (*"status: actioned"*|*"status: declined"*|*"status: superseded"*) ;;
-      (*) continue ;;
-    esac
-    r=$(printf '%s\n' "$hdr" | sed -n 's/^resolved:[[:space:]]*//p' | head -1)
-    case $r in ([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;; (*) continue ;; esac
-    [ "$r" != "$today" ] && \
-      [ "$(printf '%s\n%s\n' "$r" "$today" | sort | head -1)" = "$r" ] && \
-      mv "$f" "$d/archive/"
-  done; printf %s "$n"; })
+seen=$(cd "$d" && awk 'FNR==1 {n++; nextfile} END {print n+0}' *.md 2>/dev/null)   # files the sweep's glob reaches, counted apart from the sweep
 if [ "$n_files" -gt 0 ] && [ "${seen:-0}" -eq 0 ]; then
   echo "ARCHIVAL SWEEP BROKEN — $n_files files present, 0 examined" >&2; exit 1
 fi
+# one awk for the whole set (a process per file crosses a tool timeout on a
+# large log); one mv per stale resolved file, bounded by the files due
+( cd "$d" && awk -v today="$today" 'FNR==1 {st=""; r=""; fm=/^---[[:space:]]*$/; if (!fm) nextfile; next}
+    fm && /^---[[:space:]]*$/ {if (st ~ /^(actioned|declined|superseded)$/ && r ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/ && r < today) print FILENAME; nextfile}
+    fm && /^status:/ {st=$2}
+    fm && /^resolved:/ {r=$2}' *.md 2>/dev/null | while IFS= read -r x; do mv "$x" archive/; done )
 
 # --- id: max of active prefixes, archive prefixes and the floor, plus one ---
 # Globs and builtins list the files, never `ls`: a profile alias or function

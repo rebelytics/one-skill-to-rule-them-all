@@ -329,12 +329,6 @@ parsed=$(find "$d" -maxdepth 1 -name '*.md' -exec awk 'FNR==1 {if (/^---[[:space
 suspect=$(find "$d" -maxdepth 1 -name '*.md' -exec awk 'FNR==1 && /^---[[:space:]]*$/ {fm=1; next}
   fm && /^---[[:space:]]*$/ {fm=0; nextfile}
   fm && /^[a-z_]+: [^"\047[|>].*: / {print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')   # values with an unquoted ": " — invalid YAML
-find "$d" -maxdepth 1 -name '*.md' | LC_ALL=C sort | while IFS= read -r f; do  # quote + IFS=: never word-split a path containing a space
-  awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
-       fm && /^---[[:space:]]*$/ {exit}
-       fm' "$f"
-  printf -- '---\n'
-done
 if [ "$n" -gt 0 ] && [ "$parsed" -eq 0 ]; then
   echo "SCAN COMMAND BROKEN — $n files present, 0 headers parsed"; exit 1
 fi
@@ -342,6 +336,11 @@ fi
 printf 'files: %s  parsed: %s  suspect: %s\n' "$n" "$parsed" "$suspect"
 printf '%s [%s] session-start scan: files=%s parsed=%s\n' "$(date '+%F %H:%M')" "${PWD##*/}" "$n" "$parsed" \
   >> "[ABSOLUTE PATH]/skill-observations/checkpoints.log"   # date+time+source: one line per session, not per day
+( LC_ALL=C; [ "$n" -eq 0 ] || { cd "$d" && awk 'FNR==1 && NR>1 && fm {print "---"}
+    FNR==1 {fm=/^---[[:space:]]*$/; if (!fm) {print "---"; nextfile}; next}
+    fm && /^---[[:space:]]*$/ {fm=0; print "---"; nextfile}
+    fm
+    END {if (fm) print "---"}' *.md; } )   # LAST: content print, the only half a classifier can refuse; one awk for the whole set
 ```
 
 **Why the line carries a time and a source, not just a date.** The
@@ -359,10 +358,16 @@ per-project token the harness exposes) disambiguates the project.
 
 The final append is the session-start run's own trace (see "The scan ends
 in a write, not only a print"); a review's work-queue pass over the same
-frontmatter can drop it. The enumeration is a `find | sort | while IFS=
-read -r` loop rather than `for f in $(find …)`: the unquoted command
-substitution word-splits any path containing a space, which is a live
-hazard on every workspace whose folder name has one.
+frontmatter can drop it. The content print is one `awk` over `*.md`
+inside `( cd "$d" && … )`, never `for f in $(find …)`: the unquoted
+command substitution word-splits any path containing a space, a live
+hazard on every workspace whose folder name has one, while a glob in the
+directory itself hands `awk` bare file names that nothing splits. It
+prints each header followed by one `---` line, the output the earlier
+per-file loop produced, with one process for the whole set instead of
+one per file; `LC_ALL=C` inside the subshell sorts the glob the way the
+loop's `sort` did. Do not rebuild the file list with `$(ls … | xargs …)`:
+that reintroduces the word split.
 
 **Guard the read, not just the write.** A query that returns nothing is
 reporting on two possibilities at once — the data is absent, or the
@@ -835,22 +840,12 @@ two ever disagree, the core wins:
 d="[ABSOLUTE PATH]/skill-observations/observation-log"   # the pinned workspace path, never relative to the cwd; it may contain a space, so keep it quoted; bash, not sh
 today=$(date +%F)          # archival rides inside this command (see below):
 n_files=$(find "$d" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')
-seen=$(find "$d" -maxdepth 1 -name '*.md' -print0 | { n=0   # -print0/-d '': never word-split a path containing a space — `read -d` is a bash extension, so this loop requires bash
-  while IFS= read -r -d '' f; do   # stale resolved files move before the id is read
-    n=$(( n + 1 ))
-    hdr=$(awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
-               fm && /^---[[:space:]]*$/ {exit} fm' "$f")
-    case $hdr in   # patterns parenthesised: required inside $( ) on bash 3.2
-      (*"status: actioned"*|*"status: declined"*|*"status: superseded"*) ;;
-      (*) continue ;;
-    esac
-    r=$(printf '%s\n' "$hdr" | sed -n 's/^resolved:[[:space:]]*//p' | head -1)
-    case $r in ([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;; (*) continue ;; esac
-    [ "$r" != "$today" ] && \
-      [ "$(printf '%s\n%s\n' "$r" "$today" | sort | head -1)" = "$r" ] && \
-      mv "$f" "$d/archive/"
-  done; printf %s "$n"; })
+seen=$(cd "$d" && awk 'FNR==1 {n++; nextfile} END {print n+0}' *.md 2>/dev/null)   # files the sweep's glob reaches, counted apart from the sweep
 [ "$n_files" -gt 0 ] && [ "${seen:-0}" -eq 0 ] && { echo "ARCHIVAL SWEEP BROKEN — $n_files files present, 0 examined"; exit 1; }
+( cd "$d" && awk -v today="$today" 'FNR==1 {st=""; r=""; fm=/^---[[:space:]]*$/; if (!fm) nextfile; next}
+    fm && /^---[[:space:]]*$/ {if (st ~ /^(actioned|declined|superseded)$/ && r ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/ && r < today) print FILENAME; nextfile}
+    fm && /^status:/ {st=$2}
+    fm && /^resolved:/ {r=$2}' *.md 2>/dev/null | while IFS= read -r x; do mv "$x" archive/; done )   # one awk for the set, one mv per stale resolved file; bash
 floor=$(sed '1!d; s/[^0-9]//g' "$d/archive/.id-floor" 2>/dev/null); floor=$((10#${floor:-0}))   # digits only: a CRLF or padded floor still reads
 ids=$(for p in "$d"/[0-9]*.md "$d"/archive/[0-9]*.md; do [ -e "$p" ] && printf '%s\n' "${p##*/}"; done | grep -oE '^[0-9]+')   # globs and builtins: no `ls` a profile alias can rebind
 [ "$(printf '%s' "$ids" | grep -c .)" -eq "$(find "$d" "$d/archive" -maxdepth 1 -name '[0-9]*.md' | wc -l)" ] || { echo "ID COMMAND BROKEN — the listing and find disagree on the prefixed files"; exit 1; }
@@ -888,12 +883,13 @@ is read as digits only, so a floor file written with a CRLF, padding or
 spaces still reads as its number instead of as nothing.
 
 `awk`, `sed -n`, `grep -oE`, `sort -n`, `mv` and `printf` are POSIX,
-and the one non-POSIX construct is deliberate: `read -r -d ''` over
-`find -print0` is a bash extension, taken because it is the only form that
-cannot word-split a path containing a space — so run the snippet under
-`bash`, not `sh`. It runs unchanged on macOS, Linux and Git Bash. The date
-comparison relies on ISO dates sorting lexically, so it needs no `date`
-arithmetic. A skill that hands the agent a
+and the one non-POSIX construct is deliberate: `10#` in the arithmetic
+is a bash extension, the shortest form that keeps a zero-padded prefix out
+of octal — so run the snippet under `bash`, not `sh` (under `dash` the
+derivation stops with an arithmetic error before any file exists). It runs
+unchanged on macOS, Linux and Git Bash. The sweep's date comparison is an
+`awk` string comparison of ISO dates, which sort lexically, so it needs no
+`date` arithmetic. A skill that hands the agent a
 shell command owns that command's portability: lead with the portable
 form, never offer it as a footnote the agent reaches for after the primary
 has failed — and make any command that derives a number from a file fail
@@ -914,16 +910,20 @@ seconds for a hundred files on Linux, past a two-minute tool timeout on
 Windows — so it never warns, it stops completing, and a backgrounded scan
 is indistinguishable from a slow one until something downstream consumes
 a partial answer. The counts in the session-start scan are batched
-(`-exec … {} +`); the content print and the archival sweep are per-file
-loops. Treat a scan that does not return as a broken instrument, never as
+(`-exec … {} +`), and the content print and the archival sweep are one
+`awk` each over the directory's glob; the only per-file process left is
+the `mv` of a file due for archival, bounded by the files due rather than
+by the log. Treat a scan that does not return as a broken instrument, never as
 a slow one to wait on — the BROKEN guard cannot fire for a command that
 never finished.
 
 ### Shell portability of the id snippet — why the case patterns are parenthesised
 
-Both `case` statements in the snippet sit inside the command substitution
-`seen=$( … )`, and both are written `(pattern)` rather than `pattern)`. The
-leading parenthesis is not style.
+The single-pass sweep has no `case` statement left, but the loop it
+replaced put two inside the command substitution `seen=$( … )`, and the
+rule they taught stands for any snippet that does the same: a `case`
+pattern inside `$( )` is written `(pattern)`, not `pattern)`. The leading
+parenthesis is not style.
 
 Bash 3.2 — which is what `/bin/bash` still is on a stock macOS install — ends
 a command substitution at the first unbalanced `)`, and an unparenthesised
@@ -935,8 +935,8 @@ can fire, because those guards are inside the block that never started. A
 guard cannot report a failure that happens before it exists.
 
 Parenthesised patterns are valid in every POSIX shell and in every bash
-version, so the portable form costs nothing. Keep it in every copy of the
-snippet, here and in SKILL.md.
+version, so the portable form costs nothing. Keep it in every snippet that
+puts a `case` inside `$( )`.
 
 **If you are porting the snippet or writing a new one:** run it once under
 `/bin/bash` on macOS, not only under the shell your session happens to have.
@@ -959,8 +959,11 @@ issued without a file), not a halt, because older snippets left exactly
 that state behind on every run that stopped after its floor write. The
 floor is written last, after the create, so a run that creates no file —
 a check, a collision, a failed create — never moves it. The sweep carries the same
-guard in its own right — it counts the files it actually examined and
-halts if that count is zero while `find` reports files present. An
+guard in its own right — a separate `awk` counts the files the sweep's
+glob reaches, and the block halts if that count is zero while `find`
+reports files present. The count comes from its own command because the
+sweep is a single `awk` with no loop counter to read, and a count riding
+the sweep's output would share its failure. An
 archival loop that never enters its body moves nothing and exits
 successfully, so without the count "nothing was due for archival" and
 "the loop never ran" are the same output. The `noclobber` create covers
@@ -1395,11 +1398,13 @@ actioned, declined or superseded.
 
 Archival is a set of plain `mv` operations, one file at a time. Moving one
 resolved file cannot affect any other observation. The safe form is the
-sweep as shipped — one `find -print0` enumeration drives the loop, and the
-loop opens and moves only the path it was just handed; a moved file lands
-in `archive/`, which `-maxdepth 1` never descends into. To archive without
-writing an observation (the review's Step 1), run that sweep block on its
-own, from `today=` through the `ARCHIVAL SWEEP BROKEN` guard. Do not
+sweep as shipped — one `awk` pass over the directory's `*.md` names the
+stale resolved files, and the loop behind it moves only the name it was
+just handed; a moved file lands in `archive/`, which the glob never
+descends into. To archive without writing an observation (the review's
+Step 1), run that sweep block on its own, from `today=` through the `mv`
+loop. A header with no closing `---` is never archived: the pass decides
+at the closing line, which such a file does not have. Do not
 improvise a bulk move; where one is unavoidable, two rules:
 
 **Read the set once.** Either a single enumeration drives the moves, as

@@ -385,7 +385,7 @@ merged count against a file count.
 
 ```bash
 d="[ABSOLUTE PATH]/skill-observations/observation-log"
-find "$d" "$d/archive" -maxdepth 1 -name '*.md' -exec basename {} \; \
+find "$d" "$d/archive" -maxdepth 1 -name '*.md' | sed 's|.*/||' \
   | grep -oE '^[0-9]+' | sed 's/^0*\([0-9]\)/\1/' | sort -n | uniq -d
 ```
 

@@ -57,13 +57,13 @@ common install does — so every expansion of it stays double-quoted, and
 no snippet may feed it through word splitting (`for f in $(find …)`): a
 sweep that splits its own path at the space examines zero files, prints
 errors nobody reads, and lets the command it rides inside succeed.
-**Every snippet here is bash, not POSIX `sh`** — the archival sweep's
-`read -r -d ''` is a bash extension `dash` and `ash` lack, so under `sh` it
-fails as a usage error or, worse, as a loop that reads nothing and exits
-zero: the same silent success as the word split. A `bash` code fence
-states that to a human reader and to nothing else, so invoke the snippets
-with bash explicitly; a loop that happens to be POSIX-safe too (the
-session-start scan) is incidental, not a promise about the rest.
+**Every snippet here is bash, not POSIX `sh`** — the id snippet's `10#`
+arithmetic is a bash extension `dash` and `ash` reject, so under `sh` the
+derivation stops before any file exists, and an adapted snippet may fail
+more quietly than that. A `bash` code fence states that to a human reader
+and to nothing else, so invoke the snippets with bash explicitly; a block
+that happens to be POSIX-safe too (the session-start scan, the sweep) is
+incidental, not a promise about the rest.
 
 ## Reference files — load on demand, not up front
 
@@ -185,12 +185,11 @@ was handled without its reference loaded, log an observation.
    printf 'files: %s  parsed: %s  suspect: %s\n' "$n" "$parsed" "$suspect"
    printf '%s [%s] session-start scan: files=%s parsed=%s\n' "$(date '+%F %H:%M')" "${PWD##*/}" "$n" "$parsed" \
      >> "[ABSOLUTE PATH]/skill-observations/checkpoints.log"   # date+time+source: one line per session, not per day
-   find "$d" -maxdepth 1 -name '*.md' | LC_ALL=C sort | while IFS= read -r f; do  # LAST: content print, the only half a classifier can refuse
-     awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
-          fm && /^---[[:space:]]*$/ {exit}
-          fm' "$f"
-     printf -- '---\n'
-   done
+   ( LC_ALL=C; [ "$n" -eq 0 ] || { cd "$d" && awk 'FNR==1 && NR>1 && fm {print "---"}
+       FNR==1 {fm=/^---[[:space:]]*$/; if (!fm) {print "---"; nextfile}; next}
+       fm && /^---[[:space:]]*$/ {fm=0; print "---"; nextfile}
+       fm
+       END {if (fm) print "---"}' *.md; } )   # LAST: content print, the only half a classifier can refuse; one awk for the whole set
    ```
 
    **Counts and trace first; the content print last, because only it can be
@@ -406,22 +405,12 @@ id, not a separate duty (see Archival on Write):
 d="[ABSOLUTE PATH]/skill-observations/observation-log"   # the pinned workspace path, never relative to the cwd; it may contain a space, so keep it quoted; bash, not sh
 today=$(date +%F)          # archival rides inside this command (see below):
 n_files=$(find "$d" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')
-seen=$(find "$d" -maxdepth 1 -name '*.md' -print0 | { n=0   # -print0/-d '': never word-split a path containing a space — `read -d` is a bash extension, so this loop requires bash
-  while IFS= read -r -d '' f; do   # stale resolved files move before the id is read
-    n=$(( n + 1 ))
-    hdr=$(awk 'NR==1 && /^---[[:space:]]*$/ {fm=1; next}
-               fm && /^---[[:space:]]*$/ {exit} fm' "$f")
-    case $hdr in   # patterns parenthesised: required inside $( ) on bash 3.2
-      (*"status: actioned"*|*"status: declined"*|*"status: superseded"*) ;;
-      (*) continue ;;
-    esac
-    r=$(printf '%s\n' "$hdr" | sed -n 's/^resolved:[[:space:]]*//p' | head -1)
-    case $r in ([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;; (*) continue ;; esac
-    [ "$r" != "$today" ] && \
-      [ "$(printf '%s\n%s\n' "$r" "$today" | sort | head -1)" = "$r" ] && \
-      mv "$f" "$d/archive/"
-  done; printf %s "$n"; })
+seen=$(cd "$d" && awk 'FNR==1 {n++; nextfile} END {print n+0}' *.md 2>/dev/null)   # files the sweep's glob reaches, counted apart from the sweep
 [ "$n_files" -gt 0 ] && [ "${seen:-0}" -eq 0 ] && { echo "ARCHIVAL SWEEP BROKEN — $n_files files present, 0 examined"; exit 1; }
+( cd "$d" && awk -v today="$today" 'FNR==1 {st=""; r=""; fm=/^---[[:space:]]*$/; if (!fm) nextfile; next}
+    fm && /^---[[:space:]]*$/ {if (st ~ /^(actioned|declined|superseded)$/ && r ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/ && r < today) print FILENAME; nextfile}
+    fm && /^status:/ {st=$2}
+    fm && /^resolved:/ {r=$2}' *.md 2>/dev/null | while IFS= read -r x; do mv "$x" archive/; done )   # one awk for the set, one mv per stale resolved file; bash
 floor=$(sed '1!d; s/[^0-9]//g' "$d/archive/.id-floor" 2>/dev/null); floor=$((10#${floor:-0}))   # digits only: a CRLF or padded floor still reads
 ids=$(for p in "$d"/[0-9]*.md "$d"/archive/[0-9]*.md; do [ -e "$p" ] && printf '%s\n' "${p##*/}"; done | grep -oE '^[0-9]+')   # globs and builtins: no `ls` a profile alias can rebind
 [ "$(printf '%s' "$ids" | grep -c .)" -eq "$(find "$d" "$d/archive" -maxdepth 1 -name '[0-9]*.md' | wc -l)" ] || { echo "ID COMMAND BROKEN — the listing and find disagree on the prefixed files"; exit 1; }
