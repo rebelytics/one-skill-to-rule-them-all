@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "task-observer",
   "displayName": "Task Observer — One Skill to Rule Them All",
-  "version": "3.4.0",
+  "version": "3.5.0",
   "author": {
     "name": "Eoghan Henn",
     "url": "https://rebelytics.com"
