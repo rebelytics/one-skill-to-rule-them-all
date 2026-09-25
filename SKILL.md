@@ -174,14 +174,19 @@ was handled without its reference loaded, log an observation.
    d="[ABSOLUTE PATH]/skill-observations/observation-log"   # the pinned workspace path — re-derive in EVERY call, never relative to the cwd; run under bash, not sh
    n=$(find "[ABSOLUTE PATH]/skill-observations/observation-log" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')  # literal path: independent of $d
    parsed=$(find "$d" -maxdepth 1 -name '*.md' -exec awk 'FNR==1 {if (/^---[[:space:]]*$/) print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')
-   suspect=$(find "$d" -maxdepth 1 -name '*.md' -exec awk 'FNR==1 && /^---[[:space:]]*$/ {fm=1; next}
+   sus='FNR==1 {fm = (/^---[[:space:]]*$/ ? 1 : 0); if (!fm) nextfile; next}
      fm && /^---[[:space:]]*$/ {fm=0; nextfile}
-     fm && /^[a-z_]+: [^"\047[|>].*: / {print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')   # values with an unquoted ": " — invalid YAML
+     fm && /^[a-z_]+:[ ]+([&!][^[:space:]]*[[:space:]]+)*[^"\047[{|>#&![:space:]].*: / {print FILENAME; nextfile}
+     fm && /^[a-z_]+:[ ]+([&!][^[:space:]]*[[:space:]]+)*("([^"\\]|\\.)*"[[:space:]]*[^[:space:]#]|\047([^\047]|\047\047)*\047([[:space:]]+[^[:space:]#]|[^[:space:]#\047]))/ {print FILENAME; nextfile}
+     fm && /^[a-z_]+:[ ]+([&!][^[:space:]]*[[:space:]]+)*[`@%]/ {print FILENAME; nextfile}
+     fm && /^[a-z_]+:[ ]+([&!][^[:space:]]*[[:space:]]+)*"([^"\\]|(\\[0abtnvfre \t\r"\/\\N_LP]|\\x[[:xdigit:]][[:xdigit:]]|\\u[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]]|\\U[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]]))*\\([^0abtnvfre \t\r"\/\\N_LPxuU]|x([^[:xdigit:]]|[[:xdigit:]][^[:xdigit:]])|u([^[:xdigit:]]|[[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]])|U([^[:xdigit:]]|[[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]]))/ {print FILENAME; nextfile}'   # no literal {} in the program: find -exec … {} + would replace it
+   suspect=$(find "$d" -maxdepth 1 -name '*.md' -exec awk "$sus" {} + | wc -l | tr -d ' ')   # invalid YAML by shape: unquoted ": ", text after a closing quote, a value opening with ` @ %, an undefined escape
+   a_sus=0; [ -d "$d/archive" ] && a_sus=$(find "$d/archive" -maxdepth 1 -name '*.md' -exec awk "$sus" {} + | wc -l | tr -d ' ')   # archive/ may not exist yet
    if [ "$n" -gt 0 ] && [ "$parsed" -eq 0 ]; then
      echo "SCAN COMMAND BROKEN — $n files present, 0 headers parsed"; exit 1
    fi
-   [ "$suspect" -gt 0 ] && echo "NOTE: $suspect of $n headers carry an unquoted ': ' in a value — quote those values (File format)"
-   printf 'files: %s  parsed: %s  suspect: %s\n' "$n" "$parsed" "$suspect"
+   [ "$suspect" -gt 0 ] || [ "$a_sus" -gt 0 ] && echo "NOTE: $suspect of $n headers (and $a_sus in archive/) look like invalid YAML (an unquoted ': ', text after a closing quote, a value opening with a backtick, @ or %, an undefined escape) — fix them (File format)"
+   printf 'files: %s  parsed: %s  suspect: %s  archive-suspect: %s\n' "$n" "$parsed" "$suspect" "$a_sus"
    printf '%s [%s] session-start scan: files=%s parsed=%s\n' "$(date '+%F %H:%M')" "${PWD##*/}" "$n" "$parsed" \
      >> "[ABSOLUTE PATH]/skill-observations/checkpoints.log"   # date+time+source: one line per session, not per day
    find "$(dirname "[ABSOLUTE PATH]")" -maxdepth 3 -type d -path '*/skill-observations/observation-log' 2>/dev/null | LC_ALL=C sort | while IFS= read -r o; do printf '%s=%s\n' "${o%/skill-observations/observation-log}" "$(find "$o" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')"; done | awk '{s = s "  " $0} END {print "logs under the parent (report; never consolidate from here):" s}'
@@ -192,12 +197,9 @@ was handled without its reference loaded, log an observation.
        END {if (fm) print "---"}' *.md; } )   # LAST: content print, the only half a classifier can refuse; one awk for the whole set
    ```
 
-   **Counts and trace first; the content print last, because only it can be
-   refused.** A refused print is not an empty log and is never reported as
-   one — the counts and the `checkpoints.log` trace above it are the
-   fallback and still satisfy the BROKEN guard. Load
-   `references/observation-log.md` ("A refused print is not an empty log")
-   before removing, moving or replacing either half.
+   **Only the print can be refused, so it runs last** — a refused print is
+   never an empty log: load `references/observation-log.md` ("A refused
+   print is not an empty log") before moving either half.
 3. **Review trigger.** Read `skill-observations/last-review-date.txt`. The
    value carries the truth: a date = when the last review actually ran;
    `never` = no review has run yet. A missing file is abnormal (step 1
@@ -703,10 +705,8 @@ in its `skill:` list. Full protocol: `references/observation-log.md`.
 | Does the target skill have siblings? | Resolve it against `skill-observations/skill-families.md` BEFORE writing; add every sibling the insight applies to to `skill:`, and record the verdict in the mandatory `siblings_checked:` field — including "checked, no propagation" |
 | A scan or query came back empty? | Two possibilities, only one is a finding: guard every retrieval meant to prevent duplicate work with an independent existence check, and treat empty output over known content as a broken command |
 | Citing an observation number? | From the `id:` frontmatter field (= the `NNNN-` filename prefix); never a `grep -n` line number; sanity-check against the known id range |
-| Open-source or internal? | Default open-source; the boundary is confidential |
 | Small fix or substantial? | Additive → apply directly; restructuring/new skill → `references/skill-authoring.md` |
 | Same rule broken twice? | The fix is a structural barrier (hook, lint, default) — never a third rewording |
 | Changing an observation (status/archival)? | Re-read that one file, edit only its frontmatter, or `mv` it to `observation-log/archive/` — no shared-file rewrite |
-| Upgrading from a single-file `log.md`? | Scripted, once — `references/migration.md` |
 | Weekly review? | Trigger check at session start; procedure in `references/weekly-review.md` |
 | No filesystem? | Handoff-doc mode — `references/environments.md` |

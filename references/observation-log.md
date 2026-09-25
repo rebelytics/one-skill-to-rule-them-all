@@ -192,10 +192,21 @@ principle #8 extended…". Every one of the 27 had been written by following
 the template as it then stood, which carried the value unquoted. The
 template taught the defect, and each author complied with it.
 
-The scan's `suspect` count is the early warning: it reports headers whose
-value contains an unquoted `: ` beside the file count, so a log drifting
-into this state announces itself at session start rather than at the review
-that trips over it. Re-verify by running a real YAML parse over the
+The scan's `suspect` count is the early warning: it reports headers that
+look invalid by shape — an unquoted `: `, text after a closing quote
+(either style), a value opening with a backtick, `@` or `%`, an escape a
+double-quoted YAML string does not define (`\x`, `\u`, `\U` need 2, 4
+and 8 hex digits) — beside the file count, for the active directory and
+for `archive/`, so a log drifting into this state announces itself at
+session start rather than at the review that trips over it. The awk
+program resets its state on each file's first line, so an unterminated
+header cannot leak into the next file under `find -exec … {} +`; it
+allows any number of spaces after the colon and an `&anchor` or `!tag`
+before the value, and it never treats a value opening with `{` or `#`
+as prose, which is what kept the template's own `reference:` comment
+line from being flagged. It is a floor, not a parse: flow collections
+are not inspected, and a plain value followed by a `# comment: x` still
+counts. Re-verify by running a real YAML parse over the
 frontmatter of every file, not by re-reading the template.
 
 The typographic quote is the other common break, and it is quieter. A
@@ -326,14 +337,19 @@ the two ever disagree, the core wins:
 d="[ABSOLUTE PATH]/skill-observations/observation-log"   # the pinned workspace path — re-derive in EVERY call, never relative to the cwd; run under bash, not sh
 n=$(find "[ABSOLUTE PATH]/skill-observations/observation-log" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')  # literal path: independent of $d
 parsed=$(find "$d" -maxdepth 1 -name '*.md' -exec awk 'FNR==1 {if (/^---[[:space:]]*$/) print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')
-suspect=$(find "$d" -maxdepth 1 -name '*.md' -exec awk 'FNR==1 && /^---[[:space:]]*$/ {fm=1; next}
+sus='FNR==1 {fm = (/^---[[:space:]]*$/ ? 1 : 0); if (!fm) nextfile; next}
   fm && /^---[[:space:]]*$/ {fm=0; nextfile}
-  fm && /^[a-z_]+: [^"\047[|>].*: / {print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')   # values with an unquoted ": " — invalid YAML
+  fm && /^[a-z_]+:[ ]+([&!][^[:space:]]*[[:space:]]+)*[^"\047[{|>#&![:space:]].*: / {print FILENAME; nextfile}
+  fm && /^[a-z_]+:[ ]+([&!][^[:space:]]*[[:space:]]+)*("([^"\\]|\\.)*"[[:space:]]*[^[:space:]#]|\047([^\047]|\047\047)*\047([[:space:]]+[^[:space:]#]|[^[:space:]#\047]))/ {print FILENAME; nextfile}
+  fm && /^[a-z_]+:[ ]+([&!][^[:space:]]*[[:space:]]+)*[`@%]/ {print FILENAME; nextfile}
+  fm && /^[a-z_]+:[ ]+([&!][^[:space:]]*[[:space:]]+)*"([^"\\]|(\\[0abtnvfre \t\r"\/\\N_LP]|\\x[[:xdigit:]][[:xdigit:]]|\\u[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]]|\\U[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]]))*\\([^0abtnvfre \t\r"\/\\N_LPxuU]|x([^[:xdigit:]]|[[:xdigit:]][^[:xdigit:]])|u([^[:xdigit:]]|[[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]])|U([^[:xdigit:]]|[[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]]))/ {print FILENAME; nextfile}'   # no literal {} in the program: find -exec … {} + would replace it
+suspect=$(find "$d" -maxdepth 1 -name '*.md' -exec awk "$sus" {} + | wc -l | tr -d ' ')   # invalid YAML by shape: unquoted ": ", text after a closing quote, a value opening with ` @ %, an undefined escape
+a_sus=0; [ -d "$d/archive" ] && a_sus=$(find "$d/archive" -maxdepth 1 -name '*.md' -exec awk "$sus" {} + | wc -l | tr -d ' ')   # archive/ may not exist yet
 if [ "$n" -gt 0 ] && [ "$parsed" -eq 0 ]; then
   echo "SCAN COMMAND BROKEN — $n files present, 0 headers parsed"; exit 1
 fi
-[ "$suspect" -gt 0 ] && echo "NOTE: $suspect of $n headers carry an unquoted ': ' in a value — quote those values (File format)"
-printf 'files: %s  parsed: %s  suspect: %s\n' "$n" "$parsed" "$suspect"
+[ "$suspect" -gt 0 ] || [ "$a_sus" -gt 0 ] && echo "NOTE: $suspect of $n headers (and $a_sus in archive/) look like invalid YAML (an unquoted ': ', text after a closing quote, a value opening with a backtick, @ or %, an undefined escape) — fix them (File format)"
+printf 'files: %s  parsed: %s  suspect: %s  archive-suspect: %s\n' "$n" "$parsed" "$suspect" "$a_sus"
 printf '%s [%s] session-start scan: files=%s parsed=%s\n' "$(date '+%F %H:%M')" "${PWD##*/}" "$n" "$parsed" \
   >> "[ABSOLUTE PATH]/skill-observations/checkpoints.log"   # date+time+source: one line per session, not per day
 find "$(dirname "[ABSOLUTE PATH]")" -maxdepth 3 -type d -path '*/skill-observations/observation-log' 2>/dev/null | LC_ALL=C sort | while IFS= read -r o; do printf '%s=%s\n' "${o%/skill-observations/observation-log}" "$(find "$o" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')"; done | awk '{s = s "  " $0} END {print "logs under the parent (report; never consolidate from here):" s}'
@@ -596,7 +612,8 @@ two apart from outside.
 The session-start scan does two different jobs in one block, and they have
 different appetites. Everything up to and including the `checkpoints.log`
 write asks only for *facts about* the files: how many exist, how many have a
-parseable header, how many carry a suspect value. The trailing loop asks for
+parseable header, how many — in the directory and in `archive/` — look
+like invalid YAML. The trailing loop asks for
 the **contents** — it reads instruction-shaped text out of files and puts it
 into the agent's context, which is what builds awareness of the backlog.
 
