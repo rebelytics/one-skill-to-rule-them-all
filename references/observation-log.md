@@ -79,12 +79,14 @@ here: run this, do not work down the tree above by hand.
 ```bash
 d="[ABSOLUTE PATH]/skill-observations"   # the pinned path, quoted: it may contain a space; bash, not sh
 [ -e "$d/log.md" ] && [ ! -d "$d/observation-log" ] && { echo "LEGACY log.md — run the migration (references/migration.md) before creating anything"; exit 1; }
+c=; for x in observation-log observation-log/archive last-review-date.txt cross-cutting-principles.md; do [ -e "$d/$x" ] || c="$c${c:+,}$x"; done   # what this run creates
 mkdir -p "$d/observation-log/archive"
 [ -e "$d/last-review-date.txt" ] || printf 'never\n' > "$d/last-review-date.txt"   # the literal `never`, never a date: a date means a review actually ran
 [ -e "$d/cross-cutting-principles.md" ] || printf '# Cross-Cutting Principles\n\nPrinciples that apply to all skills. Read as a mandatory checklist during\nany skill creation or regeneration.\n\n---\n\n## Active Principles\n' > "$d/cross-cutting-principles.md"
 for x in observation-log observation-log/archive last-review-date.txt cross-cutting-principles.md; do
   [ -e "$d/$x" ] || { echo "WORKSPACE SETUP INCOMPLETE: $x"; exit 1; }
 done
+printf '%s [%s] workspace: created=%s\n' "$(date '+%F %H:%M')" "${PWD##*/}" "${c:-none}" >> "$d/checkpoints.log"   # step 1's trace
 ```
 
 `mkdir -p` creates the parent, so `observation-log/` needs no separate line;
@@ -95,6 +97,17 @@ because a created `observation-log/` would hide the one condition that
 identifies a pre-3.0 install. The principles stub is the header of the
 template in `skill-authoring.md` ("Principle Propagation"); change the two
 together.
+
+**Step 1 leaves a trace.** The last line appends what this run created to
+`checkpoints.log` — `created=none` on an ordinary session, the artefact
+names on a fresh install or a repaired one. Creation is otherwise the one
+session-start action nothing records: when a review finds the principles
+file missing, a step 1 that never ran and a file deleted later look the
+same, and only the trace tells them apart.
+Other files created at session start on the same terms, for a test plan
+rather than this command: `starter-principles-reviewed.txt` (starter-set
+reconciliation) and `skill-families.md` (created when the first family
+is named).
 
 **Why a command and not the prose list it replaces.** Observed on a fresh
 user-scope install: a session created `skill-observations/` and
