@@ -185,7 +185,19 @@ because only it sees the whole task and its review; a subagent that
 notices something worth logging says so in its final report, and the
 controller writes it, running the id snippet per write. A start-up rule
 in a project file reaches every agent the project ever dispatches.
+
+An observation file comes into being only through
+  bash "<skill directory>/scripts/new-observation.sh" <slug> "[ABSOLUTE PATH]"
+which prints the path to write into. Never by copying another file's
+header or counting a listing — including on the turn after a
+compaction, when the skill body is out of context.
 ```
+
+`<skill directory>` is the installed skill's own directory (the one
+holding `SKILL.md`), substituted at install exactly like
+`[ABSOLUTE PATH]`; where the harness cannot run a script, drop the
+paragraph and keep the rest — the inline id snippet in SKILL.md is then
+the write path.
 
 ### Anchoring the workspace
 
@@ -388,7 +400,7 @@ asking the agent to go and look:
 d="$OBS_WORKSPACE/skill-observations"      # the pinned absolute path
 open=$(find "$d/observation-log" -maxdepth 1 -name '*.md' -exec grep -l '^status: open$' {} + 2>/dev/null | wc -l | tr -d ' ')
 last=$(cat "$d/last-review-date.txt" 2>/dev/null || echo never)
-msg="Invoke the task-observer skill before the first tool call."
+msg="Invoke the task-observer skill before the first tool call. Observation files are created only by scripts/new-observation.sh in the skill directory, never by copying a header."
 if [ "$open" -gt 0 ]; then
   msg="$msg $open open observations; last review: $last."
   case "$last" in (never) msg="$msg Offer the review." ;; esac
@@ -1166,9 +1178,10 @@ is exactly what the compaction removed. Between a compaction and the
 skill's re-invocation nothing is written by any other route: a flush
 that fires first runs `scripts/new-observation.sh` (it needs no skill
 body in context — a slug and the workspace root are its only inputs) or
-waits for the invocation, and never copies another file's header. A
-rule that must reach a resumed context has to travel in a channel that
-survives the compaction — the activation config, or a session-start
+waits for the invocation, and never copies another file's header. So the
+activation block names the script as the only way an observation file
+comes into being, and the hook prints the same: a rule that must reach a
+resumed context travels in a channel that survives the compaction — the activation config, or a session-start
 hook where the harness fires it on compaction as well (Claude Code's
 `SessionStart` does unless a matcher excludes `compact`), which is then
 the channel that arrives first.
