@@ -178,6 +178,9 @@ needs an identity per queue, or the merged references stop resolving.
 **Interactive (user present):** always present observations grouped by
 skill (number, title, one-sentence summary), flag judgment calls as "needs
 your input", and wait for blanket or selective approval before applying.
+The grouped list lives in the review record and chat carries at most
+three next steps with a link to it (Step 3); the approval it asks for is
+still over the whole list.
 **Classify before you ask.** Any *disposition* option offered to the user
 (fold in, decline, revive, route to skill X) must be derived from the
 entries' bodies, never from their titles and `skill:` fields — a
@@ -730,8 +733,17 @@ more than one. Then, before anything is presented:
   them. The log is the artefact most likely to be shared casually, and
   the authoring-time sweeps never see it.
 
-Interactive: present all of it and await approval. Autonomous: apply the
-approval policy above and continue.
+Interactive: save the full decision list — grouped by skill, as the
+Approval policy requires — in the review record (Step 8). In chat, show
+at most three recommended next steps, ordered by impact. For each, state
+**problem → concrete change → verification** in plain language; name
+whether the change belongs in a skill, agent instructions, or tooling.
+Link the full list and say how many decisions remain. Group duplicates
+and exclude already-fixed items before choosing the three. Await
+approval: the user may approve the three, the whole list in the record
+in one step, or a selection from it; a short list does not authorize the
+rest of the backlog. Autonomous: apply the approval policy above and
+continue, and save the same record.
 
 **Cluster by decision BEFORE the escalation list is written.** An
 append-only log accumulates convergent entries by construction: the same
@@ -1349,7 +1361,13 @@ next write on a later day archives them.
 `skill-observations/review-started.txt` with `completed YYYY-MM-DD`.
 
 **Step 8 — deliver and summarise.** Stage updated skills (see Delivery
-below), then present:
+below). Save the complete record under
+`[workspace folder]/skill-observations/reviews/[date]/REVIEW.md`, using the
+template below. In chat, report what changed and its verification, followed
+by at most three remaining next steps in the Step 3 format. Link the record
+for the full accounting. Distinguish proposed, staged and installed changes;
+an observation count alone is not an outcome. Records are kept: no step
+prunes `reviews/`, and old ones are the user's to delete. The template:
 
 ```markdown
 ## Weekly Skill Review Complete — [date]

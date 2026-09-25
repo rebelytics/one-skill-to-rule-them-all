@@ -62,6 +62,8 @@ skill-observations/
   skill-families.md      # declared families: members, shared vs member-specific,
                          #   coherence model (created when the first family is named)
   last-review-date.txt
+  reviews/               # one record per review run: reviews/YYYY-MM-DD/REVIEW.md
+                         #   (weekly-review.md Step 8; kept, never pruned by a step)
   checkpoints.log        # append-only acknowledgement markers (optional)
 ```
 
