@@ -375,8 +375,20 @@ OPEN) rather than proceeding as if the backlog were clean. **This is a
 point-in-time assertion, not a standing guarantee.** It proves the scan was
 complete when it ran; the log is multi-writer and a long review is exactly
 when other sessions are logging, so the result decays for the duration of
-the run. Keep the Step 1 file list — Step 6 re-scans against it before
-anything is marked.
+the run. Keep the Step 1 file list ON DISK — never in a shell variable,
+which does not survive the next tool call and is not word-split under zsh
+(`observation-log.md`, "Under zsh…") — so Step 6 can re-scan against it
+before anything is marked:
+
+```bash
+d="[ABSOLUTE PATH]/skill-observations/observation-log"
+l="[ABSOLUTE PATH]/skill-observations/review-step1-list.txt"
+find "$d" -maxdepth 1 -name '*.md' | sed 's|.*/||' | LC_ALL=C sort > "$l"
+```
+
+Both list files are overwritten by the next review's Steps 1 and 6 and
+need no cleanup at Step 7; a Step 6 run against a list Step 1 failed to
+refresh shows as a delta of dozens, not as a quiet pass.
 
 **Duplicate-id check — nothing else in the process looks for one.** The id
 rules say a collision is "left for the next review to renumber", and until
@@ -1245,7 +1257,28 @@ review's base is then a staged copy whose provenance nobody re-derived);
 "arrived during this run" line of the Step 8 summary. Never let the delta
 pass silently, and never infer it from an id counter — a monotonic id
 surfacing a number above the scan's maximum is a side effect, not a
-detection mechanism. The check is one `ls` against a list already in hand.
+detection mechanism. The check is a line-oriented set difference against
+the Step 1 list, with both paths re-derived in this call and a count
+guard on the new listing:
+
+```bash
+d="[ABSOLUTE PATH]/skill-observations/observation-log"
+l="[ABSOLUTE PATH]/skill-observations/review-step1-list.txt"
+now="[ABSOLUTE PATH]/skill-observations/review-step6-list.txt"
+find "$d" -maxdepth 1 -name '*.md' | sed 's|.*/||' | LC_ALL=C sort > "$now"
+n_now=$(find "[ABSOLUTE PATH]/skill-observations/observation-log" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')
+n_list=$(wc -l < "$now" | tr -d ' ')
+[ "$n_now" -eq "$n_list" ] || { echo "RESCAN COMMAND BROKEN — $n_now files, $n_list listed"; exit 1; }
+echo "arrived:"; LC_ALL=C comm -13 "$l" "$now"
+echo "gone:";    LC_ALL=C comm -23 "$l" "$now"
+```
+
+Positive control before trusting it: create a throwaway `.md` in a copy of
+the directory after the Step 1 list is written and confirm `comm -13`
+names it — a broken comparison can invent or hide a delta without moving
+any count. A file the review itself archived since Step 1 shows under
+`gone:`; that is expected, and only an unexplained departure is a
+finding.
 Re-run the Step 1 duplicate-id check over the new listing as well: this
 re-scan is not redundant with Step 1, because the collisions it exists to
 catch are the ones created *during* the run (observed: Step 1 found and
