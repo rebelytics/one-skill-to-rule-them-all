@@ -129,7 +129,11 @@ the protocol are separate steps; a session that loads the file and stops
 has activated nothing. Any turn that will involve a tool call counts; do
 not classify the session as "too simple" from its opening message.
 A step you did not run is reported before the answer, in one line — never
-after it, where it reads as a suggestion.
+after it, where it reads as a suggestion. If the skill does not resolve on
+this turn, say which probe told you so (the skill listing, or the skill
+directory on disk), re-check the listing on every later turn that makes a
+tool call, and run the protocol the first time it resolves — a "not
+installed" verdict holds for one turn.
 
 Select skills on the DECISION the request is about, not on the artefact it
 arrived as. Name what the user is deciding, then match the installed skill
@@ -552,7 +556,9 @@ names the probe it came from — the listing lookup, or a disk check of the
 skill directory — because the two disagree exactly here, and it holds for
 one turn: re-check the listing on each later turn that makes a tool call,
 and run the Session Start Protocol in full the first time the skill
-resolves.
+resolves. Like the guard below, this rule cannot live only in the skill
+that failed to resolve; the line that carries it is in the activation
+block.
 
 The durable form: **a guard against an activation config failing to load
 cannot live inside the thing that config loads.** The guard in SKILL.md step
