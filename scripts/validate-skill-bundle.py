@@ -504,6 +504,17 @@ def check_repo_versions(repo_dir, fails):
             continue
         if v != canonical:
             fails.append(f"repo: {rel} version {v!r} != canonical {canonical!r}")
+    # The skill's own frontmatter carries the version too, so a session can
+    # name what it loaded without the repo-only manifest (which never ships
+    # inside a bundle). It is a copy of the canonical number like the others.
+    skill_md = repo_dir / "SKILL.md"
+    if skill_md.is_file():
+        fm = frontmatter(skill_md.read_text(encoding="utf-8")) or ""
+        m = re.search(r'(?m)^version:\s*["\']?([^"\'\s]+)["\']?\s*$', fm)
+        if not m:
+            fails.append("repo: SKILL.md frontmatter has no `version:` (it must equal the canonical version)")
+        elif m.group(1) != canonical:
+            fails.append(f"repo: SKILL.md frontmatter version {m.group(1)!r} != canonical {canonical!r}")
     mp = repo_dir / ".claude-plugin" / "marketplace.json"
     if mp.is_file():
         try:

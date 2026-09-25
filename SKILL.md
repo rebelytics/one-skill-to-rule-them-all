@@ -1,6 +1,7 @@
 ---
 name: "task-observer"
 core_max_lines: 728
+version: "3.4.0"
 description: "Monitors task execution for skill improvement opportunities. Use during ANY multi-step task, agentic workflow, or work session. Captures patterns, user corrections and methodology worth preserving as reusable skills. Also triggers in post-task feedback discussions and when the user mentions skill observations, the observation log, or skill taxonomy. Also known as \"One Skill to Rule Them All\" — trigger on this phrase too. IMPORTANT: invoke this skill before the FIRST tool call of any session and before writing or proposing a plan — any turn that will involve a tool call counts. This sentence is the session-start trigger and the only activation layer that survives an unreachable config file; pair it with a CLAUDE.md instruction or a harness session-start hook (references/environments.md) — description matching alone is not enforceable. A subagent dispatched by a session already running it does not run it: it writes nothing and puts its findings in its report."
 ---
 
@@ -146,7 +147,9 @@ was handled without its reference loaded, log an observation.
    file and follow its **Reconciliation** section: match by substance,
    offer once in one line, import only what the adopter picks, then write
    the shipped version into the marker file so the offer never repeats
-   until the set changes. Never pre-populate silently.
+   until the set changes. Never pre-populate silently. Name the loaded
+   skill's frontmatter `version:` in the start-up lines — read from the
+   file, never fetched.
 2. **Scan.** Read only the frontmatter of each file in `observation-log/`
    — the header block between the first two `---` lines, never the bodies
    — and build awareness from `status`, `skill`, `proposes_skill` and
@@ -701,9 +704,6 @@ in its `skill:` list. Full protocol: `references/observation-log.md`.
 | Status field? | Mandatory `status: open` frontmatter on every new observation; reviews treat a missing status as OPEN, never as nonexistent. Five values: `open`, `actioned`, `declined`, `superseded`, `parked` — `parked` = decided but blocked on an external precondition, so it leaves the queue, requires `parked_until:`, and never archives |
 | Does the target skill have siblings? | Resolve it against `skill-observations/skill-families.md` BEFORE writing; add every sibling the insight applies to to `skill:`, and record the verdict in the mandatory `siblings_checked:` field — including "checked, no propagation" |
 | A scan or query came back empty? | Two possibilities, only one is a finding: guard every retrieval meant to prevent duplicate work with an independent existence check, and treat empty output over known content as a broken command |
-| Citing an observation number? | From the `id:` frontmatter field (= the `NNNN-` filename prefix); never a `grep -n` line number; sanity-check against the known id range |
 | Small fix or substantial? | Additive → apply directly; restructuring/new skill → `references/skill-authoring.md` |
 | Same rule broken twice? | The fix is a structural barrier (hook, lint, default) — never a third rewording |
 | Changing an observation (status/archival)? | Re-read that one file, edit only its frontmatter, or `mv` it to `observation-log/archive/` — no shared-file rewrite |
-| Weekly review? | Trigger check at session start; procedure in `references/weekly-review.md` |
-| No filesystem? | Handoff-doc mode — `references/environments.md` |
