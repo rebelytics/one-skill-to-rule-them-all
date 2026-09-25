@@ -24,6 +24,7 @@ in an environment without filesystem access.
 - Git as an optional staging medium
 - Claude Code Projects — disposable threads, no local skills, no pinned
   path (based on the platform's documentation, not yet field-tested)
+- Sessions whose output channel is owned by a caller
 - First-run backfill
 - Storage regimes
 - Bundle manifest
@@ -479,7 +480,8 @@ writing to the same log reads as this session's write (a missed block,
 never a false one); it fires for the main agent only, so a subagent —
 which by the activation block writes nothing — is never blocked, and a
 harness that runs the hook for a subagent whose caller owns its output
-must not wire it there; and like every trigger, it is armed only once it has matched the
+must not wire it there ("Sessions whose output channel is owned by a
+caller"); and like every trigger, it is armed only once it has matched the
 real event — run it against a transcript with tool calls and no write,
 then against the same with a checkpoint line appended, before trusting
 either outcome.
@@ -1029,6 +1031,38 @@ work means the skill is not activated, or the log route is not wired.**
 Check the project instructions for the activation line and the added
 repository for the skill directory, then report what was found — that
 report is the field test this section is waiting for.
+
+## Sessions whose output channel is owned by a caller
+
+A subagent, a non-interactive run, a tool-shaped invocation with a
+declared result schema: the session has a filesystem and no reader.
+Detect it from the session's own contract — a single required result
+call, a ban on free-text answers — never from a flag. Every step that
+needs a free-text reply to a person has no recipient there: the review
+offer (Session Start step 3), the activation suggestion (step 4), the
+end-of-session summary (Surfacing Protocol) and the per-task summary line
+in the activation block. Skip them silently, and never count an
+unanswerable offer as surfaced. Never run the review unprompted either:
+"autonomous" in step 3 means a scheduled run whose prompt asks for the
+review, not a worker whose caller asked for something else.
+
+What happens to logging depends on who the caller is. Where the caller
+is itself a session running this protocol, the activation block's
+subagent rule applies: the worker writes nothing, and a finding worth
+logging goes into its result, in whatever field the schema leaves for
+notes, for the controller to write. Where the caller runs no protocol —
+a script, a CI job, another tool — logging stays fully in force, because
+the write is the only report there is: anything that would have been
+surfaced becomes an observation file naming the condition that fired, so
+the next interactive session inherits it; name the caller in
+`session_context`, and log only what the caller cannot see. Handoff-doc
+mode is the opposite case (a reader, nowhere to write); report-back mode
+("Anchoring the workspace") is the case with neither a stable path nor a
+reader. (Observed from both sides: a subagent with a fixed output schema
+ran the protocol correctly and then had nowhere to put four reporting
+steps; an orchestrator dispatching eight subagents in a day found each
+had resolved the same conflict on its own, differently, in its
+"decisions the brief did not cover" section.)
 
 ## First-run backfill
 

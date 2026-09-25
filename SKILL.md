@@ -87,8 +87,6 @@ was handled without its reference loaded, log an observation.
 - `references/signals.md` — the full catalogue of what is and isn't worth
   logging. **Load when unsure whether something is an observation, or when
   sorting many candidates.**
-  Also load it when a defect that is not the deliverable is consuming the
-  session, and before writing any "later" into a recommendation.
 - `references/environments.md` — activation and config setup, compaction
   behaviour, bundle manifest, handoff-doc mode for storage-less
   environments. **Load for setup questions, after a compaction or resume
@@ -216,7 +214,9 @@ was handled without its reference loaded, log an observation.
    numbers, how many are open and roughly how many distinct findings they
    represent (cluster on the `title` and `skill` fields you just scanned;
    why: `references/weekly-review.md`). Only a scheduled/autonomous run
-   loads `references/weekly-review.md` and runs the review unprompted.
+   loads `references/weekly-review.md` and runs the review unprompted; a
+   session whose output a caller owns does neither: `references/environments.md`
+   ("Sessions whose output channel is owned by a caller").
 4. **Activation.** Once per session: if no CLAUDE.md (or equivalent)
    activation instruction for this skill exists, briefly suggest adding one
    (see `references/environments.md`). Skip if already configured. Be clear
