@@ -421,6 +421,43 @@ one to a fresh id from the snippet, update its filename and its `id:`
 field together, and note the renumber in its body so a citation of the old
 number can still be traced. Then re-run the check until it prints nothing.
 
+**Per-entry header conformance — a count, not a gate.** The scan's
+suspect count catches YAML that will not parse; it cannot see a header
+that parses and is still wrong: an `id` that disagrees with the filename
+prefix, a `status` outside the five values, a missing or blank
+`siblings_checked`, or a near-miss field name (`skills:`,
+`proposed_skill:`, `sibling_checked:`) that every consumer silently
+ignores. Run it after the duplicate-id check, over the active directory:
+
+```bash
+d="[ABSOLUTE PATH]/skill-observations/observation-log"
+nonconf=$(find "$d" -maxdepth 1 -name '*.md' -exec awk '
+  FNR==1 { fm=0; bad=""; idv=""; st=""; sc=""; f=FILENAME; sub(/.*\//,"",f); pre=(match(f,/^[0-9]+/) ? substr(f,1,RLENGTH)+0 : -1) }
+  FNR==1 && /^---[[:space:]]*$/ { fm=1; next }
+  fm && /^---[[:space:]]*$/ { fm=0
+    if (idv !~ /^[1-9][0-9]*$/ || idv+0 != pre) bad=bad " id"
+    if (st !~ /^(open|actioned|declined|superseded|parked)$/) bad=bad " status"
+    if (sc == "") bad=bad " siblings_checked"
+    if (bad != "") print FILENAME ":" bad; nextfile }
+  fm && /^id:/ { idv=$2 }
+  fm && /^status:/ { st=$2 }
+  fm && /^siblings_checked:/ { sc=$0; sub(/^siblings_checked:[[:space:]]*/, "", sc) }
+  fm && /^(skills|proposed_skill|proposed_skills|proposes_skills|sibling_checked|siblings_check|target_files|skill_qualifier):/ { bad=bad " near-miss:" $1 }
+' {} +)
+n_nc=$(printf '%s' "$nonconf" | grep -c .)
+if [ "$n_nc" -gt 0 ]; then printf 'NOTE: %s non-conforming headers (id / status / siblings_checked / near-miss field):\n%s\n' "$n_nc" "$nonconf"; fi
+```
+
+It reports; it does not block the review. Its false-positive rate on a
+real corpus is unmeasured, so record three numbers the first time it runs
+over a live log — hits, true defects among them, and how many were
+normalised — and decide from those whether it stays a report or becomes
+a gate (`skill-authoring.md`, "a recommended check carries three
+measured numbers"). A header with no closing `---` is not reported here;
+the scan's `parsed` count is the instrument for that. Fix a hit the way
+the duplicate-id check fixes a renumber: one field in one file, with the
+filename left alone unless the id is the field at fault.
+
 **And key the merge on the filename, not the id**, wherever a review fans
 reading out and merges results. The filename is unique by construction —
 the noclobber create guarantees it — and the id is exactly the field a
