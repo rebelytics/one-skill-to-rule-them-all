@@ -9,6 +9,7 @@ in an environment without filesystem access.
   - The activation block
   - Anchoring the workspace
   - A session-start hook (Claude Code and similar harnesses)
+  - A stop hook — the per-task backstop as a harness event
   - Verify activation in a NEW session — the installing session cannot prove it
   - Activation config — late, intermittent, and why the guard cannot live inside it
   - The probe rides inside the first batched call
@@ -405,6 +406,83 @@ the reminder branch fires by running the hook against fixtures at `never`,
 30 days stale and 2 days stale, confirming the third stays silent. A nag
 that never fires and a nag that is correctly silent look identical from a
 passing run.
+
+### A stop hook — the per-task backstop as a harness event
+
+The per-task backstop in the activation block is prose in the same file as
+the rule it guards, so it fails together with it: a session that skipped
+the protocol skipped the backstop at every task boundary too. Where the
+harness has a stop event, run the check there instead: *has this session
+used tools, and has anything under `observation-log/` or `checkpoints.log`
+been written since it started?* If not, block the stop once per session
+with a one-line instruction; stay silent for conversation, for a session
+that already wrote, for a second block in a row, and when the log cannot
+be read. Node, no dependencies; substitute `[ABSOLUTE PATH]` as elsewhere:
+
+```js
+// Stop hook: the per-task backstop as a harness event instead of prose.
+const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
+const MIN_TOOL_USES = 3; // below this the turn is conversation, not work
+const base = path.join('[ABSOLUTE PATH]', 'skill-observations'); // the pinned workspace
+const block = (reason) => { fs.writeFileSync(marker, new Date().toISOString()); console.log(JSON.stringify({ decision: 'block', reason })); process.exit(0); };
+
+let input = {};
+try { input = JSON.parse(fs.readFileSync(0, 'utf8') || '{}'); } catch { process.exit(0); }
+if (input.stop_hook_active) process.exit(0);            // never chain a second block
+const session = String(input.session_id || '').replace(/[^A-Za-z0-9_-]/g, '');
+const transcript = input.transcript_path;
+if (!session || !transcript) process.exit(0);
+
+const marker = path.join(os.tmpdir(), `task-observer-backstop-${session}`);
+if (fs.existsSync(marker)) process.exit(0);             // once per session
+
+let started = 0, toolUses;
+try {
+  const st = fs.statSync(transcript), text = fs.readFileSync(transcript, 'utf8');
+  toolUses = (text.match(/"type":\s*"tool_use"/g) || []).length;
+  // Birth time is 0 where the filesystem has none and equals ctime where the
+  // platform substitutes it; either would make every file read as untouched
+  // or touched. Fall back to the transcript's first timestamp.
+  if (st.birthtimeMs > 0 && st.birthtimeMs < st.ctimeMs) started = st.birthtimeMs;
+  else { const m = text.match(/"timestamp":\s*"([^"]+)"/); if (m) started = Date.parse(m[1]) || 0; }
+} catch { process.exit(0); }
+if (toolUses < MIN_TOOL_USES) process.exit(0);
+
+if (!(started > 0)) block('task-observer backstop: cannot tell when this session started (no birth time, no ' +
+  'transcript timestamp), so it cannot check the log. Check by hand that this session wrote an observation ' +
+  'or a checkpoints.log line, and report the one-line summary. Fires once per session.');
+
+const files = [path.join(base, 'checkpoints.log')];
+try {
+  for (const n of fs.readdirSync(path.join(base, 'observation-log')))
+    if (n.endsWith('.md')) files.push(path.join(base, 'observation-log', n));
+} catch { process.exit(0); }                             // unreachable log: stay silent
+const touched = files.some((f) => { try { return fs.statSync(f).mtimeMs > started; } catch { return false; } });
+if (touched) process.exit(0);
+
+block('task-observer backstop: this session used tools but wrote no observation file and no checkpoint line. ' +
+  'If the skill was never invoked, invoke it now; then write pending observations or append a ' +
+  '"no observations" line to checkpoints.log, and report the one-line summary. Fires once per session.');
+```
+
+**The session's start time is the fragile input.** A transcript's birth
+time is `0` on filesystems that do not record one, and some platforms
+return the change time in its place, which moves on every append; either
+makes the comparison meaningless, and the first makes the hook
+permanently silent. So birth time counts only when it is non-zero and
+earlier than the change time; otherwise the hook reads the first
+`"timestamp"` in the transcript, and where neither exists it blocks once
+with a request to check by hand rather than falling silent.
+
+Its known limits: it compares modification times, so a parallel session
+writing to the same log reads as this session's write (a missed block,
+never a false one); it fires for the main agent only, so a subagent —
+which by the activation block writes nothing — is never blocked, and a
+harness that runs the hook for a subagent whose caller owns its output
+must not wire it there; and like every trigger, it is armed only once it has matched the
+real event — run it against a transcript with tool calls and no write,
+then against the same with a checkpoint line appended, before trusting
+either outcome.
 
 ### Verify activation in a NEW session — the installing session cannot prove it
 
