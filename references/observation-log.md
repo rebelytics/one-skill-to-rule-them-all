@@ -684,6 +684,31 @@ is the only write path wherever it can run. Every mandatory step that
 ships a command owns a sentence saying what remains mandatory when the
 command is unavailable; this is that sentence for the scan.
 
+The ladder, one command per call, each with no shell operator a shape
+classifier could decline:
+
+```bash
+find "[ABSOLUTE PATH]/skill-observations/observation-log" -maxdepth 1 -name '*.md' -exec grep -H -E '^(id|title|status|skill|proposes_skill|siblings_checked):' {} +
+ls "[ABSOLUTE PATH]/skill-observations/observation-log"
+ls "[ABSOLUTE PATH]/skill-observations/observation-log/archive"
+cat "[ABSOLUTE PATH]/skill-observations/observation-log/archive/.id-floor"
+```
+
+Combine by hand: `files` is the number of `.md` names in the first
+listing, `parsed` the number of distinct files the `grep` printed an
+`id:` line for, and the id maximum the largest prefix across both
+listings and the floor. Then write the `checkpoints.log` line, and say
+"degraded form" in the session. If `-exec … +` is itself refused as a
+compound, the fallback is
+`grep -H -E '…' "[ABSOLUTE PATH]/skill-observations/observation-log"/*.md`
+under bash — the one glob this tree tolerates, and only here, because
+the command it replaces was refused. On an empty log that `grep` reports
+"No such file" beside an empty `ls`, and on a log that has never issued
+an id the `cat` reports the same: each pair is the expected answer, not
+a broken read. The
+`ls` in this ladder is a read for a human-combined count, not an input
+to a snippet, so a rebound `ls` shows itself in the listing.
+
 ## Skill families and the sibling check
 
 Where several skills implement one idea — the same methodology for
