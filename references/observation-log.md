@@ -461,11 +461,16 @@ as a property of instruments covers the one nobody has written yet.
 **A guard that separates "empty" from "non-empty" cannot catch a
 partial read, and partial reads are the common failure of text-shaped
 tool output.** A listing that returns some of the directory passes every
-zero-check and yields a plausible, wrong maximum. Where a monotonic
-invariant is already in the same computation — a floor file is by
-definition never above the highest id issued — assert against it rather
-than against a sentinel: a computed maximum below the recorded floor is
-proof the read was partial, whatever the cause. And never write a
+zero-check and yields a plausible, wrong maximum. Assert the listing
+against a second count of the same population taken by different means
+— the id snippet counts the prefixes it listed against `find`'s count of
+prefixed files — rather than against a sentinel. A monotonic invariant
+already in the computation is a weaker check: a floor file is never above
+the highest id *issued*, but an id can be issued without its file ever
+being created (an older snippet wrote the floor before the create, and a
+legacy monolithic archive holds ids no filename carries), so a computed
+maximum below the floor is reported, and the id taken above the floor,
+rather than halted on. And never write a
 suspect reading back into the persistent source it came from; a guard
 placed after that write has protected nothing, and the floor that exists
 to stop the counter rewinding becomes the thing that rewinds it.
@@ -846,13 +851,16 @@ seen=$(find "$d" -maxdepth 1 -name '*.md' -print0 | { n=0   # -print0/-d '': nev
       mv "$f" "$d/archive/"
   done; printf %s "$n"; })
 [ "$n_files" -gt 0 ] && [ "${seen:-0}" -eq 0 ] && { echo "ARCHIVAL SWEEP BROKEN — $n_files files present, 0 examined"; exit 1; }
-hi=$( { ls "$d" "$d/archive" 2>/dev/null | grep -oE '^[0-9]+'; cat "$d/archive/.id-floor" 2>/dev/null; } \
-     | sed 's/^0*\([0-9]\)/\1/' | sort -n | tail -1); : "${hi:=0}"
-[ "$hi" -eq 0 ] && [ -n "$(find "$d" -maxdepth 1 -name '*.md')" ] && { echo "ID COMMAND BROKEN — log is non-empty but no ids extracted"; exit 1; }
-next_id=$(( hi + 1 )); echo "$next_id" > "$d/archive/.id-floor"
+floor=$(sed '1!d; s/[^0-9]//g' "$d/archive/.id-floor" 2>/dev/null); floor=$((10#${floor:-0}))   # digits only: a CRLF or padded floor still reads
+ids=$(for p in "$d"/[0-9]*.md "$d"/archive/[0-9]*.md; do [ -e "$p" ] && printf '%s\n' "${p##*/}"; done | grep -oE '^[0-9]+')   # globs and builtins: no `ls` a profile alias can rebind
+[ "$(printf '%s' "$ids" | grep -c .)" -eq "$(find "$d" "$d/archive" -maxdepth 1 -name '[0-9]*.md' | wc -l)" ] || { echo "ID COMMAND BROKEN — the listing and find disagree on the prefixed files"; exit 1; }
+hi=$(printf '%s\n' "$ids" | sort -n | tail -1); hi=$((10#${hi:-0}))   # from the files alone; 10#: a zero-padded prefix is not octal
+[ "$hi" -lt "$floor" ] && echo "NOTE: highest file id $hi is below .id-floor $floor — ids issued without a file; the new id goes above the floor"
+next_id=$(( (hi > floor ? hi : floor) + 1 ))      # never below the floor, whatever the listing saw
 f="$d/$(printf '%04d' "$next_id")-<slug>.md"      # the target path, built from the id just derived
 [ -n "$(find "$d" -maxdepth 2 -name "$(printf '%04d' "$next_id")-*.md")" ] && { echo "COLLISION — id $next_id already used; re-derive"; exit 1; }   # guard the id PREFIX across active + archive, not the path
 (set -C; : > "$f") || exit 1                        # noclobber: create, never truncate an existing file
+printf '%s\n' "$next_id" > "$d/archive/.id-floor"   # AFTER the create: an id check that writes no file never moves the floor
 ```
 
 The snippet leaves the derived number in `$next_id` and the target path in
@@ -861,7 +869,7 @@ prefix echoed.
 
 **`scripts/new-observation.sh <slug> [workspace-root]` is this snippet as
 one command.** It performs the same steps in the same order — sweep, id,
-floor write, prefix guard, noclobber create — takes the pinned workspace
+prefix guard, noclobber create, floor write — takes the pinned workspace
 root as its second argument or from `TASK_OBSERVER_WORKSPACE`, refuses a
 relative root, a malformed slug or a missing `observation-log/archive/`
 (halt and re-probe; never recreate from a writer), and prints the created
@@ -871,13 +879,15 @@ earlier read to a later write, which is the drift every rule in this
 section is trying to prevent. The inline snippet remains for harnesses
 where a script cannot be invoked.
 
-The `sed` strips the filename prefixes' zero-padding before the
-arithmetic. It is load-bearing, not cosmetic: shell arithmetic reads a
-leading-zero number as octal, so `$(( 0105 + 1 ))` yields 70 — a silently
-wrong id — and a prefix containing an 8 or 9 (e.g. `0108`) is an invalid
-octal constant and errors the whole derivation.
+The `10#` prefix in the arithmetic is load-bearing, not cosmetic: shell
+arithmetic reads a leading-zero number as octal, so `$(( 0105 + 1 ))`
+yields 70 — a silently wrong id — and a prefix containing an 8 or 9
+(e.g. `0108`) is an invalid octal constant and errors the whole
+derivation. `sort -n` needs no stripping; the arithmetic does. The floor
+is read as digits only, so a floor file written with a CRLF, padding or
+spaces still reads as its number instead of as nothing.
 
-`ls`, `awk`, `sed -n`, `grep -oE`, `sort -n`, `mv` and `printf` are POSIX,
+`awk`, `sed -n`, `grep -oE`, `sort -n`, `mv` and `printf` are POSIX,
 and the one non-POSIX construct is deliberate: `read -r -d ''` over
 `find -print0` is a bash extension, taken because it is the only form that
 cannot word-split a path containing a space — so run the snippet under
@@ -888,7 +898,16 @@ shell command owns that command's portability: lead with the portable
 form, never offer it as a footnote the agent reaches for after the primary
 has failed — and make any command that derives a number from a file fail
 loudly on an empty result, because a command that fails to empty rather
-than to error may never announce that it failed at all. A snippet that
+than to error may never announce that it failed at all. A snippet meant
+to run in an agent harness calls core utilities by names a profile cannot
+rebind — the harness commonly initialises its shell from the user's
+profile, and an alias or function named `ls` (`eza`, `lsd`, a wrapper with
+default flags) changes what that word runs while the snippet reports
+nothing wrong. Prefer shell globbing and builtins; where a utility is
+unavoidable, it is `find`, or `command <name>`. And a guard tests its own
+inputs: the listing is asserted against a file count before the floor is
+merged in, because a cached counter must never be able to satisfy a check
+whose purpose is to prove the log was read. A snippet that
 spawns one process per file carries an undeclared upper bound on the log
 it can read: per-file spawning degrades linearly with a large constant —
 seconds for a hundred files on Linux, past a two-minute tool timeout on
@@ -926,9 +945,20 @@ run against a snippet that would otherwise write to the log.
 
 ### The guard line, the sweep's count and the noclobber create
 
-The guard line distinguishes "the log says zero" from "I could not read
+The listing guard distinguishes "the log says zero" from "I could not read
 the log": a command that fails to empty rather than to error would
-otherwise propose id 1 in a populated log. The sweep carries the same
+otherwise propose id 1 in a populated log. It compares the number of ids
+the glob listed with `find`'s count of prefixed files in the same two
+directories, so it fires on a partial listing as well as an empty one,
+and it runs on the listing alone, before the floor enters — an earlier
+form merged the floor into the maximum first, and a listing broken to
+nothing then returned the floor and passed. The highest file id is kept
+apart from the floor for the same reason: the new id is the larger of
+the two plus one, and a file maximum below the floor is a NOTE (ids
+issued without a file), not a halt, because older snippets left exactly
+that state behind on every run that stopped after its floor write. The
+floor is written last, after the create, so a run that creates no file —
+a check, a collision, a failed create — never moves it. The sweep carries the same
 guard in its own right — it counts the files it actually examined and
 halts if that count is zero while `find` reports files present. An
 archival loop that never enters its body moves nothing and exits
@@ -1042,9 +1072,9 @@ with the floor left three behind). The scan may assert it; the check is one
 line, and it belongs after the scan's counts, before the content print:
 
 ```bash
-floor=$(sed 's/^0*\([0-9]\)/\1/' "$d/archive/.id-floor" 2>/dev/null | tr -d ' \n')
-top=$(ls "$d" 2>/dev/null | grep -oE '^[0-9]+' | sed 's/^0*\([0-9]\)/\1/' | sort -n | tail -1)
-[ -n "${floor:-}" ] && [ -n "${top:-}" ] && [ "$floor" -lt "$top" ] && echo "NOTE: .id-floor ($floor) below highest active id ($top) — an issuer skipped the floor write"
+floor=$(sed '1!d; s/[^0-9]//g' "$d/archive/.id-floor" 2>/dev/null)
+top=$(for p in "$d"/[0-9]*.md; do [ -e "$p" ] && printf '%s\n' "${p##*/}"; done | grep -oE '^[0-9]+' | sort -n | tail -1)
+[ -n "${floor:-}" ] && [ -n "${top:-}" ] && [ "$((10#$floor))" -lt "$((10#$top))" ] && echo "NOTE: .id-floor ($floor) below highest active id ($top) — an issuer skipped the floor write"
 ```
 
 The line is optional in the core's scan snippet (the core is at its

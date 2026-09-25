@@ -25,9 +25,11 @@
 #
 # Steps, in order: archival sweep of stale resolved files (a side effect of
 # deriving the id, never a separate duty) → id = max(active prefixes,
-# archive prefixes, .id-floor) + 1 → floor write → PREFIX collision guard
-# across active and archive (two slugs sharing one number is the failure;
-# a path check cannot see it) → noclobber create → print the path.
+# archive prefixes, .id-floor) + 1, the listing guarded against find's
+# count before the floor enters → PREFIX collision guard across active and
+# archive (two slugs sharing one number is the failure; a path check cannot
+# see it) → noclobber create → floor write (after the create, so a run that
+# creates nothing never moves it) → print the path.
 #
 # bash, not sh: `read -r -d ''` is a bash extension. Runs on bash 3.2 (stock
 # macOS): case patterns inside $( ) are parenthesised for that reason.
@@ -85,25 +87,29 @@ if [ "$n_files" -gt 0 ] && [ "${seen:-0}" -eq 0 ]; then
 fi
 
 # --- id: max of active prefixes, archive prefixes and the floor, plus one ---
-hi=$( { ls "$d" "$d/archive" 2>/dev/null | grep -oE '^[0-9]+'; cat "$d/archive/.id-floor" 2>/dev/null; } \
-     | sed 's/^0*\([0-9]\)/\1/' | sort -n | tail -1); : "${hi:=0}"
-if [ "$hi" -eq 0 ] && [ -n "$(find "$d" -maxdepth 1 -name '*.md')" ]; then
-  echo "ID COMMAND BROKEN — log is non-empty but no ids extracted" >&2; exit 1
+# Globs and builtins list the files, never `ls`: a profile alias or function
+# can rebind that word. The floor is read as digits only (a CRLF or padded
+# file still reads), and 10# keeps a zero-padded number out of octal.
+floor=$(sed '1!d; s/[^0-9]//g' "$d/archive/.id-floor" 2>/dev/null); floor=$((10#${floor:-0}))
+ids=$(for p in "$d"/[0-9]*.md "$d"/archive/[0-9]*.md; do [ -e "$p" ] && printf '%s\n' "${p##*/}"; done | grep -oE '^[0-9]+')
+if [ "$(printf '%s' "$ids" | grep -c .)" -ne "$(find "$d" "$d/archive" -maxdepth 1 -name '[0-9]*.md' | wc -l)" ]; then
+  echo "ID COMMAND BROKEN — the listing and find disagree on the prefixed files" >&2; exit 1
 fi
-next_id=$(( hi + 1 ))
+hi=$(printf '%s\n' "$ids" | sort -n | tail -1); hi=$((10#${hi:-0}))
+if [ "$hi" -lt "$floor" ]; then
+  echo "NOTE: highest file id $hi is below .id-floor $floor — ids issued without a file; the new id goes above the floor" >&2
+fi
+next_id=$(( (hi > floor ? hi : floor) + 1 ))
 prefix=$(printf '%04d' "$next_id")
 
 # floor-staleness note: the floor lags the directory when an issuer skipped
 # the floor write. Harmless here (max-of-three absorbs it) but worth a line,
 # because a lagging floor is the precondition for a restart once the active
 # directory is archived down.
-floor=$(sed 's/^0*\([0-9]\)/\1/' "$d/archive/.id-floor" 2>/dev/null | tr -d ' \n')
-top_active=$(ls "$d" 2>/dev/null | grep -oE '^[0-9]+' | sed 's/^0*\([0-9]\)/\1/' | sort -n | tail -1)
-if [ -n "${floor:-}" ] && [ -n "${top_active:-}" ] && [ "$floor" -lt "$top_active" ]; then
-  echo "NOTE: .id-floor ($floor) is below the highest active id ($top_active) — an issuer skipped the floor write; corrected now" >&2
+top_active=$(for p in "$d"/[0-9]*.md; do [ -e "$p" ] && printf '%s\n' "${p##*/}"; done | grep -oE '^[0-9]+' | sort -n | tail -1)
+if [ -s "$d/archive/.id-floor" ] && [ -n "${top_active:-}" ] && [ "$floor" -lt "$((10#$top_active))" ]; then
+  echo "NOTE: .id-floor ($floor) is below the highest active id ($((10#$top_active))) — an issuer skipped the floor write; corrected now" >&2
 fi
-
-echo "$next_id" > "$d/archive/.id-floor" || { echo "FLOOR WRITE FAILED — $d/archive/.id-floor" >&2; exit 1; }
 
 # --- collision guard on the id PREFIX, across active and archive ------------
 # Two writers deriving the same number with different slugs produce two
@@ -118,5 +124,8 @@ f="$d/${prefix}-${slug}.md"
 if ! (set -C; : > "$f") 2>/dev/null; then
   echo "CREATE FAILED — $f exists or is unwritable" >&2; exit 1
 fi
+
+# --- floor write, after the create: never lower (next_id > floor) ------------
+printf '%s\n' "$next_id" > "$d/archive/.id-floor" || { echo "FLOOR WRITE FAILED — $d/archive/.id-floor (the file $f exists; fix the floor by hand)" >&2; exit 1; }
 
 printf '%s\n' "$f"

@@ -422,20 +422,19 @@ seen=$(find "$d" -maxdepth 1 -name '*.md' -print0 | { n=0   # -print0/-d '': nev
       mv "$f" "$d/archive/"
   done; printf %s "$n"; })
 [ "$n_files" -gt 0 ] && [ "${seen:-0}" -eq 0 ] && { echo "ARCHIVAL SWEEP BROKEN — $n_files files present, 0 examined"; exit 1; }
-hi=$( { ls "$d" "$d/archive" 2>/dev/null | grep -oE '^[0-9]+'; cat "$d/archive/.id-floor" 2>/dev/null; } \
-     | sed 's/^0*\([0-9]\)/\1/' | sort -n | tail -1); : "${hi:=0}"
-[ "$hi" -eq 0 ] && [ -n "$(find "$d" -maxdepth 1 -name '*.md')" ] && { echo "ID COMMAND BROKEN — log is non-empty but no ids extracted"; exit 1; }
-next_id=$(( hi + 1 )); echo "$next_id" > "$d/archive/.id-floor"
+floor=$(sed '1!d; s/[^0-9]//g' "$d/archive/.id-floor" 2>/dev/null); floor=$((10#${floor:-0}))   # digits only: a CRLF or padded floor still reads
+ids=$(for p in "$d"/[0-9]*.md "$d"/archive/[0-9]*.md; do [ -e "$p" ] && printf '%s\n' "${p##*/}"; done | grep -oE '^[0-9]+')   # globs and builtins: no `ls` a profile alias can rebind
+[ "$(printf '%s' "$ids" | grep -c .)" -eq "$(find "$d" "$d/archive" -maxdepth 1 -name '[0-9]*.md' | wc -l)" ] || { echo "ID COMMAND BROKEN — the listing and find disagree on the prefixed files"; exit 1; }
+hi=$(printf '%s\n' "$ids" | sort -n | tail -1); hi=$((10#${hi:-0}))   # from the files alone; 10#: a zero-padded prefix is not octal
+[ "$hi" -lt "$floor" ] && echo "NOTE: highest file id $hi is below .id-floor $floor — ids issued without a file; the new id goes above the floor"
+next_id=$(( (hi > floor ? hi : floor) + 1 ))      # never below the floor, whatever the listing saw
 f="$d/$(printf '%04d' "$next_id")-<slug>.md"      # the target path, built from the id just derived
 [ -n "$(find "$d" -maxdepth 2 -name "$(printf '%04d' "$next_id")-*.md")" ] && { echo "COLLISION — id $next_id already used; re-derive"; exit 1; }   # guard the id PREFIX across active + archive, not the path
 (set -C; : > "$f") || exit 1                        # noclobber: create, never truncate an existing file
+printf '%s\n' "$next_id" > "$d/archive/.id-floor"   # AFTER the create: an id check that writes no file never moves the floor
 ```
 
-The `sed` strips the prefixes' zero-padding before the arithmetic — do not
-"simplify" it away: shell arithmetic reads a leading zero as octal, so
-`$(( 0105 + 1 ))` yields 70, and a prefix containing an 8 or 9 errors out.
-
-The guard line distinguishes "the log says zero" from "I could not read
+The listing guard tells "the log says zero" from "I could not read
 the log", the sweep's count does the same for the archival loop, the prefix
 guard refuses a number already in use under any slug, and the `noclobber`
 create refuses an existing path — write the body only after that create
