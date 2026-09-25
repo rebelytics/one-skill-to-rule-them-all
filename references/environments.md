@@ -6,6 +6,7 @@ in an environment without filesystem access.
 ## Contents
 
 - Recommended activation setup
+  - Choosing the activation scope — the load is a per-session cost
   - The activation block
   - Anchoring the workspace
   - A session-start hook (Claude Code and similar harnesses)
@@ -115,6 +116,39 @@ wrong set. The failure is silent by construction, because a skill that
 never loads cannot announce that it was relevant, so the check belongs in
 the checklist rather than in a disposition.
 
+### Choosing the activation scope — the load is a per-session cost
+
+The block below fires on every session it covers, and firing it loads
+SKILL.md. Measure before choosing: at v3.4.0 that is 728 lines (~52 KB,
+~13k tokens), plus the Session Start Protocol's own calls; the references
+are loaded on demand and do not enter this number. The cost is paid
+whether or not the session ends up logging anything.
+
+Two variants. Name the one you chose in the block itself, so a later
+reader can tell a deliberate scope from an incomplete copy:
+
+- **Always-on** — fires before the first tool call of ANY session.
+  Maximum coverage. A one-question session answered by a single `wc` pays
+  the full load.
+- **Scoped** — fires before the first tool call of a session that does
+  multi-step work with a deliverable (a code change, a plan, a skill or
+  config edit, a document), and before writing or proposing a plan.
+  Sessions answered by read-only lookups — a file read, a grep, a
+  measurement — skip it.
+
+**A scoped rule is incomplete without its re-trigger**, which is not
+optional wording: *if a skipped session turns into multi-step work, or the
+user corrects how you work, invoke the skill at that moment, before the
+next write.* Without it, the cheap opener that grows into an afternoon of
+work is precisely the session that logs nothing — the saving is then paid
+for in lost coverage exactly where coverage was worth most.
+
+Scoping is a trade the adopter makes knowingly; it is not a licence for
+the agent to classify a session as "too simple" on its own. The
+always-on block's sentence against that judgement stands in both
+variants — under the scoped one, the criterion is the deliverable, never
+how simple the opening message looks.
+
 ### The activation block
 
 ```text
@@ -125,6 +159,11 @@ check, frontmatter scan, review trigger). Loading the skill and running
 the protocol are separate steps; a session that loads the file and stops
 has activated nothing. Any turn that will involve a tool call counts; do
 not classify the session as "too simple" from its opening message.
+[Scoped variant — replace the preceding sentence with: Skip sessions
+answered by read-only lookups (a file read, a grep, a measurement); the
+load is a per-session cost and it is deliberately not paid for those. If
+a skipped session turns into multi-step work, or the user corrects how
+you work, invoke the skill at that moment, before the next write.]
 
 Select skills on the DECISION the request is about, not on the artefact it
 arrived as. Name what the user is deciding, then match the installed skill
