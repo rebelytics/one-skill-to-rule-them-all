@@ -225,11 +225,8 @@ was handled without its reference loaded, log an observation.
    (see `references/environments.md`). Skip if already configured. Be clear
    about what this step is: it runs only after the skill has been invoked,
    so it verifies a working setup and structurally cannot detect the
-   missing one — it is not the safety net for a never-activated install.
-   That case is caught only from outside the runtime: the install-time
-   verification and external diagnostic in `references/environments.md` (no
-   observation-log directory after sessions of real work), and the review's
-   regression check for a tier now gone.
+   missing one — it is not the safety net for a never-activated install;
+   the checks from outside the runtime are in `references/environments.md`.
 5. **Concurrency.** There is no shared log file to guard: each observation
    is its own file, so creating one never collides with another session's
    entry; re-read one before changing its *status* (How to Log).
@@ -365,7 +362,9 @@ same path — a classifier can deny one interface while allowing another,
 and consecutive denials from a probabilistic gatekeeper are noise, not a
 wall. Report "failed N times", never "cannot be done", unless retries and
 alternate interfaces are exhausted; otherwise observations are silently
-lost for the rest of the session.
+lost for the rest of the session. A mode that refuses every write by
+design is the exception: defer, don't retry (`references/environments.md`,
+"A mode that forbids every write by design").
 
 **Deliverable-event flush.** Whenever a unit of work is declared complete
 to a human — a file handed over, a render, a staged skill file, a

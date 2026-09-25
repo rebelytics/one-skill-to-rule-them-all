@@ -16,6 +16,7 @@ in an environment without filesystem access.
   - Two harness behaviours that block the protocol rather than break it
   - If CLAUDE.md (or the equivalent config) is governance-protected
   - A third denial class: an automated content classifier
+  - A mode that forbids every write by design
   - A delegated setup step is not done until you have observed it
   - Paths handed across a boundary are resolved from the far side
 - Environment mappings
@@ -685,6 +686,33 @@ nothing, was refused on the same grounds. So tiers 3 and 4 failed for
 different reasons that happened to coincide, and the tier presented as the
 robust fallback for a blocked config edit was the one held furthest out of
 reach. Do not present the ladder to the user as "if 3 fails, 4 will work".
+
+### A mode that forbids every write by design
+
+Some modes — Claude Code's plan mode, any propose-only mode — permit
+every read and refuse every write for the whole turn. That is not a
+denied write: retrying and switching tools are wasted calls, the log is
+not unwritable, and "failed N times" is the wrong report when the
+environment is telling the truth. A gatekeeper and a mode are opposite
+failures — one is retried, the other accepted and deferred.
+
+1. Run the read steps normally: the scan, the review-date check, the
+   per-skill lookup. A read-only session is fully observant.
+2. Defer, never skip, the writes: storage creation, `.id-floor`,
+   archival, the `checkpoints.log` line. Ids are resolved at flush
+   time, never now.
+3. Queue pending observations where the turn cannot eat them: a
+   numbered list in the plan or handover text itself. A rejected plan
+   still leaves its text in the transcript; working memory does not
+   survive the turn.
+4. Flush in the first write-capable turn, before other work, running
+   the id snippet (or the helper) before each write.
+
+Tell the two apart by the refusal's own words: a mode names itself and
+refuses every write, a gatekeeper names a classifier or a rule and
+refuses one call. Unconfirmed: whether every harness's plan mode refuses
+an append to an existing file as well as a create; defer both either way,
+so the flush turn is the only one that writes.
 
 ### A delegated setup step is not done until you have observed it
 
