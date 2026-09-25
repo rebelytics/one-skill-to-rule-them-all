@@ -242,6 +242,17 @@ is per-project and the targets are not; report the candidate shard rather
 than consolidating on your own judgement, because one plural case is
 legitimate (see the multi-log block in `weekly-review.md`).
 
+**The session-start scan lists the neighbours on every run.** One line of
+the scan snippet finds every `skill-observations/observation-log/` up to
+three levels under the pinned root's parent and prints each with its file
+count — `logs under the parent (…): /a/proj=157  /a/other=19`. One entry
+is the ordinary case. Several are either shards or the legitimate plural
+case, and the line cannot tell which: report it in one line, route to
+"Several observation logs on one machine" in `weekly-review.md`, and never
+consolidate from the scan. The probe is bounded by the parent's depth-3
+tree, not by any log's size; an empty line means the probe could not read
+the parent, since the pinned log itself is always under it.
+
 **Before creating a log, search for one.** Check the plausible anchor
 candidates — the pinned path, the project identity root, the
 environment-managed persistence directory, the shared folder, the other

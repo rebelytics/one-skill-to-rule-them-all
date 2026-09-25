@@ -160,11 +160,10 @@ was handled without its reference loaded, log an observation.
    surface unprompted. Frontmatter-only is the whole point of the per-file
    format: the scan stays cheap once hundreds of observations exist.
 
-   **This scan does not satisfy the per-skill check** (the grep run each
-   time a skill loads — `references/environments.md`, activation block):
-   different scope, depth and moment. Load `references/observation-log.md`
-   ("Why the session-start scan does not satisfy the per-skill check")
-   whenever the per-skill grep feels redundant because this scan already ran.
+   **This scan does not satisfy the per-skill check** (the grep at each
+   skill load, activation block); when that grep feels redundant, load
+   `references/observation-log.md` ("Why the session-start scan does not
+   satisfy the per-skill check").
 
    **An empty scan in a log known to be non-empty is a broken command
    until proven otherwise** — the snippet's guard halts on it. When the guard
@@ -185,6 +184,7 @@ was handled without its reference loaded, log an observation.
    printf 'files: %s  parsed: %s  suspect: %s\n' "$n" "$parsed" "$suspect"
    printf '%s [%s] session-start scan: files=%s parsed=%s\n' "$(date '+%F %H:%M')" "${PWD##*/}" "$n" "$parsed" \
      >> "[ABSOLUTE PATH]/skill-observations/checkpoints.log"   # date+time+source: one line per session, not per day
+   find "$(dirname "[ABSOLUTE PATH]")" -maxdepth 3 -type d -path '*/skill-observations/observation-log' 2>/dev/null | LC_ALL=C sort | while IFS= read -r o; do printf '%s=%s\n' "${o%/skill-observations/observation-log}" "$(find "$o" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')"; done | awk '{s = s "  " $0} END {print "logs under the parent (report; never consolidate from here):" s}'
    ( LC_ALL=C; [ "$n" -eq 0 ] || { cd "$d" && awk 'FNR==1 && NR>1 && fm {print "---"}
        FNR==1 {fm=/^---[[:space:]]*$/; if (!fm) {print "---"; nextfile}; next}
        fm && /^---[[:space:]]*$/ {fm=0; print "---"; nextfile}
