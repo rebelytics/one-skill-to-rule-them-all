@@ -1059,12 +1059,14 @@ a second round after an install a discriminated anchor — and put that path int
 # fail creating files inside copied subdirectories — see skill-authoring.md
 # editing rule 6):
 live="<absolute path to the live skill directory, no trailing slash>"
+live=$(cd "$live" && pwd -P) || exit 1   # a symlinked skills entry: find descends nothing, cp -R copies the link
 s="[workspace folder]/skill-updates/[today]/[skill-name]"
 [ -e "$s" ] && { echo "anchor exists — apply the same-day rule (Delivery) before seeding"; exit 1; }
 find "$live" -type d | while IFS= read -r d; do mkdir -p "$s/${d#$live}"; done
 find "$live" -type f | while IFS= read -r f; do cp    "$f" "$s/${f#$live}"; done
 chmod -R u+w "$s"
 diff -rq "$live" "$s"      # must be identical before any edit
+[ ! -L "$s" ] && [ "$(stat -c %i "$live/SKILL.md" 2>/dev/null || stat -f %i "$live/SKILL.md")" != "$(stat -c %i "$s/SKILL.md" 2>/dev/null || stat -f %i "$s/SKILL.md")" ] || { echo "staged path is live under another name — not a copy"; exit 1; }
 # then make EVERY edit against the staged path
 ```
 
