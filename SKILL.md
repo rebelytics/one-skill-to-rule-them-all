@@ -134,29 +134,25 @@ was handled without its reference loaded, log an observation.
    not in context. Why this guard is only the backup, and where the primary
    one belongs, is in `references/environments.md` ("Activation config —
    late, intermittent, and why the guard cannot live inside it") — load it
-   when setting up or diagnosing activation. Once the path resolves: if
-   `skill-observations/observation-log/` (with its `archive/`
-   subdirectory) or `skill-observations/cross-cutting-principles.md`
-   don't exist, create them (principles template:
-   `references/skill-authoring.md`). Then the **starter-set reconciliation**,
-   due whenever `skill-observations/starter-principles-reviewed.txt` is
-   absent or holds a starter-set version older than the one in
+   when setting up or diagnosing activation. Before creating or writing
+   anything: if the resolved workspace sits under an ephemeral path
+   (`.claude/worktrees/`, a temporary clone), warn and re-anchor on the
+   stable project path — state written there is lost at teardown; where
+   none resolves (a disposable worker), use report-back mode:
+   `references/environments.md` ("Claude Code Projects"). Then RUN the one
+   idempotent command in `references/observation-log.md` ("Workspace
+   creation"): it creates the four workspace artefacts and asserts each,
+   and refuses a pre-3.0 `log.md` layout (load `references/migration.md`
+   and convert first) — never create them by working down a list by hand.
+   Then the **starter-set reconciliation**, due whenever
+   `skill-observations/starter-principles-reviewed.txt` is absent or holds
+   a starter-set version older than the one in
    `references/starter-principles.md` — a fresh install, an upgrade to a
    bundle that ships the file, and every later growth of the set. Load that
-   file and follow its **Reconciliation** section: match by substance, offer
-   once in one line, import only what the adopter picks, then write the
-   shipped version into the marker file so the offer never repeats until
-   the set changes. Never pre-populate silently.
-   Create `skill-observations/last-review-date.txt` holding the literal
-   `never` if it doesn't exist — never write a date at setup; a date means
-   a review actually ran. If a legacy `skill-observations/log.md` exists
-   and `observation-log/` does not, this is a pre-3.0 upgrade: load
-   `references/migration.md` and run the scripted conversion before writing
-   anything else. Before creating or writing anything: if the resolved
-   workspace sits under an ephemeral path (`.claude/worktrees/`, a temporary
-   clone), warn and re-anchor on the stable project path — state written
-   there is lost at teardown; where none resolves (a disposable worker), use
-   report-back mode: `references/environments.md` ("Claude Code Projects").
+   file and follow its **Reconciliation** section: match by substance,
+   offer once in one line, import only what the adopter picks, then write
+   the shipped version into the marker file so the offer never repeats
+   until the set changes. Never pre-populate silently.
 2. **Scan.** Read only the frontmatter of each file in `observation-log/`
    — the header block between the first two `---` lines, never the bodies
    — and build awareness from `status`, `skill`, `proposes_skill` and
