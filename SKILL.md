@@ -359,7 +359,9 @@ same path — a classifier can deny one interface while allowing another,
 and consecutive denials from a probabilistic gatekeeper are noise, not a
 wall. Report "failed N times", never "cannot be done", unless retries and
 alternate interfaces are exhausted; otherwise observations are silently
-lost for the rest of the session.
+lost for the rest of the session. A mode that refuses every write by
+design is the exception: defer, don't retry (`references/environments.md`,
+"A mode that forbids every write by design").
 
 **Deliverable-event flush.** Whenever a unit of work is declared complete
 to a human — a file handed over, a render, a staged skill file, a
