@@ -239,14 +239,14 @@ was handled without its reference loaded, log an observation.
    observations unnoticed; a dead one more so. Say what you resolved against
    (this checkout, this install): an unresolved target is a fact about where
    you looked, not about the world.
-   If `skill-updates/PENDING.md` lists staged updates, reconcile the list
-   before announcing it — installation happens outside any session, so no
-   session observes it, and the session that reads the ledger owns its
-   cleanup. `diff -rq` each staged copy against live and classify it; a
-   bare "differs" is not a verdict, because live moves on legitimately. The
-   classification and its cases are in `references/weekly-review.md`
-   ("Staged-work reconciliation gate") — load it before judging any entry.
-   Then say "N staged updates awaiting review" in one line.
+   If `skill-updates/` holds anything, reconcile it before announcing it —
+   installation happens outside any session, so no session observes it, and
+   the session that reads the ledger owns its cleanup. `diff -rq` each staged
+   copy against live and classify it (a bare "differs" is not a verdict:
+   live moves on legitimately), and name every directory no manifest entry
+   covers. The cases are in `references/weekly-review.md` ("Staged-work
+   reconciliation gate") — load it before judging any entry. Then say "N
+   staged updates awaiting review" in one line.
 7. **First run, or a named past session.** If the log is empty and the
    project has history (handover or decision docs, commit history, test
    scripts, a notes or memory directory, an existing CLAUDE.md), offer a
