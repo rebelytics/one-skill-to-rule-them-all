@@ -959,7 +959,8 @@ one block, for latency. Observation writes look independent (different
 files, no shared variable) and are not: each one's id depends on the state
 the previous one leaves behind, so two writes dispatched in the same block
 both read the same maximum and mint the same number. This is a third source
-of collision, alongside a parallel session and a subagent of this session,
+of collision, alongside a parallel session and a subagent of this session
+— which inherits the same activation instruction and the same log —
 and it is the only one that lives entirely inside a single agent's own
 turn — which makes it the one no amount of caution about "other writers"
 prevents. When several observations are due, write them one at a time, each

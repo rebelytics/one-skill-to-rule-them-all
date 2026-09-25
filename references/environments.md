@@ -169,6 +169,13 @@ inside a skills-discovery directory or any path linked into one. If this
 environment mints a separate project identity per checkout, or more than
 one agent works this project, the pinned path above is the single shared
 location; do not derive one per session, tool or project.
+
+A subagent dispatched by a session that already runs this protocol does
+not run it again and does not write to the log. The controller observes,
+because only it sees the whole task and its review; a subagent that
+notices something worth logging says so in its final report, and the
+controller writes it, running the id snippet per write. A start-up rule
+in a project file reaches every agent the project ever dispatches.
 ```
 
 ### Anchoring the workspace
@@ -339,6 +346,9 @@ that a full startup protocol feels disproportionate to it.
 **Anti-pattern:** don't chain activation through another skill — load
 task-observer and related skills independently from configuration; a broken
 chain silences all observation activity.
+A start-up rule written into a project file reaches every agent the
+project dispatches, so a controller and its workers are concurrent writers
+of one log unless the block above stops the workers.
 
 ### A session-start hook (Claude Code and similar harnesses)
 
