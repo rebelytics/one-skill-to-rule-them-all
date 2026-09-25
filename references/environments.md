@@ -829,6 +829,25 @@ loads: write the activation pointer in every scheduled prompt as "probe the
 workspace folder (one `ls` of its absolute path), then invoke <skills>",
 and keep the probe's procedure and failure handling in the skill.
 
+**The second listed action leaves a started marker.** After the probe,
+every scheduled review prompt writes the date and time to
+`skill-observations/review-started.txt`, and the review's Step 7
+overwrites it with `completed <date>`:
+
+```bash
+printf '%s\n' "$(date '+%F %H:%M')" > "[ABSOLUTE PATH]/skill-observations/review-started.txt"
+```
+
+A scheduler's "succeeded" says the job launched; the marker says how far
+it got. At the next session start, a marker that does not read
+`completed` is a run that died mid-way, and a scheduler last run later
+than `last-review-date.txt` with the marker untouched is a run that fired
+and never reached its second action — two different defects, and neither
+is a review that happened. The marker is judged by its content, never by
+its mtime: Step 7 writes it after the date file, so a completed run's
+marker is always the newer of the two. Session Start step 3 reports either as "fired YYYY-MM-DD,
+no review recorded" and treats the review as due.
+
 **The access grant is part of the task definition, not of the path.** A
 scheduled session runs in the sandbox the scheduler creates, and that
 sandbox can deny a path that exists and is online (observed: a headless

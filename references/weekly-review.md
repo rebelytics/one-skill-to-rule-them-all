@@ -20,6 +20,11 @@ input. Two modes:
   means a review actually ran). In an interactive session a pending
   fallback surfaces as a one-line offer and runs only if the user opts in
   (SKILL.md, Session Start step 3) — it never gates the user's task.
+  Its content scales with the backlog and its frequency never does,
+  because a backlog that is never drained fails quietly, by becoming too
+  expensive to drain: the per-session behaviour that is correct (never
+  block the user) sums to a review nobody accepts. A bounded slice keeps
+  the unit of work constant as the backlog grows.
 
 ## Contents
 
@@ -1264,7 +1269,8 @@ breaks the cross-session grace period. Do NOT archive same-session — the
 next write on a later day archives them.
 
 **Step 7 — timestamp.** Write today's date to
-`skill-observations/last-review-date.txt`.
+`skill-observations/last-review-date.txt`, then overwrite
+`skill-observations/review-started.txt` with `completed YYYY-MM-DD`.
 
 **Step 8 — deliver and summarise.** Stage updated skills (see Delivery
 below), then present:

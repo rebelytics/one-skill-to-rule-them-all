@@ -204,22 +204,23 @@ was handled without its reference loaded, log an observation.
 3. **Review trigger.** Read `skill-observations/last-review-date.txt`. The
    value carries the truth: a date = when the last review actually ran;
    `never` = no review has run yet. A missing file is abnormal (step 1
-   creates it) — recreate it with `never`, don't invent a date. If the
-   value is `never` or 7 or more days old AND there are OPEN observations:
-   in an interactive session, offer the review in one line and proceed
-   with the user's task unless they opt in; never gate their work on the
-   review. Scale the offer's CONTENT with the backlog, never its
-   frequency: up to ~15 open observations, offer the full review ("the
-   backlog hasn't been reviewed [in N days / yet] — N open; run it now, or
-   carry on?"); above that, offer a bounded slice whose unit of work stays
-   constant as the backlog grows — "review the 10 oldest", "review just
-   the ones targeting <the skill most named>" — and state both numbers,
-   how many are open and roughly how many distinct findings they represent
-   (cluster on the `title` and `skill` fields you just scanned). A backlog
-   that is never drained fails quietly, by becoming too expensive to drain:
-   the per-session behaviour that is correct (never block the user) sums to
-   a review nobody accepts. Only a scheduled/autonomous run loads
-   `references/weekly-review.md` and runs the review unprompted.
+   creates it) — recreate it with `never`, don't invent a date. An existing
+   `skill-observations/review-started.txt` not reading `completed`, or a
+   registered scheduler reporting a later last run, is a run that completed
+   no review: say "fired YYYY-MM-DD, no review recorded" and treat the
+   review as due. If the value is `never` or 7 or more days old AND there
+   are OPEN observations: in an interactive session, offer the review in
+   one line and proceed with the user's task unless they opt in; never gate
+   their work on the review. Scale the offer's CONTENT with the backlog,
+   never its frequency: up to ~15 open observations, offer the full review
+   ("the backlog hasn't been reviewed [in N days / yet] — N open; run it
+   now, or carry on?"); above that, offer a bounded slice whose unit of
+   work stays constant as the backlog grows — "review the 10 oldest",
+   "review just the ones targeting <the skill most named>" — and state both
+   numbers, how many are open and roughly how many distinct findings they
+   represent (cluster on the `title` and `skill` fields you just scanned;
+   why: `references/weekly-review.md`). Only a scheduled/autonomous run
+   loads `references/weekly-review.md` and runs the review unprompted.
 4. **Activation.** Once per session: if no CLAUDE.md (or equivalent)
    activation instruction for this skill exists, briefly suggest adding one
    (see `references/environments.md`). Skip if already configured. Be clear
@@ -699,7 +700,6 @@ in its `skill:` list. Full protocol: `references/observation-log.md`.
 |----------|--------|
 | When do I observe? | The whole session, including feedback and reflection phases |
 | How do I log? | Silently, immediately, as one file per observation named `NNNN-slug.md`; id = max(active, archive, `.id-floor`) + 1, derived by running the snippet immediately before each write — an earlier read of the log for any other purpose is not a substitute; where a helper can run, `scripts/new-observation.sh <slug>` is the only write path |
-| When do I surface? | End of session, or earlier if needed |
 | Status field? | Mandatory `status: open` frontmatter on every new observation; reviews treat a missing status as OPEN, never as nonexistent. Five values: `open`, `actioned`, `declined`, `superseded`, `parked` — `parked` = decided but blocked on an external precondition, so it leaves the queue, requires `parked_until:`, and never archives |
 | Does the target skill have siblings? | Resolve it against `skill-observations/skill-families.md` BEFORE writing; add every sibling the insight applies to to `skill:`, and record the verdict in the mandatory `siblings_checked:` field — including "checked, no propagation" |
 | A scan or query came back empty? | Two possibilities, only one is a finding: guard every retrieval meant to prevent duplicate work with an independent existence check, and treat empty output over known content as a broken command |
