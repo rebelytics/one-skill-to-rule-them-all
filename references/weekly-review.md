@@ -380,8 +380,12 @@ marker `references/environments.md` requires of every scheduled prompt —
 nothing else. The failure shape: a stored prompt is read by every run and
 edited by nobody, so a restated step drifts behind this file and the run
 follows the copy. Record the verdict in `activation-tiers.txt` beside the
-scheduled-task tier (`prompt restates: none`, or the flagged lines), and
-run the same read over every other scheduled prompt that invokes a skill.
+scheduled-task tier, and make it evidential: the prompt's first line
+verbatim, then each flagged line quoted, or `restates: none (read: <n>
+lines)`. A verdict that quotes nothing cannot be checked by the next
+review, and reads the same as one written from the prompt's intent
+rather than its text. Run the same read over every other scheduled
+prompt that invokes a skill.
 
 Then archive observation files resolved in
 *previous* sessions — with the sweep as shipped (the sweep block of the id
