@@ -433,6 +433,20 @@ short-form ("[Author] and contributors") in the frontmatter, the footer,
 reference-file and script headers, and long-form ("Created and maintained
 by [Author], improved by its community of users") in human-facing docs.
 
+**A skill this skill helps create ships two maintenance aids.** Its README
+gets a short "How this skill improves" section, written for the skill's
+next maintainer: the input is repeated corrections and gaps filled by hand;
+the manual method is two lines — note each correction where the skill's
+rule was missing or wrong, and fold the notes into the skill at a regular
+review; task-observer automates that capture and review; and
+benchmarked-optimisation tools, which score a skill against a test set,
+complement it. Its attribution block carries the canonical-source line,
+`metadata.source` as in the template above, which is what lets a
+downstream user route a finding upstream. SKILL.md, loaded every session,
+gets at most a one-line pointer to the README section. A "scaffolded with"
+footer was considered and rejected: it serves the author, not the reader,
+and forks strip it.
+
 **Distribution-channel note:** the template's feedback routing assumes
 public-repo distribution. Only reference a repository URL once that
 repository actually exists — never write a reference to an artefact before
