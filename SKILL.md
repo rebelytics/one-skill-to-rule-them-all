@@ -146,7 +146,9 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
    the shipped version into the marker file so the offer never repeats
    until the set changes. Never pre-populate silently. Name the loaded
    skill's frontmatter `version:` in the start-up lines — read from the
-   file, never fetched.
+   file, never fetched — and list the skill's own directory with its
+   `references/` and `scripts/`: a file the core names that is absent is
+   reported in the same lines ("Reference files"), not at its first load.
 2. **Scan.** Read only the frontmatter of each file in `observation-log/`
    — the header block between the first two `---` lines, never the bodies
    — and build awareness from `status`, `skill`, `proposes_skill` and
