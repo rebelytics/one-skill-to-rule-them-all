@@ -942,7 +942,13 @@ in an ordinary session.
 
 Then run the **family drift audit**: for each family in
 `skill-observations/skill-families.md`, grep every member for each rule
-listed as shared and surface the gaps. It is mechanical and takes minutes,
+listed as shared and surface the gaps. Grep where each rule can live: a
+member Step 2 put in (b) or (c) carries only what its upstream wrote, so
+for a rule written locally grep the destination Step 2 routed it to (the
+`{skill}-extras` companion or the instruction-file entry), and say so in
+the audit line. A zero over a population that cannot contain the rule is
+a statement about the instrument, not drift (`observation-log.md`,
+"Every instrument gets the same guard"). It is mechanical and takes minutes,
 and it is the only part of the family mechanism that catches drift
 predating the rule or introduced by a skill authored outside the log — a
 registry can go stale, a grep cannot. Two disciplines make the output
