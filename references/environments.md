@@ -890,7 +890,10 @@ report-back or handoff mode (SKILL.md, How to Log); a mode is accepted
 and its writes deferred.
 
 1. Run the read steps normally: the scan, the review-date check, the
-   per-skill lookup. A read-only session is fully observant.
+   per-skill lookup. A read-only session is fully observant. Run them
+   in a command of their own, without the scan's `checkpoints.log`
+   append: a mode can refuse a command that mixes a read with a write as
+   a whole, and the refusal takes the reads with it.
 2. Defer, never skip, the writes: storage creation, `.id-floor`,
    archival, the `checkpoints.log` line. Ids are resolved at flush
    time, never now.
@@ -899,13 +902,15 @@ and its writes deferred.
    still leaves its text in the transcript; working memory does not
    survive the turn.
 4. Flush in the first write-capable turn, before other work, running
-   the id snippet (or the helper) before each write.
+   the id snippet (or the helper) before each write. End the deferred
+   `checkpoints.log` line with `(deferred from <mode>)`, so a reader of
+   the file dates the protocol to the session start, not to the flush.
 
 Tell the two apart by the refusal's own words: a mode names itself and
 refuses every write, a gatekeeper names a classifier or a rule and
-refuses one call. Unconfirmed: whether every harness's plan mode refuses
-an append to an existing file as well as a create; defer both either way,
-so the flush turn is the only one that writes.
+refuses one call. Observed in one harness: plan mode refused an append
+to an existing `checkpoints.log` as well as a create. Defer both either
+way, so the flush turn is the only one that writes.
 
 ### A delegated setup step is not done until you have observed it
 
