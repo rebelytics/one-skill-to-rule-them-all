@@ -11,6 +11,7 @@ in an environment without filesystem access.
   - A session-start hook (Claude Code and similar harnesses)
   - A stop hook — the per-task backstop as a harness event
   - A pre-tool hook — the only write path as a barrier
+  - A skill-file write gate — the skill-authoring load as a harness event
   - Verify activation in a NEW session — the installing session cannot prove it
   - Activation config — late, intermittent, and why the guard cannot live inside it
   - The probe rides inside the first batched call
@@ -635,6 +636,48 @@ and a command-text guard for that has the false positives described under
 "Two harness behaviours that block the protocol rather than break it".
 Arm it like any trigger: a direct create of a new `NNNN-slug.md` must be
 refused, and a write into the path the helper just printed must pass.
+
+### A skill-file write gate — the skill-authoring load as a harness event
+
+The pointer to `references/skill-authoring.md` fires on an episode the
+agent has to recognise, and setup or documentation work produces a
+`SKILL.md` without feeling like skill creation. The file being written is
+checkable where the episode is not. Where the harness has pre- and
+post-tool events, refuse a write to a skill file until the reference has
+been read in the same session; a context-only pre-tool hook is not enough,
+because its text reaches the model after the write it was meant to steer.
+Node, no dependencies; one script wired twice — PreToolUse on
+`Write|Edit|MultiEdit`, PostToolUse on `Read`:
+
+```js
+// Skill-file write gate: deny a write to a skill file until the skill-authoring
+// reference has been read in this session. One script, two hook entries:
+// PreToolUse on Write|Edit|MultiEdit, PostToolUse on Read.
+const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
+let input = {};
+try { input = JSON.parse(fs.readFileSync(0, 'utf8') || '{}'); } catch { process.exit(0); }
+const session = String(input.session_id || '').replace(/[^A-Za-z0-9_-]/g, '');
+const file = String((input.tool_input || {}).file_path || '').replace(/\\/g, '/');
+if (!session || !file) process.exit(0);
+const marker = path.join(os.tmpdir(), `task-observer-authoring-${session}`);
+if (input.hook_event_name === 'PostToolUse') {          // the Read half: record the read
+  if (/\/references\/skill-authoring\.md$/.test(file)) fs.writeFileSync(marker, file);
+  process.exit(0);
+}
+const skillFile = /(^|\/)SKILL\.md$/.test(file) || /\/skills\/[^/]+\//.test(file)
+  || /\/skill-updates\/[^/]+\/[^/]+\//.test(file);     // a staged copy, not PENDING.md
+if (!skillFile || fs.existsSync(marker)) process.exit(0);
+console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny',
+  permissionDecisionReason: 'Read references/skill-authoring.md (task-observer skill) in this session ' +
+    'before writing a skill file; this write is allowed once that Read has run.' } }));
+```
+
+Its limits: it sees the file tools only, so a skill file written through
+a shell command passes; the marker outlives a compaction that drops the
+reference from context (re-read it after one, as the Session Start
+Protocol already says); and like every trigger it is armed only once it
+has matched the real event — run a `SKILL.md` write before the read
+(denied), then a read of the reference and the same write (allowed).
 
 ### Verify activation in a NEW session — the installing session cannot prove it
 
