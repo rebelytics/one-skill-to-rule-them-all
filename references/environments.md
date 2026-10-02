@@ -226,6 +226,14 @@ holding `SKILL.md`), substituted at install exactly like
 paragraph and keep the rest — the inline id snippet in SKILL.md is then
 the write path.
 
+On Windows, pin the drive-letter form (`C:/Users/<user>/...`): PowerShell,
+cmd and Git Bash all accept it ("Paths handed across a boundary are
+resolved from the far side"), and `scripts/new-observation.sh` converts it
+with `cygpath` and prints the created path back in that form. Where the
+command runs from PowerShell rather than Git Bash, a bare `bash` may not
+resolve (Git for Windows' default PATH option adds only `Git\cmd`) or may
+start WSL's bash instead; name Git's `bash.exe` by its full path there.
+
 ### Anchoring the workspace
 
 SKILL.md's `[workspace folder]` definition states the rule; this is where

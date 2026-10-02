@@ -55,6 +55,15 @@ esac
 if [ -z "$root" ]; then
   echo "no workspace root: pass it as the second argument or set TASK_OBSERVER_WORKSPACE" >&2; exit 1
 fi
+# A Windows drive path (C:/... or C:\...) is absolute there and relative on
+# POSIX, so it is accepted only where cygpath can convert it (Git Bash, MSYS,
+# Cygwin); the printed path is converted back, into the form the pin used.
+pin_form=
+case $root in
+  ([A-Za-z]:[/\\]*)
+    command -v cygpath >/dev/null 2>&1 || { echo "workspace root is a drive-letter path but cygpath is not available to convert it: got '$root'" >&2; exit 1; }
+    root=$(cygpath -u "$root"); pin_form=-m ;;
+esac
 case $root in
   (/*) ;;
   (*) echo "workspace root must be an ABSOLUTE path, never relative to the cwd: got '$root'" >&2; exit 1 ;;
@@ -160,4 +169,4 @@ top_claim=$(for p in "$c"/[0-9]*; do [ -e "$p" ] && printf '%s\n' "${p##*/}"; do
 top_claim=$((10#${top_claim:-0})); [ "$top_claim" -gt "$next_id" ] || top_claim=$next_id
 printf '%s\n' "$top_claim" > "$d/archive/.id-floor" || { echo "FLOOR WRITE FAILED — $d/archive/.id-floor (the file $f exists; fix the floor by hand)" >&2; exit 1; }
 
-printf '%s\n' "$f"
+if [ -n "$pin_form" ]; then cygpath "$pin_form" "$f"; else printf '%s\n' "$f"; fi
