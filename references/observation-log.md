@@ -720,7 +720,12 @@ a protocol that found nothing leaves.
 **The snippet is one implementation of the step; the STEP is the
 requirement.** When the harness declines a command as unverifiable, do
 not rewrite it into a cleverer compound — the refusal is about shape, and
-a cleverer compound is the same shape. Degrade to flat, single-purpose
+a cleverer compound is the same shape. This ladder answers a refusal of a
+command's *shape* only, where the flat form is exactly what the policy
+layer can check. A refusal that names the content or the target — the
+print refusal above, a denied path — is a denial: report it in its own
+words and do not fetch the same content another way. Degrade to flat,
+single-purpose
 commands over the absolute path, one per call, and do the combining
 yourself: list the directory and the archive, extract the frontmatter
 fields with one `grep`, read `.id-floor`, and take the maximum by hand

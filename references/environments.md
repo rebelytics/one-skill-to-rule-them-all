@@ -33,6 +33,7 @@ in an environment without filesystem access.
 - User-facing documentation
 - Repo/maintainer sessions — verify commit identity before writing
 - Handoff-doc mode (no persistent storage)
+  - No link to the user's computer
 - Handoff-doc analysis (when one arrives)
 
 ## Recommended activation setup
@@ -870,10 +871,12 @@ reach. Do not present the ladder to the user as "if 3 fails, 4 will work".
 
 Some modes — Claude Code's plan mode, any propose-only mode — permit
 every read and refuse every write for the whole turn. That is not a
-denied write: retrying and switching tools are wasted calls, the log is
-not unwritable, and "failed N times" is the wrong report when the
-environment is telling the truth. A gatekeeper and a mode are opposite
-failures — one is retried, the other accepted and deferred.
+denied write: a retry is a wasted call, the log is not unwritable, and a
+denial report is the wrong report when the environment is telling the
+truth. A gatekeeper and a mode are different failures — a gatekeeper's
+denial is reported to the user and its observations carried in
+report-back or handoff mode (SKILL.md, How to Log); a mode is accepted
+and its writes deferred.
 
 1. Run the read steps normally: the scan, the review-date check, the
    per-skill lookup. A read-only session is fully observant.
@@ -1408,6 +1411,31 @@ next session writes each as its own file in `observation-log/`]
 ## Working Artifacts
 [drafts/analyses in full]
 ```
+
+### No link to the user's computer
+
+A cloud or scheduled run can have a filesystem of its own and no route to
+the workspace: the probe fails, and no folder-picker or device-bridge tool
+is on the tool surface — absent, not denied. Check once with a tool
+search; if none appears, the request-and-retry branch of Session Start
+step 1 has nothing to call, so skip it. The same file is the landing
+place when the folder request was refused and the one permitted retry was
+refused too. Write a handoff file to the session's output location
+(wherever its deliverables go), never only into the final message:
+
+- every observation in full frontmatter, with `id: TBD` — the id is
+  derived from a log this session cannot read;
+- a named list of the checks not performed — id derivation, restatement
+  check against existing entries, sibling check — which the next session
+  with the log runs before writing any of the files;
+- in the run's report, the condition by name: "this session has no link
+  to your computer; observations are in a handoff file", with its path.
+
+Name the condition, not its permanence. A session can become linked
+mid-run (a link notice, after which the bridge tools appear), so re-check
+the tool surface before the final flush rather than asserting the link
+cannot be made. The session that picks the file up handles it as below,
+completing the listed checks before it writes any observation file.
 
 ## Handoff-doc analysis (when one arrives)
 

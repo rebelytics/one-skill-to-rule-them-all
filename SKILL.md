@@ -109,14 +109,14 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
    `request_cowork_directory`; elsewhere, its equivalent), not the "no
    filesystem" branch: handoff-doc mode (`references/environments.md`) is
    for environments with no filesystem at all, and it is reached too easily
-   when a missing mount is read as one. That request can itself come back
-   refused by the harness's permission classifier rather than by the user
-   (a classifier denial names the classifier and carries a bracketed
-   reason; a user decline does not), so retry it once identically before
-   treating the folder-picker path as failed or even considering the "no
-   filesystem" branch: the **How to Log** rule — consecutive denials from a
-   probabilistic gatekeeper are noise, not a wall — governs every gated
-   call, this one included. Never assert the mount's state, connected or
+   when a missing mount is read as one. A permission-classifier refusal of
+   that request (it names the classifier and gives a bracketed reason; a
+   user decline does not) falls under the **How to Log** denial rule: at
+   most one identical retry, told to the user, never another tool. Refused
+   again, or no folder-picker or device-bridge tool on the surface after
+   one tool search: write the observations to a handoff file instead
+   (`references/environments.md`, "No link to the user's computer").
+   Never assert the mount's state, connected or
    not, from an environment flag, a config file's presence in context, or
    memory of an earlier turn: that claim needs a probe in the same turn.
    **A successful probe does not mean the activation config fired.**
@@ -353,15 +353,15 @@ write; a remembered "ask whether" is not enforcement. Roughly every third
 completion is the rule; the count need not be precise. (Exception for a
 priced-write workspace: `references/environments.md`.)
 
-**A denied or failed write is not a read-only log.** Retry once before
-concluding the workspace is unwritable, and try a second tool reaching the
-same path — a classifier can deny one interface while allowing another,
-and consecutive denials from a probabilistic gatekeeper are noise, not a
-wall. Report "failed N times", never "cannot be done", unless retries and
-alternate interfaces are exhausted; otherwise observations are silently
-lost for the rest of the session. A mode that refuses every write by
-design is the exception: defer, don't retry (`references/environments.md`,
-"A mode that forbids every write by design").
+**A denied or failed write is not a read-only log.** A transient failure
+(an I/O error, a timeout, a tool error with no permission decision) gets
+one retry. A permission or classifier denial is authoritative: tell the
+user in one line what was denied and why the write mattered, then carry
+the observations in report-back or handoff mode (`references/environments.md`).
+Keep at most one identical retry of a classifier denial, told to the user
+as a check for a probabilistic false negative — never a different tool. A
+mode that refuses every write by design is neither: defer, don't retry
+(`references/environments.md`, "A mode that forbids every write by design").
 
 **Deliverable-event flush.** Whenever a unit of work is declared complete
 to a human — a file handed over, a render, a staged skill file, a
