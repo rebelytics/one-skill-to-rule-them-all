@@ -1264,10 +1264,11 @@ live="<absolute path to the live skill directory, no trailing slash>"
 live=$(cd "$live" && pwd -P) || exit 1   # a symlinked skills entry: find descends nothing, cp -R copies the link
 s="[workspace folder]/skill-updates/[today]/[skill-name]"
 [ -e "$s" ] && { echo "anchor exists — apply the same-day rule (Delivery) before seeding"; exit 1; }
-find "$live" -type d | while IFS= read -r d; do mkdir -p "$s/${d#$live}"; done
-find "$live" -type f | while IFS= read -r f; do cp    "$f" "$s/${f#$live}"; done
+# live may be a clone; the staged copy never carries its VCS metadata
+find "$live" \( -name .git -o -name .hg -o -name .svn \) -prune -o -type d -print | while IFS= read -r d; do mkdir -p "$s/${d#$live}"; done
+find "$live" \( -name .git -o -name .hg -o -name .svn \) -prune -o -type f -print | while IFS= read -r f; do cp    "$f" "$s/${f#$live}"; done
 chmod -R u+w "$s"
-diff -rq "$live" "$s"      # must be identical before any edit
+diff -rq -x .git -x .hg -x .svn "$live" "$s"      # must be identical before any edit
 [ ! -L "$s" ] && [ "$(stat -c %i "$live/SKILL.md" 2>/dev/null || stat -f %i "$live/SKILL.md")" != "$(stat -c %i "$s/SKILL.md" 2>/dev/null || stat -f %i "$s/SKILL.md")" ] || { echo "staged path is live under another name — not a copy"; exit 1; }
 # then make EVERY edit against the staged path
 ```
@@ -1779,7 +1780,8 @@ but the bypass was the wrong response to it). Where the bundle ships a public ex
 confidentiality scan over that extract here too: it is the one file in
 the bundle whose content is copied from a private source, so the
 authoring-time sweeps never see it. Sweep build artefacts (`__pycache__/`, `*.pyc`, `.DS_Store`,
-`.~lock.*`) before zipping and read the archive listing back after, for
+`.~lock.*`) and version-control directories (`.git/`, `.hg/`, `.svn/`)
+before zipping and read the archive listing back after, for
 leaked artefacts and for path separators. **Packing is the LAST write to
 a staged skill.** The bundle is the deliverable, so an edit to the
 directory after packing leaves two versions: the bundle the user

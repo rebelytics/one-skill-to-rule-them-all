@@ -98,6 +98,10 @@ PATH_RE = re.compile(r"`((?:references|scripts|assets)/[^`\s*?]+\.[A-Za-z0-9]+)`
 CMD_PATH_RE = re.compile(r"(?:references|scripts|assets)/[^\s`'\"*?<>;|&]+\.[A-Za-z0-9]+")
 CMD_INTERP = {"python3", "python", "bash", "sh", "zsh", "node", "swift", "ruby", "perl", "run", "source"}
 BUILD_JUNK = {"__pycache__", ".DS_Store"}
+# Version-control metadata: a live skill can be a clone, a staged copy must
+# not be. The other checks ask what is MISSING; this one asks what is there
+# that should not be (a clone packed its whole history and passed).
+VCS_DIRS = {".git", ".hg", ".svn"}
 # Edit residue: strings that only ever enter a file through a failed
 # replacement, an unresolved template slot or an unfinished merge. The gate
 # checks bundle FORM; this is the one CONTENT assertion, because a literal
@@ -494,6 +498,12 @@ def check_dir(skill_dir, fails):
     check_reference_indexes(skill_dir, fails)
     check_plugin_manifest(skill_dir, fails)
     for p in skill_dir.rglob("*"):
+        parts = p.relative_to(skill_dir).parts
+        if any(part in VCS_DIRS for part in parts):
+            if not any(part in VCS_DIRS for part in parts[:-1]):   # report the top only
+                fails.append(f"version-control metadata in staged tree: "
+                             f"{p.relative_to(skill_dir)} (seed without it)")
+            continue
         if p.name in BUILD_JUNK or p.suffix == ".pyc" or p.name.startswith(".~lock"):
             fails.append(f"build artefact in staged tree: {p.relative_to(skill_dir)}")
         # content residue in every text file of the bundle, not only SKILL.md
@@ -823,7 +833,8 @@ def quote_frontmatter_name(skill_md):
 
 def is_build_junk(path, root):
     rel = path.relative_to(root)
-    return (any(part in BUILD_JUNK or part.startswith(".~lock") for part in rel.parts)
+    return (any(part in BUILD_JUNK or part in VCS_DIRS or part.startswith(".~lock")
+                for part in rel.parts)
             or path.suffix == ".pyc")
 
 
@@ -900,6 +911,9 @@ def check_bundle(path, fails):
         n_members += 1
         if b"\x5c" in name:
             fails.append(f"bundle: backslash in member path {name!r} (installer rejects it)")
+        if re.search(rb"(^|/)\.(git|hg|svn)(/|$)", name):
+            fails.append(f"bundle: contains version-control metadata "
+                         f"({name.decode(errors='replace')})")
         # The uploader rejects a skill bundle carrying a plugin manifest. The
         # release workflow happens to copy three paths by name rather than the
         # whole tree, so it never picked this up — an accident, not a design.

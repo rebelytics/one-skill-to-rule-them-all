@@ -893,7 +893,9 @@ re-check exists, do not record the value — record how to obtain it.
    at delivery; run the gate as the last step before presenting.)
    Packaging hygiene: before zipping, sweep the staged tree for build
    artefacts (`__pycache__/`, `*.pyc`, `.DS_Store`, `.~lock.*`) left by
-   in-session checks, and read the archive listing back after zipping —
+   in-session checks and version-control directories (`.git/`, `.hg/`,
+   `.svn/`) a seed from a clone carries in, and read the archive listing
+   back after zipping —
    the listing catches two defect classes, leaked artefacts AND wrong
    path separators, and it gets read only for the one you name, so check
    for both explicitly.
