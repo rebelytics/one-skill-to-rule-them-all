@@ -10,6 +10,7 @@ in an environment without filesystem access.
   - Anchoring the workspace
   - A session-start hook (Claude Code and similar harnesses)
   - A stop hook — the per-task backstop as a harness event
+  - A pre-tool hook — the only write path as a barrier
   - Verify activation in a NEW session — the installing session cannot prove it
   - Activation config — late, intermittent, and why the guard cannot live inside it
   - The probe rides inside the first batched call
@@ -569,6 +570,48 @@ real event — run it against a transcript with tool calls and no write,
 then against the same with a checkpoint line appended and the transcript
 appended to after it (a start time read from the change time blocks that
 one), before trusting either outcome.
+
+### A pre-tool hook — the only write path as a barrier
+
+"Where a helper can run, `scripts/new-observation.sh` is the only write
+path" is a rule, and a rule broken twice needs a barrier (SKILL.md, the
+second-violation rule): a direct create with the editing tool skips the
+id derivation and the prefix collision guard, and two ids each used twice
+are what that looks like afterwards. The helper creates the file with a
+`noclobber` create before any body is written, so a pre-tool hook can
+refuse every editing-tool write that would CREATE a Markdown file in the
+log, and the helper's own two-step write (create, then fill) passes
+untouched. Node, no dependencies; substitute `[ABSOLUTE PATH]` as
+elsewhere, and register it for the editing tool's write call (in Claude
+Code, matcher `Write`) with the interpreter in the command, as above:
+
+```js
+// PreToolUse hook (matcher "Write"): refuse an editing-tool write that would
+// CREATE a Markdown file in the observation log. The helper's noclobber create
+// makes the path exist before the body is written, so its own write passes.
+const fs = require('node:fs'), path = require('node:path');
+let log;
+try { log = fs.realpathSync(path.join('[ABSOLUTE PATH]', 'skill-observations', 'observation-log')); } catch { process.exit(0); }
+let input = {};
+try { input = JSON.parse(fs.readFileSync(0, 'utf8') || '{}'); } catch { process.exit(0); }
+const p = input.tool_input && input.tool_input.file_path;
+if (typeof p !== 'string' || !p.endsWith('.md') || fs.existsSync(p)) process.exit(0); // existing: the helper's create, or an edit
+let dir;
+try { dir = fs.realpathSync(path.dirname(path.resolve(p))); } catch { process.exit(0); }
+if (dir !== log && dir !== path.join(log, 'archive')) process.exit(0);
+process.stderr.write('task-observer: observation files are created only by scripts/new-observation.sh, ' +
+  'which derives the id and refuses a collision. Run it, then write the body into the path it prints.\n');
+process.exit(2);
+```
+
+Exit status 2 refuses the call and hands the message to the agent; every
+other path exits 0, so an unreadable log or malformed input fails open
+rather than blocking ordinary work. Its known limit: it sees the editing
+tool only, so a shell redirect (`cat > …/0013-x.md`) still bypasses it,
+and a command-text guard for that has the false positives described under
+"Two harness behaviours that block the protocol rather than break it".
+Arm it like any trigger: a direct create of a new `NNNN-slug.md` must be
+refused, and a write into the path the helper just printed must pass.
 
 ### Verify activation in a NEW session — the installing session cannot prove it
 
