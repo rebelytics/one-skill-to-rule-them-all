@@ -846,15 +846,26 @@ Claude Code skills directory.
 
 What follows from that:
 
+- **The refusal is a valid outcome, and the user sees it first.** Stop.
+  Quote the refusal and what it objected to, and explain the trade-off it
+  points at: the block is always-on third-party instruction text in a
+  global config, steering every future session, which is a real cost the
+  user is entitled to weigh. Only then offer options.
 - **Rewording does not help.** The objection is to provenance and always-on
   scope, not to the phrasing, so there is no lighter version to retry.
-  Shortening the block and trying again is the obvious move and it fails —
-  make that attempt at most once, then stop.
-- **The cheapest remaining fallback is not in the list above.** Ask the user
-  to change permission mode, then retry the *same* tier. In the reported
-  case the wall was the permission mode rather than a policy: once the user
-  switched out of auto mode, the hook tier installed with no friction at
-  all. Try this before handing the block over for pasting.
+  Shortening the block and trying again is the obvious move; it fails, and
+  it is a rewrite aimed at the classifier rather than at the user — don't
+  make it.
+- **The options, in this order.** (1) The user pastes the block into the
+  config themselves (fallback (b) above): the decision then sits with the
+  person whose config it is. (2) A permission-mode change, presented as
+  the user's decision with its implications stated: it changes what the
+  harness lets the agent do without asking for the rest of the session,
+  and it takes the classifier out of this write without answering its
+  objection. Field note: in the reported case the wall was the permission
+  mode rather than a policy — once the user switched out of auto mode, the
+  hook tier installed with no friction at all. (3) Leave activation at the
+  description layer and say plainly which tier is in place.
 
 **The ladder is not monotonic.** Tier 4 — the session-start hook, which this
 file elsewhere calls the only enforced option — can be blocked *harder* than
