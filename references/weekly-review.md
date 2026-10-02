@@ -772,6 +772,18 @@ more than one. Then, before anything is presented:
   register it names — never a proxy such as a routine's own `SKILL.md`
   when the entry asks for the register that routine declares. Close what
   is already applied, with a resolution naming where it was found.
+  Search two surfaces, not one: the substance grep is worded by the
+  reviewer and the fix by whoever applied it, so a zero there is a claim
+  about the pattern (`observation-log.md`, "Every instrument gets the same
+  guard"). Where the project cites observation ids in commit messages or
+  code comments, also search the citation, for example
+  `git log --since=<entry date> -E --grep='#0*<id>([^0-9]|$)'` and
+  `git grep -nE '#0*<id>([^0-9]|$)'`, and treat a hit on either surface
+  as an already-applied candidate, opened and read point by point. Record
+  `outstanding` only when both surfaces are empty. In an aggregate review
+  the id is qualified by its workspace (above); where commits also cite
+  issue numbers, a `#<id>` hit may be an issue, so open it before counting
+  it.
 
 - **Fix the system that owns the problem.** Before adding a skill rule,
   check whether a code, configuration or CI change would remove the
@@ -1296,7 +1308,8 @@ into a holding folder.
 The sequence exists so the live path is never the target of an edit, the
 staged copy provably starts from live, and a stale staged copy from an earlier
 date cannot be picked up by accident. **Presence check before writing anything:** grep
-the staged copy for the substance of each suggested improvement and
+the staged copy for the substance of each suggested improvement — and
+search the id citation as well, the two surfaces of Step 3 — and
 classify it as already-applied / partially-applied / outstanding — an
 `open` status is not evidence the work is outstanding, and applying an
 already-applied observation over a section that has since been refined

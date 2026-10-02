@@ -353,6 +353,17 @@ it started, an inventory read from a cache a prior step has to populate —
 caught only because that skill happened to be authored where they could
 run.)
 
+**A sweep the Suggested improvement prescribes names the behaviour, not
+the pattern that found the first instance.** When the improvement tells a
+later session to look for the same defect elsewhere, the search string
+inherits the grammar of the place the defect was first seen — a filename
+glob, a heading, a config key — and the same test written in another
+layer's grammar (a method call in code, an assertion in a test) is missed
+in silence, while the empty result reads as "there are no others". Name
+the concept, list the layers it can live in (docs, code, tests, config),
+and give the search in at least two grammars. If every hit is the same
+file type, the search covered a grammar, not the concept.
+
 ## Scanning cheaply
 
 Read only the frontmatter — the header block between the first two `---`
@@ -1595,6 +1606,12 @@ and `.id-floor`; a number far outside that range (citing #1365 when the
 highest id is #766) is almost certainly a line number misread as an id.
 IDs come from the record's own identifier field, never from the positional
 metadata of the tool that found it.
+
+**Cite the id where the fix lands.** A commit message or code comment that
+applies an observation names its id (`observation #<id>`, qualified by
+workspace where several logs exist). The fix is then findable without
+guessing its wording: it is the second surface the review's presence check
+searches (`weekly-review.md`, Step 3).
 
 ## Why the checkpoints are writes, not questions
 
