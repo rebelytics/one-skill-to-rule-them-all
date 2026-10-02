@@ -958,6 +958,34 @@ the most. An empty duplicate search releases the draft only after a
 positive control: search for a term you know an existing issue contains,
 and if that returns nothing the search is broken, not clean.
 
+**The review offers that route for any skill with a declared canonical
+source the user does not own.** Where an observation's target declares one
+— `metadata.source`, or an attribution or feedback line naming a
+repository the user does not commit to — the review offers to prepare an
+upstream issue; where no source is declared, it asks where the skill came
+from instead of guessing. In a scheduled run the offer is an escalated
+line in the summary, and nothing is drafted until the user accepts. The
+guards are all mandatory:
+
+1. An issue by default; a PR only when the user has tested the change
+   locally.
+2. Only a finding with an observed instance — what happened, which line of
+   the skill failed to prevent it, what was done instead.
+3. A recurrence threshold: the finding has recurred across at least two
+   sessions; one session's friction stays local.
+4. The feedback pre-flight applied to the upstream — duplicate search
+   across its issues and PRs, its CONTRIBUTING file and issue templates
+   read and followed, one report per finding — and the report is prepared
+   for the user to read and submit, never sent by the skill.
+
+The body's LAST line is the provenance, and it is evidence for the
+maintainer, not a badge: "Logged by task-observer during live use, N
+sessions, observed instance above" followed by
+github.com/rebelytics/one-skill-to-rule-them-all. The guards are the
+feature: maintainers already receive more generated reports than they can
+read, and a tool name carried on thin reports becomes the name of the
+noise.
+
 **Published skills have more inputs than the log and more outputs than
 one staged copy.** For any skill published to a public repository, run
 these four passes before and while staging it; each produces something
