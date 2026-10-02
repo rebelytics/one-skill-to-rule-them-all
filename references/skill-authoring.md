@@ -559,6 +559,19 @@ activation block, a hook entry, a handoff document; the config case
 carries its own read-back in `environments.md` ("A delegated setup step
 is not done until you have observed it").
 
+**Where the agent runs on the person's machine, remove the selection.**
+The paste-check reads the file; the defects above entered at the person's
+selection, which no check on the file can see. Where a clipboard tool
+exists, load one field into the clipboard yourself (Windows PowerShell:
+`Set-Clipboard -Value (Get-Content -Raw -Encoding UTF8 "<file>")`), read
+it back (`Get-Clipboard -Raw`), compare it with the source line by line,
+blank lines included, and only then name the field to paste into. Load a
+field only once the target form is open in front of the person, and give
+nothing else to copy in that message — links as plain links, no code
+blocks, no commands: a read-back proves the clipboard at the moment of the
+read, and anything copied before the paste replaces it. The read-back
+after posting (3) stays.
+
 ## Confidentiality layers
 
 The open-source/internal boundary is a confidentiality boundary; enforce it
