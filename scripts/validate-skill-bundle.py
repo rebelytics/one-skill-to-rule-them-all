@@ -17,6 +17,10 @@ Usage
                 after the directory checks pass, then validates it. An
                 unquoted frontmatter `name:` is rewritten to the quoted form
                 in the staged SKILL.md first, so the packed copy carries it.
+                The written bundle must round-trip: its members are exactly
+                the directory's files (build artefacts excluded), each equal
+                byte for byte to what the packer wrote and to the file on
+                disk; any mismatch fails the run (exit 1).
   --repo        additionally check the repo's manifests against the skill.
   --repo-only   check ONLY the repo's manifests, skipping the skill checks.
                 Also runs the markdown shape check over the repo-root .md
@@ -44,6 +48,7 @@ import pathlib
 import re
 import struct
 import sys
+import tempfile
 import zipfile
 
 MAX_DESCRIPTION_CHARS = 1024   # installer's documented cap on the folded description
@@ -114,7 +119,9 @@ TEMPLATE_MARKER = "<!-- template: slots intentional -->"
 
 def slots_are_intentional(path, body):
     return "template" in str(path).lower() or body.lstrip().startswith(TEMPLATE_MARKER)
-SECOND_FRONTMATTER_RE = re.compile(r"^---\n.*?\n---\n\s*(---\n|name:|description:)", re.S)
+# The first block ends at its FIRST closing `---` line; the lookahead stops
+# `.*?` from running on to a later pair of horizontal rules in the body.
+SECOND_FRONTMATTER_RE = re.compile(r"^---\n(?:(?!\n---\n).)*?\n---\n\s*(---\n|name:|description:)", re.S)
 
 
 def frontmatter(text):
@@ -583,6 +590,37 @@ RESIDUE_FIXTURES = [
 ]
 
 
+def roundtrip_case(after_pack):
+    """Pack a two-file fixture skill, apply `after_pack` to the directory,
+    and report whether verify_roundtrip() failed. Runs in a temporary
+    directory outside any staged tree."""
+    with tempfile.TemporaryDirectory() as tmp:
+        src = pathlib.Path(tmp) / "fixture-skill"
+        (src / "references").mkdir(parents=True)
+        (src / "SKILL.md").write_text('---\nname: "fixture-skill"\n---\nbody\n', encoding="utf-8")
+        (src / "references" / "a.md").write_text("one\n", encoding="utf-8")
+        out = pathlib.Path(tmp) / "fixture-skill.skill"
+        written = pack(src, out)
+        after_pack(src)
+        fails = []
+        verify_roundtrip(out, src, written, fails)
+        return bool(fails)
+
+
+def _junk(src):
+    (src / "__pycache__").mkdir()
+    (src / "__pycache__" / "x.cpython-312.pyc").write_bytes(b"\0")
+
+
+# (name, action on the directory after packing, must_fail): each pins one
+# boundary of the --pack round-trip check.
+SECOND_FM_FIXTURES = [
+    ("duplicated header block", "---\nname: a\n---\n---\nname: a\n---\nbody\n", True),
+    ("stray name: line after the header", "---\nname: a\n---\nname: a\nbody\n", True),
+    ("two horizontal rules later in the body", "---\nname: a\n---\n\n# T\n\ntext\n\n---\n\n---\n\n## S\n", False),
+]
+
+
 # (name, SKILL.md body, paths command_paths must return)
 COMMAND_PATH_FIXTURES = [
     ("inline run command with flags", "Run `python3 scripts/check.py --strict in.json` first.\n", {"scripts/check.py"}),
@@ -594,6 +632,18 @@ COMMAND_PATH_FIXTURES = [
 ]
 
 
+ROUNDTRIP_FIXTURES = [
+    ("fresh pack round-trips", lambda src: None, False),
+    ("directory edited after packing fails",
+     lambda src: (src / "references" / "a.md").write_text("two\n", encoding="utf-8"), True),
+    ("file added after packing fails",
+     lambda src: (src / "references" / "b.md").write_text("new\n", encoding="utf-8"), True),
+    ("file removed after packing fails",
+     lambda src: (src / "references" / "a.md").unlink(), True),
+    ("build artefact is not a member and not a mismatch", _junk, False),
+]
+
+
 def selftest():
     bad = total = 0
     for name, text, must_fail in RESIDUE_FIXTURES:
@@ -601,6 +651,10 @@ def selftest():
         ok = failed == must_fail
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} {name}")
+    for name, text, must_fail in SECOND_FM_FIXTURES:
+        ok = bool(SECOND_FRONTMATTER_RE.match(text)) == must_fail
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} second-frontmatter: {name}")
     for value, kebab in FALLBACK_NAME_FIXTURES:
         ok = bool(NAME_RE.match(fallback_name(f"name: {value}\n"))) == kebab
         bad += not ok; total += 1
@@ -609,6 +663,10 @@ def selftest():
         ok = command_paths(text) == want
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} command path: {name}")
+    for name, after_pack, must_fail in ROUNDTRIP_FIXTURES:
+        ok = roundtrip_case(after_pack) == must_fail
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} round-trip: {name}")
     print(f"selftest: {total - bad}/{total} passed")
     return 1 if bad else 0
 
@@ -763,14 +821,70 @@ def quote_frontmatter_name(skill_md):
     return True
 
 
+def is_build_junk(path, root):
+    rel = path.relative_to(root)
+    return (any(part in BUILD_JUNK or part.startswith(".~lock") for part in rel.parts)
+            or path.suffix == ".pyc")
+
+
+def packable_files(src):
+    """The files a bundle carries: every regular file but build artefacts.
+    pack() and verify_roundtrip() share this, so they cannot disagree about
+    what a member is."""
+    return sorted(p for p in src.rglob("*") if p.is_file() and not is_build_junk(p, src))
+
+
+def member_name(src, f):
+    return f"{src.name}/{f.relative_to(src).as_posix()}"
+
+
 def pack(src, out):
-    """Always writes POSIX separators, on any platform."""
-    src = pathlib.Path(src)
+    """Always writes POSIX separators, on any platform.
+
+    Returns {member: bytes} — what the packer meant to write — so the caller
+    can verify the bundle against it. The source is resolved first: the
+    member prefix is the directory's name, and Path('.').name is ''.
+    """
+    src = pathlib.Path(src).resolve()
+    written = {}
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
-        for f in sorted(p for p in src.rglob("*") if p.is_file()):
-            arc = f"{src.name}/{f.relative_to(src).as_posix()}"
+        for f in packable_files(src):
+            arc = member_name(src, f)
             assert "\\" not in arc, arc
-            z.write(f, arcname=arc)
+            data = f.read_bytes()
+            z.writestr(zipfile.ZipInfo.from_file(f, arcname=arc), data,
+                       compress_type=zipfile.ZIP_DEFLATED)
+            written[arc] = data
+    return written
+
+
+def verify_roundtrip(bundle, src, written, fails):
+    """The bundle is the deliverable; the directory is what the next review
+    diffs. An edit to the directory after packing leaves the two different,
+    the user installs the bundle, and a later comparison of the directory
+    against live reads the missing content as "not installed". So: the
+    members must be exactly the directory's packable files, each equal byte
+    for byte to what pack() wrote (`written`; None skips that half) and to
+    the file on disk now. Returns True when the round trip holds."""
+    src = pathlib.Path(src).resolve()
+    with zipfile.ZipFile(bundle) as z:
+        names = z.namelist()
+        members = {n: z.read(n) for n in names}
+    expected = {member_name(src, f): f for f in packable_files(src)}
+    problems = []
+    if len(names) != len(members):
+        problems.append(f"{len(names) - len(members)} duplicate member name(s)")
+    problems += [f"missing from the bundle: {a}" for a in sorted(set(expected) - set(members))]
+    problems += [f"in the bundle, not in the directory: {a}" for a in sorted(set(members) - set(expected))]
+    for arc in sorted(set(expected) & set(members)):
+        if written is not None and members[arc] != written.get(arc):
+            problems.append(f"member differs from what the packer wrote: {arc}")
+        elif members[arc] != expected[arc].read_bytes():
+            problems.append(f"directory file differs from the packed member: {arc}")
+    for p in problems:
+        fails.append(f"bundle round-trip: {p} — the bundle does not carry the staged "
+                     f"directory; finish every edit, then re-pack (packing is the last write)")
+    return not problems
 
 
 def check_bundle(path, fails):
@@ -838,8 +952,11 @@ def main(argv):
         check_repo_versions(repo, fails)
     if pack_to and not fails:
         quote_frontmatter_name(pathlib.Path(skill_dir).resolve() / "SKILL.md")
-        pack(skill_dir, pack_to); bundle = pack_to
+        written = pack(skill_dir, pack_to); bundle = pack_to
         print(f"packed {pack_to}")
+        if verify_roundtrip(pack_to, skill_dir, written, fails):
+            print(f"pack: round trip OK — {len(written)} members equal the staged "
+                  f"directory byte for byte")
     if bundle:
         check_bundle(bundle, fails)
     if fails:

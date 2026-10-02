@@ -595,6 +595,17 @@ legitimately moves on, so a bare "differs" is not a verdict:
   result and none is duplicated; the merged copy then takes (c)'s
   bookkeeping (surface it, list its observations, count its reviews).
 
+**Where a `.skill` bundle sits beside the staged directory, classify the
+bundle.** The bundle is what was presented and installed; the directory
+is only what its producer wrote last. Compare the two first, member by
+member on bytes: a mismatch is its own finding in the summary —
+"bundle and directory differ: <files>; directory edited after packing" —
+and never state (c), because the user installed exactly what was
+presented. Then run the four-way classification on the bundle's content,
+extracted to a scratch path outside `skill-updates/`. Content only the
+directory carries was never presented: carry it into this review's
+staging of that skill as undelivered work, and name it in the finding.
+
 **Compare with the installer's frontmatter quoting normalised.** The
 installer writes the frontmatter `name:` line back quoted on some installs
 and unquoted on others, and on some skills re-quotes `description:` too, so
@@ -1725,7 +1736,13 @@ confidentiality scan over that extract here too: it is the one file in
 the bundle whose content is copied from a private source, so the
 authoring-time sweeps never see it. Sweep build artefacts (`__pycache__/`, `*.pyc`, `.DS_Store`,
 `.~lock.*`) before zipping and read the archive listing back after, for
-leaked artefacts and for path separators. When seeding staged
+leaked artefacts and for path separators. **Packing is the LAST write to
+a staged skill.** The bundle is the deliverable, so an edit to the
+directory after packing leaves two versions: the bundle the user
+installs and the directory the next review diffs. After packing, the
+bundle's members must equal the staged directory byte for byte — `--pack`
+verifies the round trip and exits non-zero on a mismatch — and any edit
+after that means re-pack and re-check before presenting. When seeding staged
 copies from the read-only mount, `chmod -R u+w` the staged path first —
 the mount's read-only mode travels with the copy, for directories as
 well as files. Do not edit skill files in place — nothing goes live
