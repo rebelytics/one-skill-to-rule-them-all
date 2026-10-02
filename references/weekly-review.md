@@ -488,8 +488,8 @@ ignores. Run it after the duplicate-id check, over the active directory:
 
 ```bash
 d="[ABSOLUTE PATH]/skill-observations/observation-log"
-nonconf=$(find "$d" -maxdepth 1 -name '*.md' -exec awk '
-  FNR==1 { fm=0; bad=""; idv=""; st=""; sc=""; f=FILENAME; sub(/.*\//,"",f); pre=(match(f,/^[0-9]+/) ? substr(f,1,RLENGTH)+0 : -1) }
+nonconf=$(LC_ALL=C find "$d" -maxdepth 1 -name '*.md' -exec awk '
+  FNR==1 { sub(/^\357\273\277/, ""); fm=0; bad=""; idv=""; st=""; sc=""; f=FILENAME; sub(/.*\//,"",f); pre=(match(f,/^[0-9]+/) ? substr(f,1,RLENGTH)+0 : -1) }
   FNR==1 && /^---[[:space:]]*$/ { fm=1; next }
   fm && /^---[[:space:]]*$/ { fm=0
     if (idv !~ /^[1-9][0-9]*$/ || idv+0 != pre) bad=bad " id"
