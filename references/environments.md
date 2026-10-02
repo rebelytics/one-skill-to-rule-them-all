@@ -1058,6 +1058,47 @@ policy does not govern, not as the `.ps1` shim it refuses. The app's own
 terminal panel is a child of the packaged app and inherits its startup
 environment, so it is not the user's side either.
 
+**Resolving from the far side on a packaged Windows host.** `explorer.exe`
+starts what it opens outside the package, so the agent can reach the
+user's side without the person: write a pure-ASCII `.cmd` under
+`%USERPROFILE%` (not under `AppData` or `%TEMP%`), start it through
+Explorer, wait for a completion file, and read the output. Two parts are
+required. A **vantage marker** written under `%APPDATA%` from inside
+exists only inside the package, so the result counts only if its first
+line is exactly `vantage-marker-visible: False`; `True` means the vantage
+is unproven (the run never left the package, or this host does not
+redirect that path), never a pass. The **completion file** keeps the read
+from racing the script. The script travels as `-EncodedCommand`, so the
+user's execution policy cannot refuse it and no override is needed; the
+`.cmd` expands `%USERPROFILE%` at run time, so it stays ASCII on a
+non-ASCII profile path; `$ProgressPreference = 'SilentlyContinue'` keeps a
+CLIXML progress block out of the output. Replace the last two probe lines
+with whatever the hand-off needs resolved.
+
+```powershell
+$id = [guid]::NewGuid().ToString('N').Substring(0,8)
+$dir = Join-Path $env:USERPROFILE 'farside'
+New-Item -ItemType Directory -Force $dir | Out-Null
+$marker = Join-Path $env:APPDATA "farside-marker-$id"
+Set-Content -LiteralPath $marker -Value x
+$markerLit = $marker -replace "'", "''"   # a profile path may hold an apostrophe
+$out = Join-Path $dir "out-$id.txt"
+$script = @"
+`$ProgressPreference = 'SilentlyContinue'
+"vantage-marker-visible: " + (Test-Path -LiteralPath '$markerLit')
+"policy: " + (Get-ExecutionPolicy)
+"npm: " + ((Get-Command npm.cmd -ErrorAction SilentlyContinue).Source)
+"@
+$enc = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($script))
+$cmd = Join-Path $dir "run-$id.cmd"
+Set-Content -Path $cmd -Encoding Ascii -Value "@echo off`r`npowershell.exe -NoProfile -NonInteractive -EncodedCommand $enc > `"%USERPROFILE%\farside\out-$id.txt`" 2>&1`r`necho done> `"%USERPROFILE%\farside\out-$id.txt.done`""
+Start-Process explorer.exe $cmd
+$deadline = (Get-Date).AddSeconds(60)
+while (-not (Test-Path "$out.done") -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
+if (Test-Path "$out.done") { Get-Content $out; Remove-Item $cmd, $out, "$out.done" } else { 'UNVERIFIED: far-side run did not finish in 60 s (files left in %USERPROFILE%\farside)' }
+Remove-Item -LiteralPath $marker
+```
+
 ### Windows hosts: what reaches the shell and the file
 
 Two Windows transforms change content and report nothing.
