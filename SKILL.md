@@ -50,18 +50,11 @@ and its references takes that pinned absolute path, written
 activation block. A snippet run with a relative path from any other
 directory does not fail: it reports an empty, clean backlog, which is the
 one answer that never gets questioned. **The substituted path routinely
-contains a space** — the default shared-folder name on at least one
-common install does — so every expansion of it stays double-quoted, and
-no snippet may feed it through word splitting (`for f in $(find …)`): a
-sweep that splits its own path at the space examines zero files, prints
-errors nobody reads, and lets the command it rides inside succeed.
-**Every snippet here is bash, not POSIX `sh`** — the id snippet's `10#`
-arithmetic is a bash extension `dash` and `ash` reject, so under `sh` the
-derivation stops before any file exists, and an adapted snippet may fail
-more quietly than that. A `bash` code fence states that to a human reader
-and to nothing else, so invoke the snippets with bash explicitly; a block
-that happens to be POSIX-safe too (the session-start scan, the sweep) is
-incidental, not a promise about the rest.
+contains a space**, so every expansion of it stays double-quoted and no
+snippet feeds it through word splitting. **Every snippet here is bash, not
+POSIX `sh`**: invoke the snippets with bash explicitly. Why, in both cases:
+`references/observation-log.md` ("Snippets take a spaced path and run
+under bash").
 
 ## Reference files — load on demand, not up front
 

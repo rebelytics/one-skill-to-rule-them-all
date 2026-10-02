@@ -16,6 +16,7 @@ empty.
 
 - Layout
   - Workspace creation
+  - Snippets take a spaced path and run under bash
 - Frontmatter fields
   - Unquoted `: ` in a prose value — how far it drifts before anyone notices
   - A list entry holding a colon is not portable
@@ -145,6 +146,23 @@ of that action's enforcement, so the archival sweep was folded *into* the
 id-derivation snippet ("If a step must always accompany a tool call, put it
 inside the same command", Archival on Write). Step 1's creation is the
 remaining place where that reasoning had not been applied.
+
+### Snippets take a spaced path and run under bash
+
+**The substituted path routinely contains a space** — the default
+shared-folder name on at least one common install does — so every
+expansion of it stays double-quoted, and no snippet may feed it through
+word splitting (`for f in $(find …)`): a sweep that splits its own path at
+the space examines zero files, prints errors nobody reads, and lets the
+command it rides inside succeed.
+
+**Every snippet in this skill is bash, not POSIX `sh`** — the id snippet's
+`10#` arithmetic is a bash extension `dash` and `ash` reject, so under `sh`
+the derivation stops before any file exists, and an adapted snippet may
+fail more quietly than that. A `bash` code fence states that to a human
+reader and to nothing else, so invoke the snippets with bash explicitly; a
+block that happens to be POSIX-safe too (the session-start scan, the
+sweep) is incidental, not a promise about the rest.
 
 ## Frontmatter fields
 
