@@ -759,7 +759,13 @@ it in that skill's bucket (the first entry is primary), every entry in
 every entry in `target_file:` puts it under that file — a bucket the review
 applies to like a skill (staged, never edited in place), instead of
 remapping the entry onto the nearest skill. An observation may appear in
-more than one. Then, before anything is presented:
+more than one. Key each bucket on the skill's listed name, not the raw
+string: a bare name that matches exactly one installed `plugin:name` joins
+that bucket; a bare name matching several, or a descriptive form, is
+resolved from the body, never by guess; and every normalisation is listed
+under Log integrity in the Step 8 summary. One skill written two ways is
+otherwise two smaller clusters, and the family check misses that both
+entries target the same member. Then, before anything is presented:
 
 - **Presence check, here, against the real target — and against the
   Issue, not only the suggestion.** Step 5 greps the staged copy for
@@ -1617,7 +1623,8 @@ for the next review; or "none" — the line is never omitted]
 
 ### Log integrity
 [duplicate ids renumbered and any floor lag (Step 1), each with the
-writing sessions' session_context and date; or "none"]
+writing sessions' session_context and date; `skill:` names normalised for
+bucketing (Step 3), old → new; or "none"]
 
 ### Skipped (needs manual review)
 [items with reasons]
