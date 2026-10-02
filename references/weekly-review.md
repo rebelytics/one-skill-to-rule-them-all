@@ -882,6 +882,19 @@ bump the `Starter set version:` line at the top of the starter file
 unbumped version ships the new entry to nobody), and run the
 confidentiality scan over the starter file in the pre-delivery gate.
 
+**Where the user does not maintain this skill, offer the promoted
+principle back to the starter set — once.** When the review adds a
+principle to `cross-cutting-principles.md` that passes the sibling test
+(it survives removal of the tool's and subject's names) and the
+open-source confidentiality layer, offer once to prepare a submission:
+duplicate-check it against `references/starter-principles.md` and against
+the repository's issues and PRs, carry the observed instance alongside
+the generalised sentence, and prepare it as an issue from the
+repository's "Starter principle" issue template — never a PR. The user
+reads the generalised text and submits it; nothing is sent by the skill,
+and the offer fires only in the review that promoted the principle, never
+in an ordinary session.
+
 Then run the **family drift audit**: for each family in
 `skill-observations/skill-families.md`, grep every member for each rule
 listed as shared and surface the gaps. It is mechanical and takes minutes,
