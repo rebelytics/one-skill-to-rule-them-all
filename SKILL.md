@@ -166,7 +166,7 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
 
    ```bash
    d="[ABSOLUTE PATH]/skill-observations/observation-log"   # the pinned workspace path — re-derive in EVERY call, never relative to the cwd; run under bash, not sh
-   n=$(find "[ABSOLUTE PATH]/skill-observations/observation-log" -maxdepth 1 -name '[0-9]*.md' | wc -l | tr -d ' ')  # literal path: independent of $d; numbered files only, the population the guard measures
+   n=$(find "[ABSOLUTE PATH]/skill-observations/observation-log" -maxdepth 1 -name '[0-9]*.md' ! -empty | wc -l | tr -d ' ')  # literal path: independent of $d; numbered, non-empty: what the parse can read
    parsed=$(find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {if (/^---[[:space:]]*$/) print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')
    sus='FNR==1 {fm = (/^---[[:space:]]*$/ ? 1 : 0); if (!fm) nextfile; next}
      fm && /^---[[:space:]]*$/ {fm=0; nextfile}
@@ -179,7 +179,7 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
    a_sus=0; [ -d "$d/archive" ] && a_sus=$(find "$d/archive" -maxdepth 1 -name '*.md' -exec awk "$sus" {} + | wc -l | tr -d ' ')   # archive/ may not exist yet
    if [ "$n" -gt 0 ] && [ "$parsed" -eq 0 ]; then
      echo "SCAN COMMAND BROKEN — $n files present, 0 headers parsed"; exit 1
-   fi
+   fi; lost=$( { find "$d" -maxdepth 1 -name '[0-9]*.md' -empty; find "$d" -maxdepth 1 -name '[0-9]*.md' ! -empty -exec awk 'FNR==1 {if (!/^---[[:space:]]*$/) print FILENAME; nextfile}' {} +; } | sed 's|.*/||' | LC_ALL=C sort | tr '\n' ' '); [ -n "$lost" ] && echo "LOST ENTRIES — no header, an interrupted write; report each, never reuse or delete: $lost"
    [ "$suspect" -gt 0 ] || [ "$a_sus" -gt 0 ] && echo "NOTE: $suspect of $n headers (and $a_sus in archive/) look like invalid YAML (an unquoted ': ', text after a closing quote, a value opening with a backtick, @ or %, an undefined escape, a colon in an unquoted list entry) — quote or fix them (File format)"
    printf 'files: %s  parsed: %s  suspect (awk, a floor): %s  archive-suspect: %s\n' "$n" "$parsed" "$suspect" "$a_sus"
    printf '%s [%s] session-start scan: files=%s parsed=%s\n' "$(date '+%F %H:%M')" "${PWD##*/}" "$n" "$parsed" \
