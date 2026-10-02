@@ -161,8 +161,8 @@ command it rides inside succeed.
 the derivation stops before any file exists, and an adapted snippet may
 fail more quietly than that. A `bash` code fence states that to a human
 reader and to nothing else, so invoke the snippets with bash explicitly; a
-block that happens to be POSIX-safe too (the session-start scan, the
-sweep) is incidental, not a promise about the rest.
+block that happens to be POSIX-safe too (the sweep) is incidental, not a
+promise about the rest.
 
 ## Frontmatter fields
 
@@ -387,40 +387,9 @@ file type, the search covered a grammar, not the concept.
 Read only the frontmatter — the header block between the first two `---`
 lines — never the bodies. This is what keeps the session-start scan and
 the review's work-queue pass cheap once hundreds of observations exist.
-The core skill's Session Start Protocol holds the authoritative copy of
-this snippet; the copy below is reproduced for reading in context, and if
-the two ever disagree, the core wins:
-
-```bash
-d="[ABSOLUTE PATH]/skill-observations/observation-log"   # the pinned workspace path — re-derive in EVERY call, never relative to the cwd; run under bash, not sh
-n=$(find "[ABSOLUTE PATH]/skill-observations/observation-log" -maxdepth 1 -name '[0-9]*.md' ! -empty | wc -l | tr -d ' ')  # literal path: independent of $d; numbered, non-empty: what the parse can read
-parsed=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) nextfile; next} fm && /^---[[:space:]]*$/ {print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')
-sus='FNR==1 {sub(/^\357\273\277/, ""); fm = (/^---[[:space:]]*$/ ? 1 : 0); if (!fm) nextfile; next}
-  fm && /^---[[:space:]]*$/ {fm=0; nextfile}
-  fm && /^[a-z_]+:[ ]+([&!][^[:space:]]*[[:space:]]+)*[^"\047[{|>#&![:space:]].*: / {print FILENAME; nextfile}
-  fm && /^[a-z_]+:[ ]+([&!][^[:space:]]*[[:space:]]+)*("([^"\\]|\\.)*"[[:space:]]*[^[:space:]#]|\047([^\047]|\047\047)*\047([[:space:]]+[^[:space:]#]|[^[:space:]#\047]))/ {print FILENAME; nextfile}
-  fm && /^[a-z_]+:[ ]+([&!][^[:space:]]*[[:space:]]+)*[`@%]/ {print FILENAME; nextfile}
-  fm && /^[a-z_]+:[ ]+([&!][^[:space:]]*[[:space:]]+)*"([^"\\]|(\\[0abtnvfre \t\r"\/\\N_LP]|\\x[[:xdigit:]][[:xdigit:]]|\\u[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]]|\\U[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]]))*\\([^0abtnvfre \t\r"\/\\N_LPxuU]|x([^[:xdigit:]]|[[:xdigit:]][^[:xdigit:]])|u([^[:xdigit:]]|[[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]])|U([^[:xdigit:]]|[[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]]|[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]][^[:xdigit:]]))/ {print FILENAME; nextfile}
-  fm && /^[a-z_]+:[ ]+\[/ {v=$0; sub(/^[a-z_]+:[ ]+/,"",v); gsub(/"([^"\\]|\\.)*"/,"",v); gsub(/\047[^\047]*\047/,"",v); sub(/[[:space:]]#.*/,"",v); if (v ~ /:/) {print FILENAME; nextfile}}'   # no literal {} in the program: find -exec … {} + would replace it
-suspect=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk "$sus" {} + | wc -l | tr -d ' ')   # invalid YAML by shape: unquoted ": ", text after a closing quote, a value opening with ` @ %, an undefined escape, a colon in an unquoted list entry
-a_sus=0; [ -d "$d/archive" ] && a_sus=$(LC_ALL=C find "$d/archive" -maxdepth 1 -name '*.md' -exec awk "$sus" {} + | wc -l | tr -d ' ')   # archive/ may not exist yet
-p="[ABSOLUTE PATH]/skill-observations/cross-cutting-principles.md"; pa='/^(\140\140\140|~~~)/ {f=!f} f {next} /^## Active Principles/ {a=1; h=1; next} a && /^## / {a=0}'   # a fenced template is not a principle
-pr=absent; [ -f "$p" ] && pr=$(awk "$pa"' a && /^### / {n++} END {print (h ? n+0 : "unparsed")}' "$p")
-[ "$pr" = unparsed ] && echo "NOTE: the principles file has no '## Active Principles' heading — 'could not parse', not 'no principles'; read it directly"
-if [ "$n" -gt 0 ] && [ "$parsed" -eq 0 ]; then echo "SCAN COMMAND BROKEN — $n files present, 0 headers parsed"; exit 1; fi; lost=$( { find "$d" -maxdepth 1 -name '[0-9]*.md' -empty; LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' ! -empty -exec awk 'FNR==1 {sub(/^\357\273\277/, ""); if (!/^---[[:space:]]*$/) print FILENAME; nextfile}' {} +; } | sed 's|.*/||' | LC_ALL=C sort | tr '\n' ' '); [ -n "$lost" ] && echo "LOST ENTRIES — no header, an interrupted write; report each, never reuse or delete: $lost"
-[ "$parsed" -lt "$n" ] && echo "NOTE: $((n - parsed)) of $n headers did not parse (no opening or no closing ---):" && LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {if (NR>1 && fm) print f; f=FILENAME; sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) {print f; nextfile}; next} fm && /^---[[:space:]]*$/ {fm=0; nextfile} END {if (fm) print f}' {} +
-[ "$suspect" -gt 0 ] || [ "$a_sus" -gt 0 ] && echo "NOTE: $suspect of $n headers (and $a_sus in archive/) look like invalid YAML (an unquoted ': ', text after a closing quote, a value opening with a backtick, @ or %, an undefined escape, a colon in an unquoted list entry) — quote or fix them (File format)"
-printf 'files: %s  parsed: %s  suspect (awk, a floor): %s  archive-suspect: %s\n' "$n" "$parsed" "$suspect" "$a_sus"
-printf '%s [%s] session-start scan: files=%s parsed=%s principles=%s\n' "$(date '+%F %H:%M')" "${PWD##*/}" "$n" "$parsed" "$pr" \
-  >> "[ABSOLUTE PATH]/skill-observations/checkpoints.log"   # date+time+source: one line per session, not per day
-find "$(dirname "[ABSOLUTE PATH]")" -maxdepth 3 -type d -path '*/skill-observations/observation-log' 2>/dev/null | LC_ALL=C sort | while IFS= read -r o; do printf '%s=%s\n' "${o%/skill-observations/observation-log}" "$(find "$o" -maxdepth 1 -name '[0-9]*.md' | wc -l | tr -d ' ')"; done | awk '{s = s "  " $0} END {print "logs under the parent (report; never consolidate from here):" s}'
-[ -f "$p" ] && awk "$pa"' a && /^### / {sub(/\r$/, ""); print}' "$p"   # the active principles' headings: content, so it prints with the headers below
-( export LC_ALL=C; [ "$n" -eq 0 ] || { cd "$d" && awk 'FNR==1 && NR>1 && fm {print "---"}
-    FNR==1 {sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) {print "---"; nextfile}; next}
-    fm && /^---[[:space:]]*$/ {fm=0; print "---"; nextfile}
-    fm
-    END {if (fm) print "---"}' [0-9]*.md; } )   # LAST: content print, the only half a classifier can refuse; one awk for the whole set
-```
+The scan is `scripts/session-start-scan.sh`, the one copy: SKILL.md's
+Session Start Protocol (step 2) runs it, and a reader reviews it there.
+The notes below explain its parts.
 
 **Why the line carries a time and a source, not just a date.** The
 workspace is deliberately shared across every project that observes the
@@ -461,7 +430,7 @@ the file count comes from a literal path, not from the variable the parse
 loop uses, and the assertion compares two numbers derived by different
 means. Empty output has to earn the status of evidence.
 
-Three properties of the snippet's form are load-bearing, and each was
+Three properties of the scan's form are load-bearing, and each was
 learned from a report. The guard's `parsed` count is derived by its own
 command, never by a counter incremented inside the printing loop: a
 counter that rides the output stream lives in a subshell the moment the
@@ -516,11 +485,11 @@ Retrieval has to happen where the decision is made.
 
 **An empty scan in a log known to be non-empty is a broken command until
 proven otherwise**, never the finding "no relevant observations". The
-snippet's guard is what settles which of the two it is, and both halves of
+scan's guard is what settles which of the two it is, and both halves of
 its independence are load-bearing: the file count comes from a literal
 path rather than from the variable the parse loop uses, and the assertion
 compares two numbers derived by different means — halt if files exist and
-nothing parsed. Keep that independence when adapting the snippet, and keep
+nothing parsed. Keep that independence when adapting the scan, and keep
 every path re-derived inside the same tool call. The reasoning and the
 reports each rule came from are in "Guard the read, not just the write"
 and "Snippets spanning several tool calls must re-derive their own paths"
@@ -713,7 +682,7 @@ two apart from outside.
 
 ### A refused print is not an empty log
 
-The session-start scan does two different jobs in one block, and they have
+The session-start scan does two different jobs in one script, and they have
 different appetites. Everything up to and including the `checkpoints.log`
 write asks only for *facts about* the files: how many exist, how many have a
 parseable header, how many — in the directory and in `archive/` — look
@@ -737,7 +706,7 @@ This is why the counts and the trace run first. Three consequences:
   name the reason the classifier gave, and give the counts.
 - **The counts-only form is the documented fallback**, not a degraded
   improvisation. It still satisfies the `SCAN COMMAND BROKEN` guard, because
-  `n` and `parsed` both come from the half that ran. Ordering the block the
+  `n` and `parsed` both come from the half that ran. Ordering the script the
   other way round would put the guard's own inputs downstream of the half
   that can be refused — the guard would go quiet exactly when it is needed.
 - **Awareness is genuinely reduced, and that is worth one line to the user.**
@@ -781,7 +750,10 @@ with no ids extracted is a broken read, not an empty log — and the
 ran, so a later reader can tell a degraded run from a skipped one. For a
 write, the flat form already exists: `scripts/new-observation.sh`,
 invoked by absolute path, is one command with no shell operators, and it
-is the only write path wherever it can run. Every mandatory step that
+is the only write path wherever it can run. The scan has the same flat
+form, `scripts/session-start-scan.sh` invoked by absolute path, so it is
+the ladder's first rung; the flat reads follow it, for when it is refused
+too or cannot run. Every mandatory step that
 ships a command owns a sentence saying what remains mandatory when the
 command is unavailable; this is that sentence for the scan.
 
@@ -789,16 +761,17 @@ The ladder, one command per call, each with no shell operator a shape
 classifier could decline:
 
 ```bash
+bash "<skill directory>/scripts/session-start-scan.sh" "[ABSOLUTE PATH]"
 find "[ABSOLUTE PATH]/skill-observations/observation-log" -maxdepth 1 -name '*.md' -exec grep -H -E '^(id|title|status|skill|proposes_skill|siblings_checked):' {} +
 ls "[ABSOLUTE PATH]/skill-observations/observation-log"
 ls "[ABSOLUTE PATH]/skill-observations/observation-log/archive"
 cat "[ABSOLUTE PATH]/skill-observations/observation-log/archive/.id-floor"
 ```
 
-Combine by hand: `files` is the number of `.md` names in the first
-listing, `parsed` the number of distinct files the `grep` printed an
-`id:` line for, and the id maximum the largest prefix across both
-listings and the floor. Then write the `checkpoints.log` line, and say
+From the flat reads, combine by hand: `files` is the number of `.md`
+names in the first listing, `parsed` the number of distinct files the
+`grep` printed an `id:` line for, and the id maximum the largest prefix
+across both listings and the floor. Then write the `checkpoints.log` line, and say
 "degraded form" in the session. If `-exec … +` is itself refused as a
 compound, the fallback is
 `grep -H -E '…' "[ABSOLUTE PATH]/skill-observations/observation-log"/*.md`
@@ -1261,8 +1234,8 @@ top=$(for p in "$d"/[0-9]*.md; do [ -e "$p" ] && printf '%s\n' "${p##*/}"; done 
 [ -n "${floor:-}" ] && [ -n "${top:-}" ] && [ "$((10#$floor))" -lt "$((10#$top))" ] && echo "NOTE: .id-floor ($floor) below highest active id ($top) — an issuer skipped the floor write"
 ```
 
-The line is optional in the core's scan snippet (the core is at its
-ceiling); `scripts/new-observation.sh` runs the same check on every write
+`scripts/session-start-scan.sh` does not run it (the line is optional
+there); `scripts/new-observation.sh` runs the same check on every write
 and corrects the floor as its own floor write. A NOTE here is evidence that
 some writer bypassed the snippet — log that as the observation, not the
 number.

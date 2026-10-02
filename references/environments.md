@@ -315,12 +315,13 @@ than consolidating on your own judgement, because one plural case is
 legitimate (see the multi-log block in `weekly-review.md`).
 
 **The session-start scan lists the neighbours on every run.** One line of
-the scan snippet finds every `skill-observations/observation-log/` up to
-three levels under the pinned root's parent and prints each with its file
-count — `logs under the parent (…): /a/proj=157  /a/other=19`. One entry
-is the ordinary case. Several are either shards or the legitimate plural
-case, and the line cannot tell which: report it in one line, route to
-"Several observation logs on one machine" in `weekly-review.md`, and never
+the scan (`scripts/session-start-scan.sh`) finds every
+`skill-observations/observation-log/` up to three levels under the
+pinned root's parent and prints each with its file count — `logs under
+the parent (…): /a/proj=157  /a/other=19`. One entry is the ordinary
+case. Several are either shards or the legitimate plural case, and the
+line cannot tell which: report it in one line, route to "Several
+observation logs on one machine" in `weekly-review.md`, and never
 consolidate from the scan. The probe is bounded by the parent's depth-3
 tree, not by any log's size; an empty line means the probe could not read
 the parent, since the pinned log itself is always under it.
@@ -1002,7 +1003,10 @@ and its writes deferred.
    per-skill lookup. A read-only session is fully observant. Run them
    in a command of their own, without the scan's `checkpoints.log`
    append: a mode can refuse a command that mixes a read with a write as
-   a whole, and the refusal takes the reads with it.
+   a whole, and the refusal takes the reads with it. The scan script
+   writes that line, so a mode that refuses it gets the flat reads
+   (`observation-log.md`, "A refused snippet is a degraded path, never a
+   skipped step").
 2. Defer, never skip, the writes: storage creation, `.id-floor`,
    archival, the `checkpoints.log` line. Ids are resolved at flush
    time, never now.
@@ -1155,13 +1159,15 @@ and the same command run from a file arrives exact. A body written through
 that shell loses one backslash of every `\\`, and an inline snippet that
 carries `\\` runs altered: the session-start scan's `suspect` program,
 halved, is rejected by gawk, mawk and BWK awk, so the count reads 0 with
-an error on stderr. Test a host once with `printf '%s\n' 'a\\b' | od -c`:
-two backslashes in the output mean the transport is exact. Where it is
-not, write observation bodies and any other content holding backslashes
-with the editing tool, and run a snippet that carries `\\` from a file
-written with the editing tool (`bash <file>`). Very long inline commands
-have also been reported cut on the same transport, so keep inline commands
-short and put long content in files.
+an error on stderr — why the scan ships as `scripts/session-start-scan.sh`,
+whose one-line invocation carries no backslash. Test a host once with
+`printf '%s\n' 'a\\b' | od -c`: two backslashes in the output mean the
+transport is exact. Where it is not, write observation bodies and any
+other content holding backslashes with the editing tool, and run a
+snippet that carries `\\` from a file written with the editing tool
+(`bash <file>`). Very long inline commands have also been reported cut on
+the same transport, so keep inline commands short and put long content in
+files.
 
 **A byte order mark from Windows PowerShell.** PowerShell 5.1 writes UTF-8
 with a BOM (`Set-Content -Encoding UTF8`, `Out-File -Encoding utf8`).
@@ -1456,7 +1462,8 @@ This skill consists of `SKILL.md`, the reference files it lists
 (`weekly-review.md`, `skill-authoring.md`, `environments.md`,
 `observation-log.md`, `signals.md`, `migration.md`,
 `starter-principles.md`) and `scripts/migrate-log.py`,
-`scripts/new-observation.sh` and `scripts/validate-skill-bundle.py`. If a referenced
+`scripts/new-observation.sh`, `scripts/session-start-scan.sh` and
+`scripts/validate-skill-bundle.py`. If a referenced
 file is missing, the install is
 incomplete: proceed using the rules in `SKILL.md`, tell the user which
 files are missing, and point them to the full bundle at the canonical

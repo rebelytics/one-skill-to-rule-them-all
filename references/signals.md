@@ -139,8 +139,9 @@ record, both run through it. Passing synthetic payloads are evidence about
 the author's model of the input, not about the input, and the proof of the
 other triggers in the same file says nothing about the added one. For a
 barrier on shell commands, this skill's own snippets are legitimate
-commands it will meet early — the id derivation and the session-start
-scan are compound scripts with command substitution — so include them.
+commands it will meet early — the id derivation is a compound script with
+command substitution, the session-start scan a bundled script's
+invocation — so include them.
 
 **Where this matters most** is the class where the absence of an error is
 not evidence of success — silent corruption, a command that exits 0 having

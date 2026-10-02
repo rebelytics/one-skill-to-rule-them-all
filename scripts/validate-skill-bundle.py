@@ -11,7 +11,7 @@ Usage
 -----
   python3 validate-skill-bundle.py <staged-skill-dir> [--bundle file.skill] [--pack out.skill]
   python3 validate-skill-bundle.py --repo-only <repo-dir>
-  python3 validate-skill-bundle.py --selftest   # residue-check fixtures; exit 1 on any mismatch
+  python3 validate-skill-bundle.py --selftest   # check fixtures and the scan script; exit 1 on any mismatch
 
   --pack        writes a well-formed bundle (POSIX separators on any platform)
                 after the directory checks pass, then validates it. An
@@ -654,6 +654,44 @@ ROUNDTRIP_FIXTURES = [
 ]
 
 
+# The session-start scan ships as scripts/session-start-scan.sh beside this
+# file. Each case runs it against a throwaway workspace (with a space in its
+# path) and pins one boundary: (name, scenario, args, exit status, stdout
+# substring, checkpoint lines written). Skipped, not failed, where no bash is
+# on PATH: the scan is a bash script and the gate is not.
+SCAN_SCRIPT = pathlib.Path(__file__).resolve().parent / "session-start-scan.sh"
+SCAN_FIXTURES = [
+    ("healthy log scans: counts line, one checkpoint line", "healthy", True, 0,
+     "files: 2  parsed: 2  suspect (awk, a floor): 1", 1),
+    ("no header parses: guard halts before the checkpoint", "broken", True, 1,
+     "SCAN COMMAND BROKEN", 0),
+    ("no workspace root: refused, nothing written", "healthy", False, 2, "", 0),
+]
+
+
+def scan_case(scenario, pass_root):
+    """Run the scan script over a fixture workspace; return (status, stdout,
+    checkpoint lines written)."""
+    import os
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / "work space"
+        log = root / "skill-observations" / "observation-log"
+        (log / "archive").mkdir(parents=True)
+        ck = root / "skill-observations" / "checkpoints.log"
+        ck.write_text("", encoding="utf-8")
+        if scenario == "healthy":
+            (log / "0001-a.md").write_text('---\nid: 1\ntitle: "ok"\n---\nbody\n', encoding="utf-8")
+            (log / "0002-b.md").write_text("---\nid: 2\ntitle: Fix: unquoted\n---\n", encoding="utf-8")
+        else:
+            (log / "0001-a.md").write_text('---\nid: 1\ntitle: "never closed"\n', encoding="utf-8")
+        env = {k: v for k, v in os.environ.items() if k != "TASK_OBSERVER_WORKSPACE"}
+        args = ["bash", str(SCAN_SCRIPT)] + ([str(root)] if pass_root else [])
+        r = subprocess.run(args, cwd=tmp, env=env, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace")
+        return r.returncode, r.stdout, len(ck.read_text(encoding="utf-8").splitlines())
+
+
 def selftest():
     bad = total = 0
     for name, text, must_fail in RESIDUE_FIXTURES:
@@ -677,6 +715,23 @@ def selftest():
         ok = roundtrip_case(after_pack) == must_fail
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} round-trip: {name}")
+    import shutil
+    import subprocess
+    if not shutil.which("bash"):
+        print("skip scan script: no bash on PATH")
+    elif not SCAN_SCRIPT.is_file():
+        bad += 1; total += 1
+        print(f"FAIL scan script: {SCAN_SCRIPT.name} missing beside this file")
+    else:
+        ok = subprocess.run(["bash", "-n", str(SCAN_SCRIPT)]).returncode == 0
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} scan script: bash -n passes")
+        for name, scenario, pass_root, want_rc, want_out, want_ck in SCAN_FIXTURES:
+            rc, out, ck = scan_case(scenario, pass_root)
+            ok = rc == want_rc and want_out in out and ck == want_ck
+            bad += not ok; total += 1
+            print(f"{'ok  ' if ok else 'FAIL'} scan script: {name}"
+                  + ("" if ok else f" (exit {rc}, {ck} checkpoint lines)"))
     print(f"selftest: {total - bad}/{total} passed")
     return 1 if bad else 0
 
