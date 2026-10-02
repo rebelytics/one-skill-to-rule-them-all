@@ -29,13 +29,40 @@ materially changed, or existing installs never see the change.
 
 **The offer is one line, made once:** "the bundle ships N starter
 principles; M are not covered by your file — want to see them?" On yes,
-show only the uncovered ones and let the adopter pick. On a fresh install
-M equals N and the choice is simply "start empty, or seed". Either way,
+show only the uncovered ones and let the adopter pick. Either way,
 write the shipped version into the marker file afterwards, so the offer
 never repeats until the set changes. **Never pre-populate silently:** the
 live file's authority comes from the adopter's own evidence trail, and
 unexamined imported rules contradict the pruning principle the file itself
 carries (entry 11).
+
+**On a fresh install, the comparison has no second operand — run an
+evidence pass instead of offering all-or-nothing.** The procedure above is
+a diff against the adopter's existing principles file. On a fresh install
+there is none, M equals N, and "start empty, or seed" is the weakest
+possible framing of the most consequential decision this file describes:
+seeding all N imports rules with no local evidence, which entry 11 argues
+against and the `Origin:` marker exists to flag; starting empty discards a
+set that took a long run of the loop to accumulate. The useful answer is a
+subset, and the evidence for choosing one is local, cheap to read, and
+already on disk:
+
+- commit history — a documented format or convention that is violated
+  repeatedly is the argument for the principle that would have caught it;
+- the installed skills and their structure — line counts, whether rules
+  are enforced by a script or only stated, which skills delegate to
+  subagents;
+- existing enforcement scripts, hooks and CI;
+- handover docs, memory notes, and any `CLAUDE.md`-equivalent, which are
+  largely a record of corrections nobody logged.
+
+Offer the evidence-grounded subset, and say which artefact motivated each
+entry you propose. An entry with no local evidence is not imported — the
+rejections are as much a part of the pass as the imports.
+
+This is the same evidence pass SKILL.md step 7 ("First run") describes for
+backfilling observations, over the same artefacts. A fresh install should
+do the reading once and serve both, rather than twice or not at all.
 
 **How to import:** copy the entries the adopter chooses (all, or a subset)
 into the live file in the template format from `references/skill-authoring.md`,
