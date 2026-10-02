@@ -1824,6 +1824,21 @@ the next time it is needed, never at the moment of deletion. Rounds, not
 days, are what the rule counts (a same-day second round is its own
 copy).
 
+**Executable artefacts are staged like skills.** The second-violation rule
+makes the review produce barriers — a hook, a lint rule, a script a hook
+calls — and each of these refuses calls the moment it is live. Stage them
+under `skill-updates/<date>/hooks/` (or `lint/`, `scripts/`), never at the
+path the harness runs; the manifest entry carries the path a staged file
+replaces or, for a new one, the configuration line that registers it, so
+nothing is live until the user acts. A change to a registered file is
+staged the same way whatever its shape — a new trigger, a dispatcher
+branch, an import: new logic behind an entry point that is already
+registered meets no registration step, so the staging is its only gate.
+Before staging, run the script offline on payloads built from the real
+tool record (`signals.md`, "Second violation — why a barrier, not a
+rewording"); after install, the next session confirms it refuses the real
+command and passes a legitimate one.
+
 **The dated staging folder is multi-writer.** `skill-updates/<date>/` is
 a namespace keyed only by date, so a manual session and a scheduled run
 can both write into the same day's folder (observed minutes apart). Any
