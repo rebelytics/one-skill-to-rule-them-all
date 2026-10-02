@@ -275,6 +275,21 @@ block in `weekly-review.md` before consolidating anything — it defines
 that case and the aggregate review that serves it. A reader who stops at
 this paragraph consolidates a set that was meant to stay separate.
 
+**A session started without a project folder has no stable project
+identity.** In a desktop app that runs such a session in a per-session
+scratch directory (the tell is `scratch-workspaces/` or
+`scratch-<date>-<hash>` in the cwd), the project identity derived from
+that directory is new every session, so a log anchored on
+`~/.claude/projects/<project-id>/` survives on disk and is never read
+again: its open entries are never applied at session start and never
+reach a review. Treat the scratch directory as an ephemeral path
+(SKILL.md, Session Start step 1): anchor on the pinned path if one
+exists, otherwise on the user-scope workspace
+(`~/.claude/skill-observations/`, the path skills installed at user scope
+need anyway), and name the anchor in the start-up lines. Logs already
+written under scratch-derived identities are shards: consolidate their
+open entries as below.
+
 **The fork rule as usually stated describes the harmless case.** "A second
 **empty** log beside a populated one is a silent fork" — but an empty log
 announces itself: the first scan returns nothing, and nobody trusts a

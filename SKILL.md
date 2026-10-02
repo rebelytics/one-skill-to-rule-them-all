@@ -128,8 +128,8 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
    late, intermittent, and why the guard cannot live inside it") — load it
    when setting up or diagnosing activation. Before creating or writing
    anything: if the resolved workspace sits under an ephemeral path
-   (`.claude/worktrees/`, a temporary clone), warn and re-anchor on the
-   stable project path — state written there is lost at teardown; where
+   (`.claude/worktrees/`, a temporary clone, `scratch-workspaces/`), warn
+   and re-anchor on a stable path — state there is lost or orphaned; where
    none resolves (a disposable worker), use report-back mode:
    `references/environments.md` ("Claude Code Projects"). Then RUN the one
    idempotent command in `references/observation-log.md` ("Workspace
