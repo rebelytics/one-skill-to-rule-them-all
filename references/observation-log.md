@@ -983,7 +983,7 @@ seen=$(cd "$d" && awk 'FNR==1 {n++; nextfile} END {print n+0}' *.md 2>/dev/null)
 ( cd "$d" && awk -v today="$today" 'FNR==1 {st=""; r=""; fm=/^---[[:space:]]*$/; if (!fm) nextfile; next}
     fm && /^---[[:space:]]*$/ {if (st ~ /^(actioned|declined|superseded)$/ && r ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/ && r < today) print FILENAME; nextfile}
     fm && /^status:/ {st=$2}
-    fm && /^resolved:/ {r=$2}' *.md 2>/dev/null | while IFS= read -r x; do mv "$x" archive/; done )   # one awk for the set, one mv per stale resolved file; bash
+    fm && /^resolved:/ {r=$2}' *.md 2>/dev/null | while IFS= read -r x; do mv -n "$x" archive/ 2>/dev/null; if [ -e "$x" ]; then echo "NOTE: $x not archived — archive/$x exists or the move failed"; fi; done )   # one awk for the set, one mv per stale resolved file, never over an archived one; bash
 floor=$(sed '1!d; s/[^0-9]//g' "$d/archive/.id-floor" 2>/dev/null); floor=$((10#${floor:-0}))   # digits only: a CRLF or padded floor still reads
 ids=$(for p in "$d"/[0-9]*.md "$d"/archive/[0-9]*.md; do [ -e "$p" ] && printf '%s\n' "${p##*/}"; done | grep -oE '^[0-9]+')   # globs and builtins: no `ls` a profile alias can rebind
 [ "$(printf '%s' "$ids" | grep -c .)" -eq "$(find "$d" "$d/archive" -maxdepth 1 -name '[0-9]*.md' | wc -l)" ] || { echo "ID COMMAND BROKEN — the listing and find disagree on the prefixed files"; exit 1; }
@@ -1002,7 +1002,12 @@ prefix echoed.
 
 **`bash scripts/new-observation.sh <slug> [workspace-root]` is this snippet as
 one command.** It performs the same steps in the same order — sweep, id,
-prefix guard, noclobber create, floor write — takes the pinned workspace
+prefix guard, noclobber create, floor write — plus one the inline snippet
+lacks: before the prefix guard it claims the number with a noclobber
+create of an empty marker in `archive/.id-claims/`, moving up one when the
+claim is taken, so two runs at the same moment never share an id. Markers
+are never removed (no delete permission needed); one left by an
+interrupted run only leaves a gap. It takes the pinned workspace
 root as its second argument or from `TASK_OBSERVER_WORKSPACE`, refuses a
 relative root, a malformed slug or a missing `observation-log/archive/`
 (halt and re-probe; never recreate from a writer), and prints the created
@@ -1121,11 +1126,14 @@ path, the invariant is a unique number, and a guard on the path passes
 every violation of the number that uses a different slug — which is all
 of them. So the guard now asks whether any file with the derived prefix
 exists in `observation-log/` or `archive/` (`find … -name 'NNNN-*.md'`,
-never a bare glob), and halts if one does. It fires only when the
-derivation is stale — a correct max-of-three cannot produce a number that
-is already in use — so a COLLISION here means the id came from somewhere
-other than a snippet run immediately before this write. Re-run the
-snippet; never adjust the number by hand.
+never a bare glob), and halts if one does. It fires when the derivation
+is stale — the id came from somewhere other than a snippet run
+immediately before this write. It cannot see a writer running at the same
+moment, whose file does not exist yet: both derive the same correct
+number from the same listing. The script closes that window with its
+number claim; the inline snippet does not, and the review's duplicate-id
+check catches what slips through. Re-run the snippet; never adjust the
+number by hand.
 
 ### Run the snippet immediately before every write
 
@@ -1258,7 +1266,8 @@ write-back once silently erased entries appended minutes earlier. None of
 those failure modes exist when each file is isolated. In the rare case two
 parallel sessions pick the same id, the result is two files sharing a
 number — harmless, distinct files, nothing lost, as long as the slugs
-differ; the snippet's prefix guard catches that case at write time when the
+differ; the script's number claim prevents it for runs at the same moment,
+the snippet's prefix guard catches it at write time when the
 derivation is stale, an identical id AND slug is one path, which is what the
 `noclobber` create guards against, and the review's duplicate-id check (Step
 1, re-run at Step 6) renumbers whatever slips past both and logs a

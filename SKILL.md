@@ -408,7 +408,7 @@ seen=$(cd "$d" && awk 'FNR==1 {n++; nextfile} END {print n+0}' *.md 2>/dev/null)
 ( cd "$d" && awk -v today="$today" 'FNR==1 {st=""; r=""; fm=/^---[[:space:]]*$/; if (!fm) nextfile; next}
     fm && /^---[[:space:]]*$/ {if (st ~ /^(actioned|declined|superseded)$/ && r ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/ && r < today) print FILENAME; nextfile}
     fm && /^status:/ {st=$2}
-    fm && /^resolved:/ {r=$2}' *.md 2>/dev/null | while IFS= read -r x; do mv "$x" archive/; done )   # one awk for the set, one mv per stale resolved file; bash
+    fm && /^resolved:/ {r=$2}' *.md 2>/dev/null | while IFS= read -r x; do mv -n "$x" archive/ 2>/dev/null; if [ -e "$x" ]; then echo "NOTE: $x not archived — archive/$x exists or the move failed"; fi; done )   # one awk for the set, one mv per stale resolved file, never over an archived one; bash
 floor=$(sed '1!d; s/[^0-9]//g' "$d/archive/.id-floor" 2>/dev/null); floor=$((10#${floor:-0}))   # digits only: a CRLF or padded floor still reads
 ids=$(for p in "$d"/[0-9]*.md "$d"/archive/[0-9]*.md; do [ -e "$p" ] && printf '%s\n' "${p##*/}"; done | grep -oE '^[0-9]+')   # globs and builtins: no `ls` a profile alias can rebind
 [ "$(printf '%s' "$ids" | grep -c .)" -eq "$(find "$d" "$d/archive" -maxdepth 1 -name '[0-9]*.md' | wc -l)" ] || { echo "ID COMMAND BROKEN — the listing and find disagree on the prefixed files"; exit 1; }
