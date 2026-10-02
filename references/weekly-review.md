@@ -1541,6 +1541,14 @@ next write on a later day archives them.
 **Step 7 — timestamp.** Write today's date to
 `skill-observations/last-review-date.txt`, then overwrite
 `skill-observations/review-started.txt` with `completed YYYY-MM-DD`.
+A timestamp write whose outcome is unknown — the call timed out, the
+device bridge disconnected — is the run's to verify, never the user's:
+the Step 8 summary and any notification report it as "unconfirmed —
+verified at the next reachable call or by the next session's start",
+never as a file for the user to check. Verify it with one read of both
+files on the next call that reaches the workspace; where the run ends
+first, Session Start step 3's read of `last-review-date.txt` and
+`review-started.txt` is that verification.
 
 **Step 8 — deliver and summarise.** Stage updated skills (see Delivery
 below). Save the complete record under
