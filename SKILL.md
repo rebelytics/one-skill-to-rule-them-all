@@ -301,10 +301,11 @@ roughly forty of ninety-one open entries were one finding restated), and a
 near-duplicate costs a capture every session and a triage every review.
 
 **Validate the target at write time.** `skill:` names a skill that exists
-now, written as the skill listing shows it (a plugin skill as `plugin:name`,
-never bare). If the right home is not a skill — an instructions file, a
-memory note, the register a routine reads — put that path in `target_file:`,
-not the nearest skill; a skill not yet built goes in `proposes_skill:`.
+now and performs the operation the Issue describes, written as the skill
+listing shows it (a plugin skill as `plugin:name`, never bare). If the
+right home is not a skill — an instructions file, a memory note, the
+register a routine reads — put that path in `target_file:`, not the
+nearest skill; a skill not yet built goes in `proposes_skill:`.
 
 **Check the target's siblings at write time, and record that you did.**
 Before writing, resolve the target against the family registry

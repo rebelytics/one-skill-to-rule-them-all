@@ -767,6 +767,18 @@ under Log integrity in the Step 8 summary. One skill written two ways is
 otherwise two smaller clusters, and the family check misses that both
 entries target the same member. Then, before anything is presented:
 
+- **Routing check, before the presence check.** `skill:` is written
+  mid-task by whoever noticed the symptom, so it names the symptom
+  reliably and the location unreliably, and the write-time check asks
+  only whether the name resolves. Open each target and confirm it
+  performs the operation the Issue describes. If it does not, re-route —
+  to the skill that does, or to the non-skill file that does (an
+  instructions file, an agent definition, a scheduled prompt), which
+  becomes a `target_file:` bucket whose output is a staged proposal for
+  that file — and note the move in the body ("routed from X to Y: X never
+  performs the append") so the resolution carries it. A fix installed
+  where it cannot fire closes the entry and leaves the defect standing.
+
 - **Presence check, here, against the real target — and against the
   Issue, not only the suggestion.** Step 5 greps the staged copy for
   each improvement before writing; run that same
