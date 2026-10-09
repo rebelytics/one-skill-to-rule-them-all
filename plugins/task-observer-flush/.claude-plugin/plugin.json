@@ -1,0 +1,11 @@
+{
+  "name": "task-observer-flush",
+  "version": "0.1.0",
+  "description": "Turn-end guard for task-observer: notes a turn that used tools and wrote nothing to the observation log or checkpoints.log, and reminds the next turn to flush.",
+  "author": {
+    "name": "Eoghan Henn",
+    "url": "https://rebelytics.com"
+  },
+  "license": "CC-BY-4.0",
+  "repository": "https://github.com/rebelytics/one-skill-to-rule-them-all"
+}
