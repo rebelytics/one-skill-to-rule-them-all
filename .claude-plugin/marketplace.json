@@ -23,6 +23,12 @@
         "human-in-the-loop",
         "feedback-loop"
       ]
+    },
+    {
+      "name": "task-observer-flush",
+      "source": "./plugins/task-observer-flush",
+      "description": "Turn-end guard for task-observer: notes a turn that used tools and wrote nothing to the observation log or checkpoints.log, and reminds the next turn to flush.",
+      "category": "productivity"
     }
   ]
 }
