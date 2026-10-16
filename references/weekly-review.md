@@ -592,15 +592,23 @@ Enumerate the listing rather than matching a date-shaped name:
 discriminated anchors (`<date>-<slug>`, `<date>.2`) and hand-over
 material are valid names, and an index shows only what someone entered,
 so a check that reads only the index reports every unentered item as
-absent — the cost is not lost work but the same work done again by a
-less informed session. Then, for each entry in
+absent. Then, for each entry in
 `skill-updates/PENDING.md`
 AND each skill directory under `skill-updates/<date>/` — always both,
 never the manifest alone: it may be missing entries, or missing
 entirely, and an absent manifest reads exactly like an empty one — run `diff -rq`
 of the staged copy
 against the live skill and classify FOUR ways — because live
-legitimately moves on, so a bare "differs" is not a verdict:
+legitimately moves on, so a bare "differs" is not a verdict. First the
+seed check, because equality proves nothing by itself: a round that was
+seeded and never edited is byte-identical to live for as long as live
+stands still. Where `<date>/.seed/<skill>.sha256` exists (the seed
+snippet under Step 5 writes it), re-hash the staged copy and compare —
+`(cd "$s" && find . -type f -exec sha256sum {} + | LC_ALL=C sort) | diff -
+"<date>/.seed/<skill>.sha256"` — and a copy that still matches its seed is
+reported as "seeded, no edits since <newest mtime under the anchor>": the
+entry stays, and the copy is never (a), whatever the live diff says.
+`.seed/` is not a skill directory; the enumeration above skips it. Then:
 
 - **(a) identical** → installed; remove the manifest entry.
 - **(b) live strictly newer / a superset of the staged copy** →
@@ -611,9 +619,8 @@ legitimately moves on, so a bare "differs" is not a verdict:
   staging of that skill in this review. Also list, in
   the summary, the observations whose `resolution:` names that staged
   path (`find observation-log -name '*.md' -exec grep -l
-  "skill-updates/<anchor>/<skill>" {} +` — `find`, never a bare glob, which
-  zsh treats as an error when it matches nothing, and which would also miss
-  `archive/`): they were marked `actioned` at staging
+  "skill-updates/<anchor>/<skill>" {} +` — `find`, never a bare glob,
+  which also misses `archive/`): they were marked `actioned` at staging
   and their work has not landed. They stay `actioned` — the status
   describes the review's act, and re-opening would re-queue work already
   done — but the summary carries them under "actioned, awaiting install",
@@ -626,6 +633,21 @@ legitimately moves on, so a bare "differs" is not a verdict:
   merge, assert that every heading from BOTH inputs is present in the
   result and none is duplicated; the merged copy then takes (c)'s
   bookkeeping (surface it, list its observations, count its reviews).
+
+**A claim's liveness is the newest mtime under its anchor, never a
+hand-kept field.** An in-progress claim — a seeded round, a "being applied
+by session Y" note in an observation body — has no expiry of its own, so
+a session that died mid-round holds its claim forever and every later
+review steps around it. The gate reads liveness from the files: the
+newest mtime under the anchor (`find "$s" -type f -exec stat -c %Y {} + |
+sort -n | tail -1`; `stat -f %m` on macOS) is when the round was last worked.
+A claim untouched for longer than the review interval gets one line to
+the user — "<skill> round of <date>: untouched since <t>; release the
+claim or resume from the seed?" — and is never released automatically:
+a paused session has not released its task (`observation-log.md`,
+"Re-check ownership immediately before the first write"). Where a
+hand-kept field disagrees with the mtime,
+print both and trust neither alone.
 
 **Where a `.skill` bundle sits beside the staged directory, classify the
 bundle.** The bundle is what was presented and installed; the directory
@@ -1360,6 +1382,7 @@ find "$live" \( -name .git -o -name .hg -o -name .svn \) -prune -o -type d -prin
 find "$live" \( -name .git -o -name .hg -o -name .svn \) -prune -o -type f -print | while IFS= read -r f; do cp    "$f" "$s/${f#$live}"; done
 chmod -R u+w "$s"
 diff -rq -x .git -x .hg -x .svn "$live" "$s"      # must be identical before any edit
+mkdir -p "$s/../.seed"; (cd "$s" && find . -type f -exec sha256sum {} + | LC_ALL=C sort) > "$s/../.seed/[skill-name].sha256"   # shasum -a 256 on macOS; the gate's seed check reads it
 [ ! -L "$s" ] && [ "$(stat -c %i "$live/SKILL.md" 2>/dev/null || stat -f %i "$live/SKILL.md")" != "$(stat -c %i "$s/SKILL.md" 2>/dev/null || stat -f %i "$s/SKILL.md")" ] || { echo "staged path is live under another name — not a copy"; exit 1; }
 # then make EVERY edit against the staged path
 ```
