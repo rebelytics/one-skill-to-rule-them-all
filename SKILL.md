@@ -267,7 +267,7 @@ for one skill rarely share a name.
 **Check for a restatement before writing.** Before creating the file, list
 the open observations that name the same target skill (the scan at session
 start already holds their titles; otherwise `find observation-log -name
-'*.md' -exec grep -l "skill:.*<bare-name>" {} +`) and read those titles. If the
+'*.md' -exec grep -l -E "^(skill|target_file):.*<bare-name>" {} +`) and read those titles. If the
 finding is the same one restated — the same rule, the same failure shape, a
 different example — extend the existing entry instead: append the new
 instance to its body, add the session to `session_context`, widen `title:`

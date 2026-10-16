@@ -166,15 +166,14 @@ first task boundary instead of never.
 Loading a skill is not complete until you have queried the observation
 log for OPEN observations naming it and read their bodies:
   find "[ABSOLUTE PATH]/skill-observations/observation-log" -maxdepth 1 \
-    -name '*.md' -exec grep -l "skill:.*<skill-name>" {} +
+    -name '*.md' -exec grep -l -E "^(skill|target_file):.*<skill-name>" {} +
 (<skill-name> is the bare name: drop a plugin: prefix, up to the last
 colon. A qualified pattern misses every entry filed under the bare name
-and reports a clean zero; the bare one matches both spellings.)
-(Use find, not a bare *.md glob. Under zsh an unmatched glob is an error,
-so on an empty log the command never runs and the enclosing block aborts —
-and 2>/dev/null does not help, because the redirection belongs to a
-command that never starts. This is the first thing that fires on a fresh
-install, in every session, for as long as the log is empty.)
+and reports a clean zero; the bare one matches both spellings. For an
+agent definition or instructions file it is the file name, which the
+target_file: field carries by any path.)
+(Use find, not a bare *.md glob: under zsh an unmatched glob aborts the
+whole block, and on an empty log it is unmatched in every session.)
 Apply their insights to the current work — meaning: let them change what
 you do in THIS task. Editing the skill file, or writing the rule into any
 other file a later session reads, is acting on the observation and waits
@@ -195,7 +194,10 @@ substitute for the skill that owns it.
 Where scripts run, the lookup and its checkpoint line are one command:
   bash "<skill directory>/scripts/skill-load.sh" "[ABSOLUTE PATH]" <skill-name>
 The Skill invocation and that call are ONE batch — emit them together,
-one call per skill loaded, never the call in a later batch.
+one call per skill loaded, never the call in a later batch. On a first
+run the log does not exist yet (step 1 creates it): the call says so and
+exits 0 with no checkpoint line; re-run it once per skill loaded in that
+batch after the Workspace creation command.
 
 The task-observer workspace for this project is:
   [ABSOLUTE PATH]
@@ -223,6 +225,9 @@ because only it sees the whole task and its review; a subagent that
 notices something worth logging says so in its final report, and the
 controller writes it, running the id snippet per write. A start-up rule
 in a project file reaches every agent the project ever dispatches.
+Before briefing a delegate under an agent definition or instructions
+file, run the lookup for that file's name; its open entries shape the
+brief.
 
 An observation file comes into being only through
   bash "<skill directory>/scripts/new-observation.sh" <slug> "[ABSOLUTE PATH]"

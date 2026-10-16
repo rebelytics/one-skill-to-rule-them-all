@@ -1202,35 +1202,49 @@ def scan_case(scenario, pass_root):
 
 # scripts/skill-load.sh, the per-skill lookup run beside each Skill
 # invocation: (name, skill argument, absolute root?, exit status, stdout
-# substring, checkpoint lines written). The fixture holds one match, one
-# prefix-only name, one closed entry and one body-only mention.
+# substring, checkpoint lines written[, "nolog"]). The fixture holds one
+# match, one prefix-only name, one closed entry, one body-only mention and
+# two target_file entries; "nolog" runs it against a root with no
+# skill-observations/ at all (the first run, before step 1).
 LOAD_SCRIPT = pathlib.Path(__file__).resolve().parent / "skill-load.sh"
 LOAD_FIXTURES = [
     ("exact name, open only, frontmatter only", "foo", True, 0, "foo: 1 open observations\n0001-a.md", 1),
     ("plugin-qualified listing finds the bare-name entry", "plug:foo", True, 0,
      "plug:foo: 1 open observations\n0001-a.md", 1),
     ("relative root: refused, nothing written", "foo", False, 2, "", 0),
+    ("a file name finds the target_file entry by its last segment", "reviewer.md", True, 0,
+     "reviewer.md: 1 open observations\n0005-e.md", 1),
+    ("the bare skill name does not match the file name", "reviewer", True, 0,
+     "reviewer: 1 open observations\n0006-f.md", 1),
+    ("no log yet: one NOTE line, exit 0, nothing written", "foo", True, 0,
+     "NOTE: foo: no observation log yet at ", 0, "nolog"),
 ]
 
 
-def load_case(skill, absolute):
+def load_case(skill, absolute, scenario=""):
     import os
     import subprocess
     with tempfile.TemporaryDirectory() as tmp:
         root = pathlib.Path(tmp) / "work space"
         log = root / "skill-observations" / "observation-log"
-        log.mkdir(parents=True)
         ck = root / "skill-observations" / "checkpoints.log"
-        ck.write_text("", encoding="utf-8")
-        for f, head, body in [("0001-a.md", "skill: [foo, bar]\nstatus: open", ""),
-                              ("0002-b.md", "skill: [foo-extras]\nstatus: open", ""),
-                              ("0003-c.md", "skill: foo\nstatus: actioned", ""),
-                              ("0004-d.md", "skill: [bar]\nstatus: open", "skill: foo\n")]:
-            (log / f).write_text(f"---\nid: 1\n{head}\n---\n{body}", encoding="utf-8")
+        if scenario == "nolog":
+            root.mkdir(parents=True)
+        else:
+            log.mkdir(parents=True)
+            ck.write_text("", encoding="utf-8")
+            for f, head, body in [("0001-a.md", "skill: [foo, bar]\nstatus: open", ""),
+                                  ("0002-b.md", "skill: [foo-extras]\nstatus: open", ""),
+                                  ("0003-c.md", "skill: foo\nstatus: actioned", ""),
+                                  ("0004-d.md", "skill: [bar]\nstatus: open", "skill: foo\n"),
+                                  ("0005-e.md", "skill: []\ntarget_file: [.claude/agents/reviewer.md]\nstatus: open", ""),
+                                  ("0006-f.md", "skill: [reviewer]\nstatus: open", "")]:
+                (log / f).write_text(f"---\nid: 1\n{head}\n---\n{body}", encoding="utf-8")
         arg = str(root) if absolute else os.path.relpath(root, tmp)
         r = subprocess.run(["bash", str(LOAD_SCRIPT), arg, skill], cwd=tmp, capture_output=True,
                            text=True, encoding="utf-8", errors="replace")
-        return r.returncode, r.stdout, len(ck.read_text(encoding="utf-8").splitlines())
+        written = len(ck.read_text(encoding="utf-8").splitlines()) if ck.is_file() else 0
+        return r.returncode, r.stdout, written
 
 
 # scripts/migrate-log.py, the pre-3.0 log converter: (name, legacy entry's
@@ -1459,8 +1473,8 @@ def selftest():
         ok = subprocess.run(["bash", "-n", str(LOAD_SCRIPT)]).returncode == 0
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} skill-load script: bash -n passes")
-        for name, skill, absolute, want_rc, want_out, want_ck in LOAD_FIXTURES:
-            rc, out, ck = load_case(skill, absolute)
+        for name, skill, absolute, want_rc, want_out, want_ck, *scenario in LOAD_FIXTURES:
+            rc, out, ck = load_case(skill, absolute, *scenario)
             ok = rc == want_rc and want_out in out and ck == want_ck
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} skill-load script: {name}"
