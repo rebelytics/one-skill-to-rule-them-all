@@ -78,6 +78,7 @@ here: run this, do not work down the tree above by hand.
 ```bash
 d="[ABSOLUTE PATH]/skill-observations"   # the pinned path, quoted: it may contain a space; bash, not sh
 [ -e "$d/log.md" ] && [ ! -d "$d/observation-log" ] && { echo "LEGACY log.md — run the migration (references/migration.md) before creating anything"; exit 1; }
+[ -e "$d/log.md" ] && [ -d "$d/observation-log" ] && { echo "SPLIT STORE — log.md holds $(grep -c '^### Observation ' "$d/log.md") observations not in observation-log/ (an older installed copy still writes the legacy file); migrate the remainder (references/migration.md), re-issuing ids from the directory's counter"; exit 1; }
 c=; for x in observation-log observation-log/archive last-review-date.txt cross-cutting-principles.md; do [ -e "$d/$x" ] || c="$c${c:+,}$x"; done   # what this run creates
 mkdir -p "$d/observation-log/archive"
 [ -e "$d/last-review-date.txt" ] || printf 'never\n' > "$d/last-review-date.txt"   # the literal `never`, never a date: a date means a review actually ran
@@ -93,7 +94,10 @@ the `[ -e ]` guards make the command safe to re-run on an existing
 workspace, which is what lets step 1 run it unconditionally rather than
 deciding first whether setup is needed. The legacy guard runs first
 because a created `observation-log/` would hide the one condition that
-identifies a pre-3.0 install. The principles stub is the header of the
+identifies a pre-3.0 install; the split-store guard beside it catches the
+install that was migrated and then kept writing `log.md` through an older
+copy the host still loads, which the first guard alone can never see
+again once the directory exists. The principles stub is the header of the
 template in `skill-authoring.md` ("Principle Propagation"); change the two
 together.
 

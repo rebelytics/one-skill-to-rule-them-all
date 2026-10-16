@@ -1165,6 +1165,8 @@ SCAN_FIXTURES = [
      "NOTE: id: does not read as the filename prefix", 1, ""),
     ("a zero-padded id reads as its prefix; only the wrong number is named", "padded", True, 0,
      "after reading the body: 0004-d.md (id: 5)", 1, "0002-b.md (id"),
+    ("a pre-3.0 log.md beside the directory: SPLIT STORE with its count", "split", True, 0,
+     "SPLIT STORE — log.md holds 2 observations not in observation-log/", 1, ""),
 ]
 
 
@@ -1199,6 +1201,9 @@ def scan_case(scenario, pass_root):
         if scenario == "moved":
             (root / "skill-observations" / "MOVED.md").write_text(
                 "Moved to /new/root on 2026-01-01\r\n", encoding="utf-8")
+        if scenario == "split":
+            (root / "skill-observations" / "log.md").write_text(
+                "### Observation 1: A\n\n### Observation 2: B\n", encoding="utf-8")
         env = {k: v for k, v in os.environ.items() if k != "TASK_OBSERVER_WORKSPACE"}
         args = ["bash", str(SCAN_SCRIPT)] + ([str(root)] if pass_root else [])
         r = subprocess.run(args, cwd=tmp, env=env, capture_output=True, text=True,

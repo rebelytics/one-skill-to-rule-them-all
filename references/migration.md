@@ -1,14 +1,16 @@
 # Migrating a pre-3.0 single-file log
 
-Load triggers: the Session Start Protocol finds a pre-3.0 `log.md` and no `observation-log/`
+Load triggers: the Session Start Protocol finds a pre-3.0 `log.md` — with no `observation-log/`, or beside one (a split store)
 
 Upgrade-only. Versions before 3.0.0 kept every observation in one file,
 `skill-observations/log.md`, with `### Observation N:` headers. Version
 3.0.0 stores one file per observation under
 `skill-observations/observation-log/`. This reference converts the former
 into the latter, once, with the bundled script. Fresh 3.0 installs never
-need it; the Session Start Protocol loads it only when it finds a
-`log.md` and no `observation-log/` directory.
+need it; the Session Start Protocol loads it when it finds a `log.md`
+and no `observation-log/` directory — or a `log.md` beside a populated
+one (a SPLIT STORE: an older installed copy of the skill kept writing
+the legacy file after the migration; find and retire that copy first).
 
 The conversion is a script rather than a procedure for one reason: a
 script can be run in check-only mode over every log you have and its
@@ -133,6 +135,16 @@ it can be the Microsoft Store alias), use `py -3`.
    other words, so it can neither flag an unknown `skill:` entry nor a
    second skill named inside a qualifier; pass it to the step 3 check of
    the live log too.
+
+   **A split store is never converted into the populated directory.** The
+   converted files keep their legacy ids and the script overwrites a
+   same-named file, so a `log.md` written beside an existing
+   `observation-log/` is converted into a scratch `--out` directory, and
+   each converted file is then created in the live one through
+   `scripts/new-observation.sh --body <file> <slug>` with its `id:` line
+   replaced by `__ID__` first — the id is re-issued from the directory's
+   counter, never carried over, and the legacy number goes into the body
+   as "migrated from log.md #N" so a citation of it can still be traced.
 
 6. **Verify twice: source fidelity, then target conformance.** The
    report's file count must equal the number of `### Observation` headers

@@ -127,7 +127,7 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
    `references/environments.md` ("Claude Code Projects"). Then RUN the one
    idempotent command in `references/observation-log.md` ("Workspace
    creation"): it creates the four workspace artefacts and asserts each,
-   and refuses a pre-3.0 `log.md` layout (load `references/migration.md`
+   and refuses a pre-3.0 `log.md`, alone or beside the directory (load `references/migration.md`
    and convert first) — never create them by working down a list by hand.
    Then the **starter-set reconciliation**, due whenever
    `skill-observations/starter-principles-reviewed.txt` is absent or holds

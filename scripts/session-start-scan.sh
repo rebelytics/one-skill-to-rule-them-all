@@ -15,13 +15,14 @@
 # (UNFILLED: a header whose title: is empty — the skeleton new-observation.sh
 # writes at create time, a write in progress or abandoned; NOTE: id: … when
 # a header's id does not read as its filename prefix); the counts
-# line (files, parsed, suspect, archive-suspect); a NOTE: pointer line when
+# line (files, parsed, suspect, archive-suspect); a SPLIT STORE line when a
+# pre-3.0 log.md sits beside the directory; a NOTE: pointer line when
 # skill-observations/MOVED.md exists; a GAP line when the previous scan in
 # checkpoints.log is 7 or more days old; the logs found under the root's
 # parent; the active principles' headings; then the frontmatter of every
 # numbered entry, each header followed by one `---` line; and LAST one
 # `end of scan` line repeating the counts and how many finding lines
-# (NOTE / LOST ENTRIES / UNFILLED / GAP) stand above the entries. The findings open the
+# (NOTE / LOST ENTRIES / UNFILLED / SPLIT STORE / GAP) stand above the entries. The findings open the
 # output and the summary closes it, so a view cut by `head` keeps the
 # findings and one cut by `tail` keeps the summary and its finding count;
 # neither replaces reading the output whole, which the summary line says.
@@ -127,7 +128,7 @@ a_sus=0; [ -d "$d/archive" ] && a_sus=$(LC_ALL=C find "$d/archive" -maxdepth 1 -
 p="$root/skill-observations/cross-cutting-principles.md"
 pa='/^(\140\140\140|~~~)/ {f=!f} f {next} /^## Active Principles/ {a=1; h=1; next} a && /^## / {a=0}'
 pr=absent; [ -f "$p" ] && pr=$(awk "$pa"' a && /^### / {n++} END {print (h ? n+0 : "unparsed")}' "$p")
-# fx counts the finding lines (NOTE / LOST ENTRIES / UNFILLED / GAP) printed above the
+# fx counts the finding lines (NOTE / LOST ENTRIES / UNFILLED / SPLIT STORE / GAP) printed above the
 # entries, for the end-of-scan line.
 fx=0
 [ "$pr" = unparsed ] && { echo "NOTE: the principles file has no '## Active Principles' heading — 'could not parse', not 'no principles'; read it directly"; fx=$((fx + 1)); }
@@ -158,6 +159,17 @@ idmis=$(printf '%s\n' "$hd" | sed -n 's/^I \(.*\) \(.*\)$/\1 (id: \2)/p' | LC_AL
 [ "$parsed" -lt "$n" ] && { echo "NOTE: $((n - parsed)) of $n headers did not parse (no opening or no closing ---):"; fx=$((fx + 1)); } && LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {if (NR>1 && fm) print f; f=FILENAME; sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) {print f; nextfile}; next} fm && /^---[[:space:]]*$/ {fm=0; nextfile} END {if (fm) print f}' {} +
 [ "$suspect" -gt 0 ] || [ "$a_sus" -gt 0 ] && { echo "NOTE: $suspect of $n headers (and $a_sus in archive/) look like invalid YAML (an unquoted ': ', text after a closing quote, a value opening with a backtick, @ or %, an undefined escape, a colon in an unquoted list entry) — quote or fix them (File format)"; fx=$((fx + 1)); }
 printf 'files: %s  parsed: %s  suspect (awk, a floor): %s  archive-suspect: %s\n' "$n" "$parsed" "$suspect" "$a_sus"
+
+# --- split store: a pre-3.0 log.md beside the directory -----------------------
+# The creation command's LEGACY guard fires only when the directory is
+# absent, so a legacy file written AFTER the migration — by an older
+# installed copy the host still loads — sits beside the directory unseen.
+# Report it with its entry count; the creation command refuses on it too.
+lg="$root/skill-observations/log.md"
+if [ -e "$lg" ]; then
+  echo "SPLIT STORE — log.md holds $(grep -c '^### Observation ' "$lg" | tr -d ' ') observations not in observation-log/: an older installed copy of the skill still writes the legacy file; name each copy's version, then migrate the remainder (references/migration.md) with ids re-issued from this directory's counter"
+  fx=$((fx + 1))
+fi
 
 # --- pointer: skill-observations/MOVED.md marks a root as abandoned ------------
 # Left by a consolidation or a re-anchor (references/environments.md, "Before
@@ -215,6 +227,6 @@ rc=$?
 # so output cut to its last lines still shows that there were findings to
 # read; it is a pointer to the whole output, never its replacement.
 st=; [ "$rc" -eq 0 ] || st="; content print exited $rc"
-printf 'end of scan — files: %s  parsed: %s  suspect: %s  archive-suspect: %s  principles: %s; finding lines above the entries (NOTE / LOST ENTRIES / UNFILLED / GAP): %s%s. Read the output whole: never cut it with head, tail or grep\n' \
+printf 'end of scan — files: %s  parsed: %s  suspect: %s  archive-suspect: %s  principles: %s; finding lines above the entries (NOTE / LOST ENTRIES / UNFILLED / SPLIT STORE / GAP): %s%s. Read the output whole: never cut it with head, tail or grep\n' \
   "$n" "$parsed" "$suspect" "$a_sus" "$pr" "$fx" "$st"
 exit "$rc"

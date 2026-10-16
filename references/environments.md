@@ -926,7 +926,10 @@ version's trigger, including its session-start instruction. That defeats the
 upgrade at the one activation tier that survives an unreachable config:
 description matching now has two candidates competing for the same trigger,
 one of them the file the upgrade just replaced. Back up **outside** the
-skills directory.
+skills directory. The same holds for any second copy the host loads — a
+user-owned copy beside an account-synced one: the older copy is a second
+writer in the old format (the scan's SPLIT STORE line is how it shows),
+so name each copy's version when more than one resolves.
 
 **A hook registered by script path dies when the exec bit goes.** The
 docs' example reads most naturally as naming the script directly:
