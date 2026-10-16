@@ -1163,6 +1163,8 @@ SCAN_FIXTURES = [
      "UNFILLED — a header with an empty title", 1, "LOST ENTRIES —"),
     ("id: below the filename prefix is named with its value", "idmis", True, 0,
      "NOTE: id: does not read as the filename prefix", 1, ""),
+    ("a zero-padded id reads as its prefix; only the wrong number is named", "padded", True, 0,
+     "after reading the body: 0004-d.md (id: 5)", 1, "0002-b.md (id"),
 ]
 
 
@@ -1186,10 +1188,14 @@ def scan_case(scenario, pass_root):
             (log / "0001-a.md").write_text('---\nid: 1\ntitle: "never closed"\n', encoding="utf-8")
         else:
             (log / "0001-a.md").write_text('---\nid: 1\ntitle: "ok"\n---\nbody\n', encoding="utf-8")
-            second = {"skeleton": '---\nid: 2\ntitle: ""\nstatus: open\nskill: []\n---\n',
-                      "idmis": '---\nid: 1\ntitle: "retyped"\n---\n'}
-            (log / "0002-b.md").write_text(
-                second.get(scenario, "---\nid: 2\ntitle: Fix: unquoted\n---\n"), encoding="utf-8")
+            rest = {"skeleton": [("0002-b.md", '---\nid: 2\ntitle: ""\nstatus: open\nskill: []\n---\n')],
+                    "idmis": [("0002-b.md", '---\nid: 1\ntitle: "retyped"\n---\n')],
+                    # both id forms exist in live logs: padded and unpadded read as the prefix
+                    "padded": [("0002-b.md", '---\nid: 0002\ntitle: "padded"\n---\n'),
+                               ("0003-c.md", '---\nid: 3\ntitle: "plain"\n---\n'),
+                               ("0004-d.md", '---\nid: 5\ntitle: "wrong"\n---\n')]}
+            for f, text in rest.get(scenario, [("0002-b.md", "---\nid: 2\ntitle: Fix: unquoted\n---\n")]):
+                (log / f).write_text(text, encoding="utf-8")
         if scenario == "moved":
             (root / "skill-observations" / "MOVED.md").write_text(
                 "Moved to /new/root on 2026-01-01\r\n", encoding="utf-8")

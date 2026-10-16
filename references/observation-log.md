@@ -150,7 +150,7 @@ promise about the rest.
 
 | Field | Meaning |
 |---|---|
-| `id` | Integer; matches the `NNNN-` filename prefix — four digits, zero-padded (`printf '%04d'`, as the snippet and the script write it), so a listing sorts numerically and a clash is visible in it; `63-` beside `0063-` is one id written by something other than the snippet. Never reused. |
+| `id` | Integer: the number the snippet printed, equal to the `NNNN-` filename prefix read as a number. The prefix is four digits, zero-padded (`printf '%04d'`, as the snippet and the script write it), so a listing sorts numerically and a clash is visible in it; `63-` beside `0063-` is one id written by something other than the snippet. The field is written unpadded (`id: 63`); a padded copy of the prefix (`id: 0063`) reads as the same number and is not a defect — every check compares numerically — while a value that reads as another number is. Never reused. |
 | `title` | Short descriptive title. It is the summary every restatement check and frontmatter scan matches against, and an edit to the body does not update it: when an appended instance widens the finding, rewrite the title in the same edit, or the next restatement of the wider finding misses it and is filed as new. |
 | `status` | `open`, `actioned`, `declined`, `superseded` (a later observation found this one's mitigation does not work; `resolution` names it) or `parked`. A missing status is read as `open`, never as nonexistent. |
 | `parked` (status value) | Decided, but blocked on an external precondition: the entry is sound and no longer awaiting a judgement, so reviews drop it from the work queue and never re-escalate it. It is not resolved, so it does not archive — see Archival below. It stays in `observation-log/` until its `parked_until:` condition is met (set it back to `open`) or it is genuinely resolved. Recording a park as free text while leaving `status: open` does not work: nothing classifies on prose, so the entry stays in the queue and is re-raised at every review. |
@@ -175,8 +175,9 @@ and `sibling_checked:` are read by nothing: an entry carrying one of them
 sits under no skill at all, indistinguishable from `skill: []`, and a
 review bucketing by target routes it nowhere. `status: OPEN` is not one of
 the five values — a reader that happens to case-fold hides the defect, it
-does not license it. `id:` is the integer the snippet printed, never the
-zero-padded filename prefix. A scan that parses every header and checks
+does not license it. `id:` is the number the snippet printed, and a check
+that rejects its zero-padded form rejects a live log's own entries (measured
+on one: 4 hits, 0 defects, 0 normalised). A scan that parses every header and checks
 none of them against this table touches such an entry on schedule and
 reports a clean count. The failure produces a smaller number, never an error, which is
 why a near-miss name is flagged rather than skipped wherever a check runs.
