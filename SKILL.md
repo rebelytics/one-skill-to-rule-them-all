@@ -195,36 +195,36 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
 4. **Activation.** Once per session: if no CLAUDE.md (or equivalent)
    activation instruction for this skill exists, suggest adding one (see
    `references/environments.md`); after a scan `GAP:` line, open with the
-   gap and the missing instruction, plainly. Skip if configured. This step
-   runs only once the skill is invoked, so it verifies a working setup and
-   cannot detect a missing one — it is not the safety net for a
-   never-activated install; the outside checks are in that reference.
-5. **Concurrency.** There is no shared log file to guard: each observation
-   is its own file, so creating one never collides with another session's
-   entry; re-read one before changing its *status* (How to Log).
+   gap and the missing instruction, plainly. A block whose stamp (its first
+   line) is older than this version's, or absent, is reported in one line
+   with the paragraphs it lacks; offer the current block, never rewrite the
+   file unasked. This step runs only once the skill is invoked, so it
+   verifies a working setup and cannot detect a missing one — it is not the
+   safety net for a never-activated install; outside checks: that reference.
+5. **Concurrency.** No shared log file to guard: each observation is its
+   own file; re-read one before changing its *status* (How to Log).
 6. **Targets and staged work.** Resolve each distinct `skill:` value in
    the scanned frontmatter against the installed skill set and mention, in
    one line, any that no longer resolve — and any that resolve but cannot
    run, because presence in a listing is not capability
-   (`references/skill-authoring.md`, "Runtime prerequisites"). A deleted skill accumulates
-   observations unnoticed; a dead one more so. Say what you resolved against
-   (this checkout, this install): an unresolved target is a fact about where
-   you looked, not about the world.
+   (`references/skill-authoring.md`, "Runtime prerequisites"). A deleted
+   skill accumulates observations unnoticed; a dead one more so. Say what
+   you resolved against (this checkout, this install): an unresolved target
+   is a fact about where you looked, not about the world.
    If `skill-updates/` holds anything, reconcile it before announcing it —
    installation happens outside any session, so no session observes it, and
    the session that reads the ledger owns its cleanup. `diff -rq` each staged
-   copy against live and classify it (a bare "differs" is not a verdict:
-   live moves on legitimately), and name every directory no manifest entry
-   covers. The cases are in `references/weekly-review.md` ("Staged-work
-   reconciliation gate") — load it before judging any entry. Then say "N
-   staged updates awaiting review" in one line.
+   copy against live and classify it (a bare "differs" is not a verdict),
+   and name every directory no manifest entry covers. The cases are in
+   `references/weekly-review.md` ("Staged-work reconciliation gate") — load
+   it before judging any entry. Then say "N staged updates awaiting review".
 7. **First run, or a named past session.** If the log is empty and the
-   project has history (handover or decision docs, commit history, test
-   scripts, a notes or memory directory, an existing CLAUDE.md), offer a
-   one-off backfill pass over those artefacts; when the user names a
-   finished session, run the same pass scoped to it. Entries cite the
-   durable artefact (file and section) in `session_context`, never a
-   session. Procedure: `references/environments.md` ("First-run backfill").
+   project has history (handover or decision docs, commit history, a notes
+   or memory directory, an existing CLAUDE.md), offer a one-off backfill
+   pass over those artefacts; when the user names a finished session, run
+   the same pass scoped to it. Entries cite the durable artefact (file and
+   section) in `session_context`, never a session. Procedure:
+   `references/environments.md` ("First-run backfill").
 
 ## When to Observe
 

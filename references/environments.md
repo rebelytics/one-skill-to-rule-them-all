@@ -137,6 +137,7 @@ the checklist rather than in a disposition.
 ### The activation block
 
 ```text
+(task-observer activation block — template of v3.8.0)
 Before the first tool call of any session — and before writing or
 proposing a plan, not merely before executing one — invoke the
 task-observer skill AND execute its Session Start Protocol (storage
@@ -246,6 +247,20 @@ holding `SKILL.md`), substituted at install exactly like
 script paragraphs and keep the rest — the inline id snippet in SKILL.md is
 then the write path, and the `find … grep` above is the lookup, with its
 checkpoint line written by hand in the same batch.
+
+**The first line is the template's stamp, and an upgrade does not move
+it.** The block lives in the user's instruction file, outside the bundle,
+so upgrading the bundle in place leaves it on whatever template it was
+copied from, and step 4's presence check cannot tell a current block from
+a 3.4-era one: every paragraph added since — the lookup, the subagent
+rule, the script-only write path — is missing from that install without
+any signal. The stamp is bumped whenever the block's text changes, and
+Session Start step 4 compares it with this version's: a block whose stamp
+is older, or has none, is reported in one line with the paragraphs it
+lacks, and the current block is offered whole — the file is never
+rewritten unasked. On every upgrade, diff the installed block against
+this template; a block copied without its stamp line is read as
+unstamped.
 
 On Windows, pin the drive-letter form (`C:/Users/<user>/...`): PowerShell,
 cmd and Git Bash all accept it ("Paths handed across a boundary are
