@@ -3,18 +3,27 @@
 # as one command that cannot be split.
 #
 # Usage:
-#   bash scripts/new-observation.sh <slug> [workspace-root]
+#   bash scripts/new-observation.sh [--body <file>] <slug> [workspace-root]
 #
 #   <slug>            kebab-case, no id prefix, no extension ("short-slug")
 #   [workspace-root]  the pinned absolute workspace path — the directory that
 #                     holds skill-observations/. Defaults to the environment
 #                     variable TASK_OBSERVER_WORKSPACE. One of the two is
 #                     required; the log is never resolved from the cwd.
+#   --body <file>     optional, before or after the slug: once the file is
+#                     created, <file> (frontmatter and body, written by the
+#                     caller with a QUOTED heredoc) is copied into it with
+#                     the literal placeholders __ID__ and __DATE__ replaced
+#                     everywhere by the issued id and today's date
+#                     (YYYY-MM-DD). A quoted heredoc cannot carry the id, and
+#                     an unquoted one runs every backticked span in the body;
+#                     this flag fills the two values so neither is needed.
 #
 # Prints the created file's absolute path on stdout (one line) and exits 0.
 # Any guard firing prints its message on stderr and exits 1 with NO file
-# created. Write the observation body into the printed path, with the id
-# from its NNNN- prefix in the `id:` field — copied, never retyped.
+# created. Without --body, write the observation body into the printed
+# path, with the id from its NNNN- prefix in the `id:` field — copied,
+# never retyped.
 #
 # This is the id-derivation snippet from SKILL.md "How to Log", plus a
 # number claim the inline snippet lacks, packaged so that the moment of
@@ -32,18 +41,40 @@
 # so two writers running at once never share one) → PREFIX collision guard
 # across active and archive (two slugs sharing one number is the failure; a
 # path check cannot see it) → noclobber create → floor write (after the
-# create, so a run that creates nothing never moves it) → print the path.
+# create, so a run that creates nothing never moves it) → body copy with
+# the placeholders filled (--body only) → print the path.
 #
 # bash, not sh: the `10#` arithmetic is a bash extension. Runs on bash 3.2
-# (stock macOS): case patterns are parenthesised for that reason.
+# (stock macOS): case patterns are parenthesised for that reason, and the
+# argument loop uses no array.
 
 set -u
 
-slug="${1:-}"
-root="${2:-${TASK_OBSERVER_WORKSPACE:-}}"
+slug=; root=; body=; npos=0
+while [ $# -gt 0 ]; do
+  case $1 in
+    (--body)
+      [ $# -ge 2 ] || { echo "--body needs a file argument" >&2; exit 1; }
+      body=$2; shift 2 ;;
+    (--body=*) body=${1#--body=}; shift ;;
+    (--*) echo "unknown option: $1" >&2; exit 1 ;;
+    (*)
+      npos=$((npos + 1))
+      case $npos in
+        (1) slug=$1 ;;
+        (2) root=$1 ;;
+        (*) echo "too many arguments: $1" >&2; exit 1 ;;
+      esac
+      shift ;;
+  esac
+done
+[ -n "$root" ] || root="${TASK_OBSERVER_WORKSPACE:-}"
 
 if [ -z "$slug" ]; then
-  echo "usage: new-observation.sh <slug> [workspace-root]" >&2; exit 1
+  echo "usage: new-observation.sh [--body <file>] <slug> [workspace-root]" >&2; exit 1
+fi
+if [ -n "$body" ] && ! { [ -f "$body" ] && [ -r "$body" ]; }; then
+  echo "--body file is missing or unreadable: '$body'" >&2; exit 1
 fi
 case $slug in
   (*[!a-z0-9-]*|-*|*-|*--*|"")
@@ -168,5 +199,17 @@ fi
 top_claim=$(for p in "$c"/[0-9]*; do [ -e "$p" ] && printf '%s\n' "${p##*/}"; done | sort -n | tail -1)
 top_claim=$((10#${top_claim:-0})); [ "$top_claim" -gt "$next_id" ] || top_claim=$next_id
 printf '%s\n' "$top_claim" > "$d/archive/.id-floor" || { echo "FLOOR WRITE FAILED — $d/archive/.id-floor (the file $f exists; fix the floor by hand)" >&2; exit 1; }
+
+# --- body copy, placeholders filled (--body only) ----------------------------
+# The body file is read as data: sed matches the two literal placeholders
+# (no regex metacharacters in either) and the replacements are an integer
+# and a YYYY-MM-DD date, so nothing needs escaping and every other byte —
+# backticks, $, quotes — reaches the file verbatim. Plain `s///g`, no -i and
+# no GNU-only flag: BSD sed runs this too.
+if [ -n "$body" ]; then
+  if ! sed -e "s/__ID__/$next_id/g" -e "s/__DATE__/$today/g" "$body" > "$f"; then
+    echo "BODY COPY FAILED — $f exists and is empty; write the body into it by hand (id $next_id)" >&2; exit 1
+  fi
+fi
 
 if [ -n "$pin_form" ]; then cygpath "$pin_form" "$f"; else printf '%s\n' "$f"; fi

@@ -816,6 +816,18 @@ permissions; grow the (b) list when a change you made has vanished — a
 rule that fires after the damage, so it is the backstop for the
 attribution read, never the test.
 
+**Run the validator over the live set while the inventory is in hand.**
+Step 1's gate compares staged against live and Step 5 validates what was
+edited, so a skill that is never staged is never checked again, and the
+validator's own checks tighten between releases. Run
+`scripts/validate-skill-bundle.py` over every category-(a) live skill
+directory — seconds for a whole library — and list the failures in the
+Step 8 summary under Log integrity ("N installed skills fail the
+validator: …"). A failing skill with no observations in the queue gets a
+one-line staging that fixes only the gate failure (the minimal structural
+change). The failure shape: a gate that runs only on what is about to
+change never sees what has already drifted.
+
 **Step 3 — cross-check observations.** Evaluate every OPEN observation
 against every skill — not just the skills named in its `skill:` list;
 Principles often generalise. Build skill → [relevant observations], seeding
@@ -1743,7 +1755,8 @@ for the next review; or "none" — the line is never omitted]
 writing sessions' session_context and date; `skill:` names normalised for
 bucketing (Step 3), old → new; `skill:` entries in qualified and bare
 form (Step 3), N / M; inbox entries drained (Step 1), or "inbox
-not read: <reason>"; or "none"]
+not read: <reason>"; "N installed skills fail the validator: …" (Step 2),
+each with its one-line staging; or "none"]
 
 ### Skipped (needs manual review)
 [items with reasons]

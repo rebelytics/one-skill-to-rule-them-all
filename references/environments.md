@@ -1301,8 +1301,11 @@ remote shell (`device_bash`) and a file-commit tool
 shell running the id snippet (SKILL.md, How to Log) — or
 `scripts/new-observation.sh`, where the script is reachable on the device
 — at the moment of writing, and its body goes into the created path
-through the same shell with a quoted heredoc. It is never composed in the
-container and committed afterwards. The failure shape: a committed file
+through the same shell with a quoted heredoc: into a scratch file first,
+with `__ID__` and `__DATE__` as placeholders, handed to the helper's
+`--body` so the id reaches the body without an unquoted expansion
+(`observation-log.md`, "Editing an existing observation"). It is never
+composed in the container and committed afterwards. The failure shape: a committed file
 carries an id derived from a listing taken earlier, and the prefix guard
 never ran because it lives in the command the commit bypassed; the lagging
 `.id-floor` appears first and the duplicate id at the next review.

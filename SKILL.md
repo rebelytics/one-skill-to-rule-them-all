@@ -409,12 +409,12 @@ and the noclobber create") when any of them fires.
 **Run the snippet immediately before EVERY write, including the first and
 only one of a session** — an earlier read of the log is not a substitute,
 and the id the session-start scan printed is never an input to a write.
-Where a helper can run, `bash scripts/new-observation.sh <slug> "[ABSOLUTE PATH]"`
-is the only write path: it performs this whole snippet and prints the
-created path, so derivation cannot drift from creation (the structural
-barrier the second-violation rule demands). Load `references/observation-log.md`
-("Run the snippet immediately before every write") when skipping feels
-reasonable, or when two files turn out to share an id.
+Where a helper can run, `bash scripts/new-observation.sh --body <file>
+<slug> "[ABSOLUTE PATH]"` is the only write path: it runs this whole snippet,
+copies the body in with `__ID__` and `__DATE__` filled and prints the created
+path, so derivation cannot drift from creation (the structural barrier the
+second-violation rule demands). Load `references/observation-log.md` ("Run the
+snippet immediately before every write") when skipping feels reasonable.
 
 **Resolve each id at its own write time** — run the snippet before EACH
 file, never pre-compute a range, and put the value it printed into both the
@@ -680,7 +680,7 @@ agent not following the skill's rules, acknowledge and correct it instead.
 | Question | Answer |
 |----------|--------|
 | When do I observe? | The whole session, including feedback and reflection phases |
-| How do I log? | Immediately, without interrupting the user's task, as one file per observation named `NNNN-slug.md`; id = max(active, archive, `.id-floor`) + 1, derived by running the snippet immediately before each write — an earlier read of the log for any other purpose is not a substitute; where a helper can run, `bash scripts/new-observation.sh <slug> "[ABSOLUTE PATH]"` is the only write path |
+| How do I log? | Immediately, without interrupting the user's task, as one file per observation named `NNNN-slug.md`; id = max(active, archive, `.id-floor`) + 1, derived by running the snippet immediately before each write — an earlier read of the log for any other purpose is not a substitute; where a helper can run, `bash scripts/new-observation.sh --body <file> <slug> "[ABSOLUTE PATH]"` is the only write path |
 | Status field? | Mandatory `status: open` frontmatter on every new observation; reviews treat a missing status as OPEN, never as nonexistent. Five values: `open`, `actioned`, `declined`, `superseded`, `parked` — `parked` = decided but blocked on an external precondition, so it leaves the queue, requires `parked_until:`, and never archives |
 | Does the target skill have siblings? | Resolve it against `skill-observations/skill-families.md` BEFORE writing; add every sibling the insight applies to to `skill:`, and record the verdict in the mandatory `siblings_checked:` field — including "checked, no propagation" |
 | A scan or query came back empty? | Two possibilities, only one is a finding: guard every retrieval meant to prevent duplicate work with an independent existence check, and treat empty output over known content as a broken command |

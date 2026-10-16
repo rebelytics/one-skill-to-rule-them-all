@@ -1200,15 +1200,15 @@ reads like a harness fault rather than a consequence of the create. A quoted her
 shell receives the command as typed; on a host whose shell tool rewrites
 it in transit (`environments.md`, "Windows hosts: what reaches the shell
 and the file"), the body goes through the editing tool. Where the shell is that only path, write the
-frontmatter with `printf` and the body with a QUOTED heredoc: quoting the
-delimiter disables every substitution, so the body cannot carry
-variables, and the id and the dates go in the `printf` above it —
+whole file with a QUOTED heredoc: quoting the delimiter disables every
+substitution, so the body cannot carry variables — the id and the date go in as
+the literal placeholders `__ID__` and `__DATE__`, which `scripts/new-observation.sh --body <file>` replaces everywhere on its create (the body file is read as data, so a backticked path survives); with the inline snippet and no helper, `printf` the frontmatter and append a quoted-heredoc body —
 
 ```bash
-printf -- '---\nid: %s\ntitle: "%s"\nstatus: open\ndate: %s\n' "$next_id" "$title" "$(date +%F)" > "$f"   # …the remaining fields, then the closing ---
-cat >> "$f" <<'OBS'
-**Issue:** … `find -exec` … $(date) … written literally, none of it run
+cat > "$tmp/body.md" <<'OBS'    # frontmatter and body; __ID__ / __DATE__ where the id and date belong
+**Issue:** … `find -exec` … $(date) … written literally, none of it run; #__ID__ on __DATE__
 OBS
+bash "<skill directory>/scripts/new-observation.sh" --body "$tmp/body.md" <slug> "[ABSOLUTE PATH]"
 ```
 
 The same rule covers `echo -e` and any `"$(cat <<…)"` form. Exit code 0
