@@ -61,6 +61,10 @@ Over time, I got used to just asking about the logged observations every time I 
 
 If you want to browse the observations yourself, you'll find them at `[your shared folder]/skill-observations/observation-log/` — one small Markdown file per observation, each starting with a frontmatter header (status, skill, type, date) followed by the issue, the suggested improvement, and the principle. Resolved observations move to `observation-log/archive/`. You don't normally need to look at these directly (Claude handles that), but they're there if you're curious. Storing one file per observation, with the metadata in frontmatter, lets Claude scan just the headers to find what's open instead of re-reading the whole backlog — which keeps token usage low as observations pile up.
 
+### Upgrading between 3.x versions
+
+Replace the bundle, then re-diff your activation block against the template in `references/environments.md`: the block's first line names the template version it came from, and a session that finds an older or unstamped block tells you which paragraphs it lacks and offers the current block without rewriting your file.
+
 ### Upgrading from a version before 3.0
 
 Versions before 3.0.0 kept all observations in one file, `skill-observations/log.md`. Version 3.0.0 stores one file per observation. The first session that runs with the new version installed will notice the old file and convert it with a small script bundled in the skill — it checks the log first, reports anything it isn't sure about, and keeps the old file as `log.md.migrated` so nothing is lost. You don't need to do anything except say yes when asked; the details, including how to roll back, are in `references/migration.md`.

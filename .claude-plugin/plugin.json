@@ -3,7 +3,7 @@
   "name": "task-observer",
   "displayName": "Task Observer — One Skill to Rule Them All",
   "description": "Observes agent work sessions and turns recurring friction, corrections and judgement calls into proposed skill improvements and new skill candidates, with a human review gate.",
-  "version": "3.7.0",
+  "version": "3.8.0",
   "author": {
     "name": "Eoghan Henn",
     "url": "https://rebelytics.com"

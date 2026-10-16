@@ -536,7 +536,7 @@ nonconf=$(LC_ALL=C find "$d" -maxdepth 1 -name '*.md' -exec awk '
   FNR==1 { sub(/^\357\273\277/, ""); fm=0; bad=""; idv=""; st=""; sc=""; f=FILENAME; sub(/.*\//,"",f); pre=(match(f,/^[0-9]+/) ? substr(f,1,RLENGTH)+0 : -1) }
   FNR==1 && /^---[[:space:]]*$/ { fm=1; next }
   fm && /^---[[:space:]]*$/ { fm=0
-    if (idv !~ /^[1-9][0-9]*$/ || idv+0 != pre) bad=bad " id"
+    if (idv !~ /^0*[1-9][0-9]*$/ || idv+0 != pre) bad=bad " id"
     if (st !~ /^(open|actioned|declined|superseded|parked)$/) bad=bad " status"
     if (sc == "") bad=bad " siblings_checked"
     if (bad != "") print FILENAME ":" bad; nextfile }
