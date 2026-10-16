@@ -416,6 +416,22 @@ readable from this run, say so under Log integrity ("inbox not read:
 capture fallback the processing step never drains is a second log nobody
 reviews.
 
+**Harvest the run-output notes next.** Runs that cannot write or get an
+approval answered end their final message with a `## Task-observer
+notes` section (`references/environments.md`, "Sessions whose output
+channel is owned by a caller") at the run-output paths the activation
+block's `[RUN OUTPUT PATHS]` line or a task definition names. For each
+path, read every file not yet marked, take the section's bullets through
+the same write path as an inbox entry — one at a time, file on disk
+before the source is marked — and mark the source: where the file is
+writable, the heading becomes `## Task-observer notes (harvested
+<date>)`; where it is not, append its path and sha256 to
+`skill-observations/harvested.txt`, which the drain reads first. A
+section reading `none` is marked without a write. Report under Log
+integrity: "run-output notes: N harvested from M files; <path> not
+read: <reason>" — a path the block names that this run cannot reach is a
+gap in the log, said in that line, never a silent zero.
+
 Then archive observation files resolved in
 *previous* sessions — with the sweep as shipped (the sweep block of the id
 snippet, run on its own; see Archival on Write in SKILL.md), never an
@@ -1777,7 +1793,8 @@ writing sessions' session_context and date; `skill:` names normalised for
 bucketing (Step 3), old → new; `skill:` entries in qualified and bare
 form (Step 3), N / M; inbox entries drained (Step 1), or "inbox
 not read: <reason>"; "N installed skills fail the validator: …" (Step 2),
-each with its one-line staging; or "none"]
+each with its one-line staging; run-output notes harvested (Step 1), N
+from M files, or the path not read; or "none"]
 
 ### Skipped (needs manual review)
 [items with reasons]

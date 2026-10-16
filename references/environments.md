@@ -234,6 +234,14 @@ Before briefing a delegate under an agent definition or instructions
 file, run the lookup for that file's name; its open entries shape the
 brief.
 
+A run of this block that cannot write here or get an approval answered —
+a child run with no protocol-running caller, a job with a narrow tool
+allowlist, a scheduled task in default permission mode — skips the write
+steps, never stalls on them, and ends its final message with a
+`## Task-observer notes` section (environments.md, "Sessions whose
+output channel is owned by a caller"). Such runs write their output to:
+  [RUN OUTPUT PATHS, one per line, or "none"]
+
 An observation file comes into being only through
   bash "<skill directory>/scripts/new-observation.sh" <slug> "[ABSOLUTE PATH]"
 which prints the path to write into. Never by copying another file's
@@ -261,6 +269,20 @@ lacks, and the current block is offered whole — the file is never
 rewritten unasked. On every upgrade, diff the installed block against
 this template; a block copied without its stamp line is read as
 unstamped.
+
+**Before writing a user-scope block, list its non-interactive consumers.**
+A block in a user-level instruction file reaches every run that file
+loads, not only the sessions a person watches: scripts calling the CLI
+(`claude -p …`), LaunchAgent, cron and Task Scheduler jobs, the desktop
+app's scheduled tasks. A run with a narrow tool allowlist can write no
+file; one in default permission mode stops at the protocol's first
+command and waits for an approval nobody reads. So, before the block is
+written: list every such consumer with its permission mode and tool
+allowlist, and for each that cannot write or get an approval answered,
+put its run-output path into the block's `[RUN OUTPUT PATHS]` line, so
+the review knows where to harvest. A consumer the list missed shows up
+later as a job that stalls at the protocol's first call — a missing
+entry here, not a defect in the block.
 
 On Windows, pin the drive-letter form (`C:/Users/<user>/...`): PowerShell,
 cmd and Git Bash all accept it ("Paths handed across a boundary are
@@ -1507,12 +1529,10 @@ step they take. That breaks three install assumptions at once:
   Per-observation files still prevent write collisions between parallel
   threads; the problem here is survival, not concurrency.
 
-The Session Start guard warns and re-anchors when the resolved workspace
-is ephemeral; in a thread there is nothing stable to re-anchor on, so the
-branch is **report-back mode** ("Anchoring the workspace" above): the
-durable route is the channel the surface guarantees survives — the
-worker's report to its coordinator, a merged commit — not a location the
-worker can reach and hope outlives it.
+A thread has nothing stable to re-anchor on, so this is **report-back
+mode** ("Anchoring the workspace" above): the durable route is the
+channel the surface guarantees survives, never a location the worker can
+reach and hope outlives it.
 
 The characteristic failure is silent: a never-activated install and
 observations stranded on an unmerged branch both produce no error, so
@@ -1542,14 +1562,42 @@ is itself a session running this protocol, the activation block's
 subagent rule applies: the worker writes nothing, and a finding worth
 logging goes into its result, in whatever field the schema leaves for
 notes, for the controller to write. Where the caller runs no protocol —
-a script, a CI job, another tool — logging stays fully in force, because
-the write is the only report there is: anything that would have been
-surfaced becomes an observation file naming the condition that fired, so
-the next interactive session inherits it; name the caller in
-`session_context`, and log only what the caller cannot see. Handoff-doc
-mode is the opposite case (a reader, nowhere to write); report-back mode
-("Anchoring the workspace") is the case with neither a stable path nor a
-reader.
+a script, a CI job, another tool — and the run can write, logging stays
+fully in force, because the write is the only report there is: anything
+that would have been surfaced becomes an observation file naming the
+condition that fired, so the next interactive session inherits it; name
+the caller in `session_context`, and log only what the caller cannot see.
+
+**A run that cannot write, or cannot get an approval answered, skips the
+write steps and reports back instead.** Three shapes: a child run with
+no protocol-running caller (`claude -p` from a script); a job whose tool
+allowlist holds no write tool (a LaunchAgent with narrow
+`--allowedTools`); a scheduled task in default permission mode, where
+the protocol's first command raises an approval card nobody answers. In
+each, a declined or unanswered protocol call must not abort the caller's
+task: the run reads the shape from its own contract — the allowlist, the
+permission mode, the absent caller — skips the probe's write branch, the
+id claim and the observation write, says so in one line, and carries its
+observations in the final message under a fixed heading, last:
+
+```markdown
+## Task-observer notes
+- skill: <target skill> — <title>. Issue: <what happened>. Improvement:
+  <what should change>. Principle: <generalisation, or none>. Context:
+  <caller or job name>, <date>.
+```
+
+One bullet per observation, no id (only a session with the log derives
+one), and the literal line `none` when nothing was observed — the
+section is never omitted, since a missing section and a run that never
+ran the protocol read the same. The review's Step 1 harvests these
+sections from the run-output paths the activation block's `[RUN OUTPUT
+PATHS]` line or the task definition names (`weekly-review.md`, Step 1,
+"Harvest the run-output notes"); a run whose output goes nowhere durable
+has no route, and the install step above ("Before writing a user-scope
+block") is what gives it one. Handoff-doc mode is the opposite case (a
+reader, nowhere to write); report-back mode ("Anchoring the workspace")
+is the case with neither a stable path nor a reader.
 
 ## First-run backfill
 
