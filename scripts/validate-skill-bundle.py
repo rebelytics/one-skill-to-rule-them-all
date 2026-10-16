@@ -104,6 +104,9 @@ PATH_RE = re.compile(r"`((?:references|scripts|assets)/[^`\s*?]+\.[A-Za-z0-9]+)`
 # skills: 28 hits, 0 missing, no normalisation needed.
 CMD_PATH_RE = re.compile(r"(?:references|scripts|assets)/[^\s`'\"*?<>;|&]+\.[A-Za-z0-9]+")
 CMD_INTERP = {"python3", "python", "py", "bash", "sh", "zsh", "node", "swift", "ruby", "perl", "run", "source"}
+# A placeholder segment in a cited path — `<study>` or `{study}`, never
+# spanning a `/` — marks a naming pattern, checked as a glob (check_dir).
+SLOT_SEG_RE = re.compile(r"<[^<>/\s]+>|\{[^{}/\s]+\}")
 # An interpreter's own options sit between it and the script: `py -3 x.py`
 # (the Windows launcher, which migration.md recommends where `python3` is the
 # Store alias), `python3 -X utf8 x.py`, `bash -eu x.sh`. Reading only the
@@ -855,7 +858,11 @@ def check_dir(skill_dir, fails):
         print(f"warn: SKILL.md:{ln}: {tok!r} is rewritten when the skill is invoked with "
               f"arguments — write an awk field as `$ 2`, or move the text to a reference or script")
     # Every cited bundled path exists (backticked, real extension — globs in
-    # prose are skipped). Ownership is inferred from the shape of the span, so
+    # prose are skipped, and a naming pattern with a `<slot>` or `{slot}`
+    # segment is matched as a glob against the staged set, not looked up:
+    # `references/studies/<study>.md` documents a family of files, and it
+    # passes when at least one staged file fits the pattern, fails when
+    # none does). Ownership is inferred from the shape of the span, so
     # the convention has to make the two cases distinguishable: PATH_RE requires
     # the reserved prefix IMMEDIATELY after the backtick, which means a path
     # qualified with its owning skill's name — `<skill-name>/references/x.md` —
@@ -871,6 +878,12 @@ def check_dir(skill_dir, fails):
     # The failure message names both conventions, because a false FAIL here is
     # otherwise indistinguishable from a genuinely missing file.
     for rel in sorted(set(PATH_RE.findall(text)) | command_paths(text)):
+        if SLOT_SEG_RE.search(rel):
+            pat = SLOT_SEG_RE.sub("*", rel)
+            if not any(q.is_file() for q in skill_dir.glob(pat)):
+                fails.append(f"cited path pattern has no staged instance: {rel} "
+                             f"(no file matches {pat})")
+            continue
         if not (skill_dir / rel).is_file():
             fails.append(
                 f"cited path missing from staged set: {rel} "
@@ -1111,8 +1124,10 @@ COMMAND_PATH_FIXTURES = [
 
 # The cited-path check end to end, over a minimal staged skill with no
 # scripts/: (name, SKILL.md body, substring every failure must carry, or None
-# when the body must pass). The `./` and `<skill-name>/` spellings are the two
-# exemptions the failure message names.
+# when the body must pass; an optional fourth element lists files to stage
+# beside SKILL.md). The `./` and `<skill-name>/` spellings are the two
+# exemptions the failure message names; a `<slot>`/`{slot}` segment makes
+# the span a naming pattern, matched as a glob.
 CITED_PATH_FIXTURES = [
     ("unqualified prose path fails, naming both conventions",
      "The `scripts/report.py` vs `pkg/` collision fails partial runs.\n",
@@ -1125,6 +1140,11 @@ CITED_PATH_FIXTURES = [
      "Run `python3 ./scripts/report.py --check` first.\n", None),
     ("another skill's qualified path passes",
      "See `other-skill/references/x.md`.\n", None),
+    ("a `<slot>` naming pattern passes when a staged file fits it",
+     "One file per study: `references/studies/<study>.md`.\n", None, ["references/studies/alpha.md"]),
+    ("a `{slot}` naming pattern with no staged instance fails, naming the glob",
+     "One file per study: `references/studies/{study}.md`.\n",
+     "cited path pattern has no staged instance: references/studies/{study}.md (no file matches references/studies/*.md)"),
 ]
 
 
@@ -1433,18 +1453,21 @@ def selftest():
         ok = command_paths(text) == want
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} command path: {name}")
-    for name, body, want in CITED_PATH_FIXTURES:
+    for name, body, want, *staged in CITED_PATH_FIXTURES:
         with tempfile.TemporaryDirectory() as td:
             sk = pathlib.Path(td) / "cp"
             sk.mkdir()
             (sk / "SKILL.md").write_text('---\nname: cp\ndescription: "D."\n---\n' + body,
                                          encoding="utf-8")
+            for rel in (staged[0] if staged else []):
+                (sk / rel).parent.mkdir(parents=True, exist_ok=True)
+                (sk / rel).write_text("x\n", encoding="utf-8")
             import contextlib
             import io
             fails = []
             with contextlib.redirect_stdout(io.StringIO()):
                 check_dir(sk, fails)
-        cited = [f for f in fails if f.startswith("cited path missing")]
+        cited = [f for f in fails if f.startswith("cited path ")]
         ok = (not fails) if want is None else (len(cited) == 1 and want in cited[0])
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} cited path: {name}"

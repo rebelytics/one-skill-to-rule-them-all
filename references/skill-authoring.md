@@ -851,7 +851,10 @@ re-check exists, do not record the value — record how to obtain it.
    and in command position — the convention for that case, not the
    disguise the gate forbids (both: weekly-review.md, Delivery); the
    skill's own files keep the bare prefix, since either spelling would
-   pass one that is missing. The validator extracts a path that
+   pass one that is missing; a path with a `<slot>` or `{slot}` segment
+   (`references/studies/<study>.md`) documents a naming pattern and is
+   matched as a glob — it passes when a staged file fits it, fails when
+   none does. The validator extracts a path that
    fills a whole backtick span, and also one in command position — after
    an interpreter (`python3`, `py`, `bash`, `node`, `uv run` …) inside an
    inline span or a fenced block, with arguments behind it — while a bare
