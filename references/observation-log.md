@@ -394,15 +394,13 @@ token the harness exposes) the project.
 The final append is the session-start run's own trace (see "The scan ends
 in a write, not only a print"); a review's work-queue pass over the same
 frontmatter can drop it. The content print is one `awk` over `*.md`
-inside `( cd "$d" && … )`, never `for f in $(find …)`: the unquoted
-command substitution word-splits any path containing a space, a live
-hazard on every workspace whose folder name has one, while a glob in the
-directory itself hands `awk` bare file names that nothing splits. It
-prints each header followed by one `---` line, the output the earlier
-per-file loop produced, with one process for the whole set instead of
-one per file; `LC_ALL=C` inside the subshell sorts the glob the way the
-loop's `sort` did. Do not rebuild the file list with `$(ls … | xargs …)`:
-that reintroduces the word split.
+inside `( cd "$d" && … )`, never `for f in $(find …)` or a list rebuilt
+with `$(ls … | xargs …)` — both word-split a spaced path ("Snippets take
+a spaced path", above), while a glob in the directory itself hands `awk`
+bare file names that nothing splits. It prints each header followed by
+one `---` line, the output the earlier per-file loop produced, with one
+process for the whole set instead of one per file; `LC_ALL=C` inside the
+subshell sorts the glob the way the loop's `sort` did.
 
 **Guard the read, not just the write.** A query that returns nothing is
 reporting on two possibilities at once — the data is absent, or the
@@ -424,16 +422,15 @@ counter that rides the output stream lives in a subshell the moment the
 loop is piped (`done | grep …`), and the guard then fires "0 headers
 parsed" directly under a screen of correctly printed headers. Files are
 enumerated with `find`, not a glob: under zsh's default `nomatch` an
-unmatched `"$d"/*.md` aborts the whole `for` before its first iteration,
-so a fresh install's empty log produced an error where the answer was
-"no observations", and the `[ -e "$f" ] || continue` line meant to catch
-the literal glob was dead code there. And the guard is an `if` block, not
-a trailing `&&` chain: a chain whose last test is false leaves the block
-with exit status 1 on every healthy scan, so a harness that surfaces exit
-codes reported failure at exactly the step whose job is to say whether
-the log could be read. When adapting a snippet, keep the guard out of
-the stream it guards, enumerate without globs, and end on a statement
-whose status is 0 when nothing is wrong.
+unmatched `"$d"/*.md` aborts the whole `for` before its first iteration
+(a fresh install's empty log errored where the answer was "no
+observations", past a dead `[ -e "$f" ] || continue`). And the guard is
+an `if` block, not a trailing `&&` chain: a chain whose last test is
+false leaves the block with exit status 1 on every healthy scan, which a
+harness that surfaces exit codes reported as failure at exactly the step
+whose job is to say whether the log could be read. When adapting a
+snippet, keep the guard out of the stream it guards, enumerate without
+globs, and end on a statement whose status is 0 when nothing is wrong.
 
 **Snippets spanning several tool calls must re-derive their own paths.**
 Shell state does not carry between tool calls in most harnesses, so a
@@ -500,17 +497,16 @@ the id stays issued, and the floor already sits above it.
 
 **Every instrument gets the same guard: an empty or zero result is a
 claim about the instrument until an independent probe shows the
-population is empty.** `SCAN COMMAND BROKEN` and `ID COMMAND BROKEN` are
-two instances of one rule, not two rules — a frontmatter scan, an id
-derivation, a status grep, a count in a hook, a query in a script all
-report on the same two possibilities as the scan above, and only the
-second of them is a defect that a "0" conceals.
-So the guard is a property every new instrument arrives with, never a
-line added after its first silent failure: pair each number-or-list
-producing command with a second count derived by a different means from
-a literal path, and halt on the disagreement. A guard enumerated per
-snippet is unguarded for the next snippet by construction; a guard stated
-as a property of instruments covers the one nobody has written yet.
+population is empty** (core, verbatim). `SCAN COMMAND BROKEN` and `ID
+COMMAND BROKEN` are two instances of one rule, not two rules: a
+frontmatter scan, an id derivation, a status grep, a count in a hook, a
+query in a script all report on the same two possibilities as the scan
+above, and only the second is a defect that a "0" conceals. So the guard
+is a property every new instrument arrives with, never a line added after
+its first silent failure — pair each number-or-list producing command
+with a second count derived by a different means from a literal path, and
+halt on the disagreement; a guard enumerated per snippet is unguarded for
+the next snippet by construction.
 
 **A guard that separates "empty" from "non-empty" cannot catch a
 partial read, and partial reads are the common failure of text-shaped
@@ -766,11 +762,10 @@ or ship references nobody can use:
 | **Pattern group** | the same shape — one companion per tool, one dossier per subject — with no reason for a user of one to have another | **never** — a sibling paragraph naming the others is a defect, published or not | in cross-cutting principles |
 
 Group skills by what a user of one would also need, not by what they
-look alike. Propagation of insights and cross-referencing are different
-relationships: a pattern group earns the sibling check at write time
-(the "could this sentence survive removing the tool name?" test is
-exactly what such a group is good for) and earns no cross-references at
-all. A family earns both.
+look alike. Propagation and cross-referencing are different relationships:
+a pattern group earns the sibling check at write time (the "could this
+sentence survive removing the tool name?" test, below, is exactly what
+such a group is good for) and no cross-references; a family earns both.
 
 **A skill can belong to more than one grouping** — typically a per-tool
 family and a core/companion family at once — and the registry records
@@ -806,11 +801,10 @@ exactly what the shared/member-specific split records.
 observation, resolve the target against the registry — against every
 family and every pattern group it appears in, since membership is
 plural. For each sibling in each of them, either add it to `skill:` or
-state in the body why it does not apply. Where the insight is shared
-across a PATTERN group, the destination is usually a cross-cutting
-principle rather than the same paragraph copied into each member.
-**No registry yet, or the target is not in
-it?** The check is still required: scan the installed skill names for a
+state in the body why it does not apply (an insight shared across a
+PATTERN group lands in cross-cutting principles, per the table above).
+**No registry yet, or the target is not in it?** The check is still
+required: scan the installed skill names for a
 shared prefix, suffix or subject (`*-extras` companions, per-tool
 implementations of one method, per-subject dossiers), do the evaluation
 against whatever set that yields, and propose the registry entry. Two
@@ -1055,12 +1049,11 @@ one block, for latency. Observation writes look independent (different
 files, no shared variable) and are not: each one's id depends on the state
 the previous one leaves behind, so two writes dispatched in the same block
 both read the same maximum and mint the same number. This is a third source
-of collision, alongside a parallel session and a subagent of this session
-— which inherits the same activation instruction and the same log —
-and it is the only one that lives entirely inside a single agent's own
-turn — which makes it the one no amount of caution about "other writers"
-prevents. When several observations are due, write them one at a time, each
-after the previous write has completed.
+of collision, beside a parallel session and a subagent of this session
+(which inherits the same activation instruction and the same log), and the
+only one that lives entirely inside a single agent's own turn, where no
+caution about "other writers" reaches. When several observations are due,
+write them one at a time, each after the previous write has completed.
 
 ### Floor staleness — the floor below the highest active prefix
 
@@ -1081,9 +1074,8 @@ top=$(for p in "$d"/[0-9]*.md; do [ -e "$p" ] && printf '%s\n' "${p##*/}"; done 
 
 `scripts/session-start-scan.sh` does not run it (the line is optional
 there); `scripts/new-observation.sh` runs the same check on every write
-and corrects the floor as its own floor write. A NOTE here is evidence that
-some writer bypassed the snippet — log that as the observation, not the
-number.
+and corrects the floor as its own floor write. Log the NOTE's bypassing
+writer as the observation, not the number.
 
 ### A structural probe that comes back empty is a stop signal
 
@@ -1104,15 +1096,14 @@ non-empty log is a broken command", above).
 Because every observation lives in its own file, a new observation never
 touches another entry's bytes, so it cannot truncate, overwrite or renumber
 anyone else's work: per-file isolation removes the overwrite and
-lost-write failure modes of a shared file. In the rare case two
-parallel sessions pick the same id, the result is two files sharing a
-number — harmless, distinct files, nothing lost, as long as the slugs
-differ; the script's number claim prevents it for runs at the same moment,
-the snippet's prefix guard catches it at write time when the
-derivation is stale, an identical id AND slug is one path, which is what the
-`noclobber` create guards against, and the review's duplicate-id check (Step
-1, re-run at Step 6) renumbers whatever slips past both and logs a
-meta-observation.
+lost-write failure modes of a shared file. Two parallel sessions picking
+the same id leave two files sharing a number — harmless as long as the
+slugs differ ("Run the snippet immediately before every write", above);
+the script's number claim prevents it for runs at the same moment, the
+prefix guard catches a stale derivation at write time, the `noclobber`
+create refuses the one path an identical id AND slug resolve to, and the
+review's duplicate-id check (Step 1, re-run at Step 6) renumbers whatever
+slips past both and logs a meta-observation.
 
 **The bounded-mutation discipline outlived the single-file log.** It was
 written for `log.md` and it applies to every deletion or replacement the
@@ -1121,28 +1112,26 @@ list, a review report, a manifest. Locate the target by its own boundaries
 (the item's first line and the next item's first line), never by
 surrounding whitespace or a greedy pattern: a `\n\n` "paragraph" boundary
 around one item of a numbered list ran to the end of the list and deleted
-every item after it.
-Re-read the region after the edit and count what survived against what
-was meant to survive.
+every item after it. Re-read the region after the edit and count what
+survived against what was meant to survive.
 
 ## Read the full body before resolving, dismissing, fixing or citing
 
-**Read the full body before resolving, dismissing, fixing, or citing.** A
-tracked item's title (observation, GitHub issue, ticket) is an index entry,
-not its content — it compresses away the failure story, the reporter's
-context, and often the proposed fix. Dismissal is the path with no
-downstream checkpoint: a resolved or cited item gets reviewed later, a
-dismissed one silently disappears. Harvest fix designs from issue bodies —
-reporters frequently include the correct solution, which also settles
-attribution. When a parallel agent logs a finding that appears to duplicate
-your own, diff the two bodies, not the titles: two entries about the same
-mechanism can carry opposite operational conclusions, and the second is
-often the refinement, not the echo. Apparent agreement suppresses
-verification more effectively than disagreement does, so this rule binds
-hardest exactly where it feels least necessary.
-The same holds for a hand-maintained ledger or manifest read to judge an
-artefact against it — excerpt to find an entry, full text to judge one
-(`weekly-review.md`, "Staged-work reconciliation gate").
+Rule: core, Acting on Observations. A tracked item's title (observation,
+GitHub issue, ticket) is an index entry, not its content — it compresses
+away the failure story, the reporter's context, and often the proposed
+fix. Dismissal is the path with no downstream checkpoint: a resolved or
+cited item gets reviewed later, a dismissed one silently disappears.
+Harvest fix designs from issue bodies — reporters frequently include the
+correct solution, which also settles attribution. When a parallel agent
+logs a finding that appears to duplicate your own, diff the two bodies,
+not the titles: two entries about the same mechanism can carry opposite
+operational conclusions, and the second is often the refinement, not the
+echo. Apparent agreement suppresses verification more effectively than
+disagreement does, so this rule binds hardest exactly where it feels
+least necessary. The same holds for a hand-maintained ledger or manifest
+read to judge an artefact against it — excerpt to find an entry, full
+text to judge one (`weekly-review.md`, "Staged-work reconciliation gate").
 
 **A change you did not make resolves an observation point by point,
 never title against title** (core, Acting on Observations). A point
@@ -1180,14 +1169,12 @@ ids.
 **Re-check ownership immediately before the first write, not at planning
 time.** "Is anyone else working on this?" is answered from two sources that
 are both honest and both stale the moment they are read: a handoff or
-manifest state, and a session listing. A **paused** session has not released
-its task — it is idle, it reads as idle, and it can resume at any moment
-with its own decisions intact.
-
-So the check belongs immediately before the first write, in the same turn —
-the same rule as re-reading a file before editing it, for the same reason.
-Planning-time evidence of idleness has a shelf life of exactly as long as
-the planning takes. And prefer a check on **the result** — has the work
+manifest state, and a session listing — and a **paused** session has not
+released its task; it reads as idle and can resume at any moment with its
+own decisions intact. So the check belongs immediately before the first
+write, in the same turn (the same rule as re-reading a file before editing
+it): planning-time evidence of idleness has a shelf life of exactly as long
+as the planning takes. And prefer a check on **the result** — has the work
 already landed in the target? — over a check on the vehicle, since a paused
 session's state says nothing about what it is about to do.
 
@@ -1197,11 +1184,10 @@ negative test; the temptation peaks exactly on a file with uncommitted work
 and nothing to fall back to.
 
 Rewriting a text file from the shell passes the replacement through the
-shell's quoting first, and what arrives is not always what was typed. An
+shell's quoting first, and what arrives is not always what was typed: an
 unescaped `$` inside a double-quoted replacement has landed in a source
-file as a NUL byte, turning the file binary — and **the command exited 0**.
-The damage surfaced later and by accident, when a `grep` answered "Binary
-file matches" instead of the expected line.
+file as a NUL byte, turning the file binary, with **the command exiting
+0** and a later `grep` answering "Binary file matches" as the first sign.
 
 Observation bodies make this sharply worse than it sounds. They are full of
 backticks, `$`, quotes and braces, because they quote commands and
@@ -1323,14 +1309,13 @@ clear it, and never run `git clean` with that directory in scope.
 read.** The id snippet takes the maximum over the files this install can
 see; ids another install has minted and not yet pushed are not unread,
 they are absent, so both mint from their own maximum and every guard on
-either side passes honestly. And
-`.id-floor` is one file recording a per-writer fact, so it merges as a
-conflict between two correct values: resolve it upward, never by picking
-a side. Two installs sharing a log through a repository serialise their
-writes through it — pull before every write, push after it — and treat
-a collision found at the next review as the expected cost of a missed
-pull, renumbered exactly as Step 1 says; ownership of the file is not a
-condition.
+either side passes honestly. And `.id-floor` is one file recording a
+per-writer fact, so it merges as a conflict between two correct values:
+resolve it upward, never by picking a side. Two installs sharing a log
+through a repository serialise their writes through it — pull before
+every write, push after it — and treat a collision found at the next
+review as the expected cost of a missed pull, renumbered exactly as Step
+1 says; ownership of the file is not a condition.
 
 ## Archival
 
@@ -1406,19 +1391,17 @@ searches (`weekly-review.md`, Step 3).
 
 ## Why the checkpoints are writes, not questions
 
-The core skill requires a write to disk at every third completed todo item
-and at every deliverable event — an observation file, or a one-line
-acknowledgement in `checkpoints.log` when nothing has accumulated. The
-reason is that a remembered "ask whether anything is worth logging" is not
-enforcement: softer "check when completing items" guidance has been shown,
-repeatedly, to get lost during cognitively demanding analytical work —
-exactly when the most observations accumulate. A concrete write forces the
-mental check to surface as a recorded action, and it prevents the common
-failure where the skill is loaded but nothing is written until the user
-asks. Hooking the flush onto tool calls you are already making (presenting
-a file, rendering a deck, completing a todo batch) means the write happens
-as a side effect of work you were doing anyway, rather than depending on a
-separate act of memory.
+The core requires a write to disk at every third completed todo item and
+at every deliverable event (an observation file, or a one-line
+acknowledgement in `checkpoints.log`) because a remembered "ask whether
+anything is worth logging" is not enforcement: softer "check when
+completing items" guidance has been shown, repeatedly, to get lost during
+cognitively demanding analytical work — exactly when the most observations
+accumulate — and the skill is then loaded with nothing written until the
+user asks. A concrete write surfaces the mental check as a recorded
+action, and riding it on a tool call already being made (presenting a
+file, rendering a deck, completing a todo batch) removes the separate act
+of memory.
 
 **A claimed write is not a write.** Every rule above binds on the write;
 the summary that reports it needs its own rule, because a closing line
@@ -1436,19 +1419,18 @@ taken in the same turn, never from memory of having written it.
 ### The scan ends in a write, not only a print
 
 Loading this skill and executing this protocol are two acts, and only the
-load leaves an artefact in the transcript — which discharges the felt
-obligation, so a session that loaded and then ran nothing looks from
-outside exactly like one that did both. The appended `checkpoints.log`
-line is the protocol's own trace, for the same reason the checkpoint rule
-is a write: a step whose value lies in happening at a specific moment needs
-its own entry in the tool record. (Where the workspace prices every write —
-the exception under "How to Log" — fold this line into the session's first
-write instead.) Read the scan's output whole. Its finding lines (NOTE,
-LOST ENTRIES, UNFILLED, GAP) and counts come first and the entry headers last, with
-one `end of scan` line closing it that repeats the counts and the number
-of finding lines; `tail`, `head` or a `grep` hides exactly the lines that
-matter while the checkpoint line still lands and the log looks
-compliant. A truncated scan is a skipped one.
+load leaves an artefact in the transcript, so a session that loaded and
+then ran nothing looks from outside exactly like one that did both. The
+appended `checkpoints.log` line is the protocol's own trace, for the same
+reason the checkpoint rule is a write: a step whose value lies in happening
+at a specific moment needs its own entry in the tool record. (Where the
+workspace prices every write — the exception under "How to Log" — fold
+this line into the session's first write instead.) Read the scan's output
+whole. Its finding lines (NOTE, LOST ENTRIES, UNFILLED, GAP) and counts
+come first and the entry headers last, with one `end of scan` line closing
+it that repeats the counts and the number of finding lines; `tail`, `head`
+or a `grep` hides exactly the lines that matter while the checkpoint line
+still lands and the log looks compliant. A truncated scan is a skipped one.
 
 ### Two gaps the checkpoint pairing still leaves — and the rule behind both
 
