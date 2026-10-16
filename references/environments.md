@@ -201,6 +201,10 @@ batch after the Workspace creation command.
 
 The task-observer workspace for this project is:
   [ABSOLUTE PATH]
+It does not exist until the first session creates it: a failed probe whose
+parent resolves and is writable is a first run — run Workspace creation,
+then re-run the lookup above once per skill loaded in that batch (on the
+first batch it finds no log and writes no checkpoint line; that is expected).
 Every path the skill uses derives from that root and nothing else:
   [ABSOLUTE PATH]/skill-observations/observation-log/   (the log)
   [ABSOLUTE PATH]/skill-observations/cross-cutting-principles.md
@@ -898,6 +902,22 @@ connecting"). Never put a placeholder command in the probe's slot — an
 `echo`, or an `ls` of the cloud container: it probes nothing and reads in
 the transcript like a probe that passed. In a session with two filesystems
 a container `ls` never counts as the workspace probe.
+
+**A failed probe has three readings, and the parent tells them apart.**
+The pinned path is absent on the first run of every install, because
+nothing creates `skill-observations/` before the first session does; a
+probe read as "not mounted" sends that run to the folder picker, which
+grants the path it already had, or in a harness without a picker to
+handoff-doc mode, where the log is never created at all. So a failed probe
+is split before any branch is chosen, by one `ls` of the pinned path's
+parent: it resolves and is writable → a first run: run "Workspace
+creation" (`observation-log.md`) and continue; it resolves read-only → the
+grant precondition above ("A grant names a path; it does not create
+one"); it does not resolve → a missing mount, and the folder picker is
+the first response. The per-skill lookups that rode in the probe's batch
+ran against no log: after a first-run creation, re-run the lookup once
+per skill loaded in that batch, so `checkpoints.log` holds the
+`workspace: created=…` line followed by one `loaded` line per skill.
 
 ### Install-layout hazards — three ways a skill silently stops existing
 

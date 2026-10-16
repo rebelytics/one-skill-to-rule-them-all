@@ -97,51 +97,51 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
    the workspace-mount probe — one `ls` of the pinned path, carried INSIDE
    the session's first batched tool call; session-start skill loads ride in
    that same batch, never in an earlier one (`references/environments.md`,
-   "The probe rides inside the first batched call"). If it fails, the first
-   response is the environment's folder-picker tool (in Cowork,
-   `request_cowork_directory`; elsewhere, its equivalent), not the "no
-   filesystem" branch: handoff-doc mode (`references/environments.md`) is
-   for environments with no filesystem at all, and it is reached too easily
-   when a missing mount is read as one. A permission-classifier refusal of
-   that request (it names the classifier and gives a bracketed reason; a
-   user decline does not) falls under the **How to Log** denial rule: at
-   most one identical retry, told to the user, never another tool. Refused
-   again, or no folder-picker or device-bridge tool after one tool search:
-   load `references/environments.md` ("No link to the user's computer"),
-   mandatory, and keep its order — the log, else ask to park in the user's
-   memory inbox, else a handoff file. Never assert the mount's state, connected
-   or not, from an environment flag, a config file's presence in context, or
-   memory of an earlier turn: that claim needs a probe in the same turn.
-   **A successful probe does not mean the activation config fired.**
-   On turn 1 a merely late config is indistinguishable from an absent one:
-   load the session-start skills directly rather than assuming it did, and
-   read the config file yourself if the mount resolves but its content is
-   not in context. Why this guard is only the backup, and where the primary
-   one belongs, is in `references/environments.md` ("Activation config —
-   late, intermittent, and why the guard cannot live inside it") — load it
-   when setting up or diagnosing activation. Before creating or writing
-   anything: if the resolved workspace sits under an ephemeral path
-   (`.claude/worktrees/`, a temporary clone, `scratch-workspaces/`), warn
-   and re-anchor on a stable path — state there is lost or orphaned; where
-   none resolves (a disposable worker), use report-back mode:
-   `references/environments.md` ("Claude Code Projects"). Then RUN the one
-   idempotent command in `references/observation-log.md` ("Workspace
-   creation"): it creates the four workspace artefacts and asserts each,
-   and refuses a pre-3.0 `log.md`, alone or beside the directory (load `references/migration.md`
-   and convert first) — never create them by working down a list by hand.
-   Then the **starter-set reconciliation**, due whenever
-   `skill-observations/starter-principles-reviewed.txt` is absent or holds
-   a starter-set version older than the one in
-   `references/starter-principles.md` — a fresh install, an upgrade to a
-   bundle that ships the file, and every later growth of the set. Load that
-   file and follow its **Reconciliation** section: match by substance,
-   offer once in one line, import only what the adopter picks, then — once
-   answered — write the shipped version into the marker file so the offer
-   never repeats until the set changes. Never pre-populate silently. Name
-   the loaded skill's frontmatter `version:` in the start-up lines — read
-   from the file, never fetched — and list the skill's own directory with its
-   `references/` and `scripts/`: a file the core names that is absent is
-   reported in the same lines ("Reference files"), not at its first load.
+   "The probe rides inside the first batched call"). A failed probe is
+   split before any branch is chosen, by one `ls` of the pinned path's
+   parent: the parent resolves and is writable → a first run, not a missing
+   mount — run "Workspace creation" (below), then re-run the per-skill
+   lookup once for each skill loaded in that batch; it resolves read-only →
+   a grant that names a path it cannot create (`references/environments.md`,
+   "Anchoring the workspace"); it does not resolve → the folder-picker tool (in
+   Cowork, `request_cowork_directory`; elsewhere, its equivalent), never
+   the "no filesystem" branch (handoff-doc mode), which a missing mount
+   read as no filesystem reaches too easily. A permission-classifier
+   refusal of that request (it names the classifier and gives a bracketed
+   reason; a user decline does not) falls under the **How to Log** denial
+   rule: at most one identical retry, told to the user, never another tool.
+   Refused again, or no folder-picker or device-bridge tool after one tool
+   search: load `references/environments.md` ("No link to the user's
+   computer"), mandatory, and keep its order — the log, else ask to park in
+   the user's memory inbox, else a handoff file. Never assert the mount's
+   state from an environment flag, a config file in context, or memory of
+   an earlier turn: that claim needs a probe in the same turn. **A
+   successful probe does not mean the activation config fired.** On turn 1
+   a merely late config is indistinguishable from an absent one: load the
+   session-start skills directly rather than assuming it did, and read the
+   config file yourself if the mount resolves but its content is not in
+   context (why this guard is only the backup: `references/environments.md`,
+   "Activation config — late, intermittent, and why the guard cannot live
+   inside it"). Before creating or writing anything: if the resolved
+   workspace sits under an ephemeral path (a worktree, a temporary clone,
+   `scratch-workspaces/`), warn and re-anchor on a stable path — state
+   there is lost or orphaned; where none resolves (a disposable worker),
+   use report-back mode: `references/environments.md` ("Claude Code
+   Projects"). Then RUN the one idempotent command in
+   `references/observation-log.md` ("Workspace creation"): it creates the
+   four workspace artefacts and asserts each, and refuses a pre-3.0
+   `log.md`, alone or beside the directory (load `references/migration.md`
+   and convert first) — never create them by hand. Then the **starter-set reconciliation**, due
+   whenever `skill-observations/starter-principles-reviewed.txt` is absent
+   or holds a starter-set version older than the one in
+   `references/starter-principles.md`. Load that file and follow its
+   **Reconciliation** section: match by substance, offer once in one line,
+   import only what the adopter picks, then — once answered — write the
+   shipped version into the marker file; never pre-populate silently. Name the loaded skill's
+   frontmatter `version:` in the start-up lines — read from the file, never
+   fetched — and list the skill's own directory with its `references/` and
+   `scripts/`: a file the core names that is absent is reported in the same
+   lines ("Reference files"), not at its first load.
 2. **Scan.** Read only the frontmatter of each file in `observation-log/`
    — the header block between the first two `---` lines, never the bodies
    — and build awareness from `status`, `skill`, `proposes_skill` and
