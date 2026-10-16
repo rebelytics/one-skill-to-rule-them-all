@@ -3,10 +3,10 @@
 # Over its ceiling, a file with more than 12 load triggers is split by episode;
 # one with 12 or fewer is trimmed, or its ceiling raised with a dated reason.
 # A ceiling more than 3 lines above its file's count is lowered to the count.
-environments.md 1734 2026-10-16 the activation check opens unprimed, the desktop app's scheduler is named, other agent tools reading the folder, the far-side recipe asks for a go-ahead, the live-set validator pass
-migration.md 250 2026-10-09 the abandoned-root pointer file is named and read, migrate-log.py checks dropped keys
+environments.md 1829 2026-10-16 the test branch: first-run probe, stamped activation block, hook count at zero, runs that report back, helper and lookup notes
+migration.md 262 2026-10-16 the test branch: the split store, a log.md beside the observation directory
 observation-log.md 1474
 signals.md 234
-skill-authoring.md 1374 2026-10-16 a binary prerequisite is one that starts, the ./<path> citation form
+skill-authoring.md 1382 2026-10-16 the test branch: rule 4 on sync-maintained copies, placeholder path citations
 starter-principles.md 504 2026-10-16 the marker is written after the answer, cited bodies are read, entry 23 covers the unmeasured baseline
-weekly-review.md 2068 2026-10-16 corrected command forms, the check an entry names, dated summary claims, shared-tree worker checks, keep-two per skill, the live-set validator pass and the --body helper
+weekly-review.md 2131 2026-10-16 the test branch: record-bound timestamp, seeded rounds, the sync mark, run-output harvest
