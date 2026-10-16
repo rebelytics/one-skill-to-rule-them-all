@@ -21,9 +21,15 @@
 #
 # Prints the created file's absolute path on stdout (one line) and exits 0.
 # Any guard firing prints its message on stderr and exits 1 with NO file
-# created. Without --body, write the observation body into the printed
-# path, with the id from its NNNN- prefix in the `id:` field — copied,
-# never retyped.
+# created. The file is never empty: the create writes a frontmatter
+# skeleton — `id:` (the number, unpadded), `date:` today, `status: open`,
+# every other field present and empty — so a scan that meets it mid-write
+# reads a header with its id, not a LOST entry, and the id is on disk
+# before anything can retype it. Without --body, fill the skeleton's
+# fields in place (the `id:` line is already right: copy nothing, retype
+# nothing) and append the body below the closing `---`. With --body, the
+# filled copy is built beside the file and renamed over it, so the file
+# holds either the skeleton or the whole body, never a part.
 #
 # This is the id-derivation snippet from SKILL.md "How to Log", plus a
 # number claim the inline snippet lacks, packaged so that the moment of
@@ -40,9 +46,11 @@
 # enters → number claim (a noclobber marker per id in archive/.id-claims/,
 # so two writers running at once never share one) → PREFIX collision guard
 # across active and archive (two slugs sharing one number is the failure; a
-# path check cannot see it) → noclobber create → floor write (after the
-# create, so a run that creates nothing never moves it) → body copy with
-# the placeholders filled (--body only) → print the path.
+# path check cannot see it) → noclobber create of the skeleton → floor
+# write (after the create, so a run that creates nothing never moves it) →
+# body copy with the placeholders filled, built as a hidden sibling and
+# renamed into place (--body only) → id check on the written header →
+# print the path.
 #
 # bash, not sh: the `10#` arithmetic is a bash extension. Runs on bash 3.2
 # (stock macOS): case patterns are parenthesised for that reason, and the
@@ -188,8 +196,16 @@ if [ -n "$(find "$d" -maxdepth 2 -name "${prefix}-*.md")" ]; then
 fi
 
 # --- noclobber create: never truncate an existing file ----------------------
+# The create and the first content are one printf: the file is a header
+# with its id from the first instant it exists. An empty file in the log is
+# a LOST entry by definition (the scan says so), and a create that leaves
+# one is a LOST entry for as long as the caller takes to write the body.
+# The field list mirrors the core template (How to Log); `title:` is left
+# empty on purpose — the scan reports a header with an empty title as
+# UNFILLED, a write in progress or abandoned, distinct from LOST.
 f="$d/${prefix}-${slug}.md"
-if ! (set -C; : > "$f") 2>/dev/null; then
+skel=$(printf '%s\nid: %s\ntitle: ""\nstatus: open\ntype:\nskill: []\nproposes_skill: []\ntarget_file: []\nsiblings_checked: ""\narea: ""\ndate: %s\nsession_context: ""\nparked_until:\nresolved:\nresolution:\nreference:\n---' --- "$next_id" "$today")   # the format opens with %s: a leading --- reads as an option
+if ! (set -C; printf '%s\n' "$skel" > "$f") 2>/dev/null; then
   echo "CREATE FAILED — $f exists or is unwritable" >&2; exit 1
 fi
 
@@ -205,11 +221,32 @@ printf '%s\n' "$top_claim" > "$d/archive/.id-floor" || { echo "FLOOR WRITE FAILE
 # (no regex metacharacters in either) and the replacements are an integer
 # and a YYYY-MM-DD date, so nothing needs escaping and every other byte —
 # backticks, $, quotes — reaches the file verbatim. Plain `s///g`, no -i and
-# no GNU-only flag: BSD sed runs this too.
+# no GNU-only flag: BSD sed runs this too. The filled copy is built as a
+# hidden sibling (a leading dot: no `[0-9]*.md` listing or glob sees it)
+# and renamed over the skeleton, one atomic step, so no reader ever meets
+# the file truncated. Where the rename is refused (a mount that treats
+# replacing a file as a delete), the copy is written in place instead and
+# the sibling is left for the user — nothing here deletes.
 if [ -n "$body" ]; then
-  if ! sed -e "s/__ID__/$next_id/g" -e "s/__DATE__/$today/g" "$body" > "$f"; then
-    echo "BODY COPY FAILED — $f exists and is empty; write the body into it by hand (id $next_id)" >&2; exit 1
+  part="$d/.${prefix}-${slug}.md.part"
+  if ! sed -e "s/__ID__/$next_id/g" -e "s/__DATE__/$today/g" "$body" > "$part"; then
+    echo "BODY COPY FAILED — $f holds the frontmatter skeleton only; write the body into it by hand (id $next_id)" >&2; exit 1
   fi
+  if ! mv -f "$part" "$f" 2>/dev/null; then
+    if cat "$part" > "$f"; then
+      echo "NOTE: rename refused — body copied in place; remove '$part' by hand" >&2
+    else
+      echo "BODY COPY FAILED — $f holds the frontmatter skeleton only; the filled copy is at '$part' (id $next_id)" >&2; exit 1
+    fi
+  fi
+  # The id in the written header must be the one this run issued: a body
+  # that carried a literal id instead of __ID__ is the mismatch the scan
+  # reports; say so here, where the body is still in hand.
+  got=$(LC_ALL=C awk 'FNR==1 {sub(/^\357\273\277/, "")} /^---[[:space:]]*$/ {if (++n == 2) exit; next} n == 1 && /^id:/ {v=$2; gsub(/["\047\r]/, "", v); print v; exit}' "$f")
+  case $got in
+    (*[!0-9]*|"") echo "NOTE: $f carries no numeric id: in its header (read '$got'); set id: $next_id" >&2 ;;
+    (*) [ "$((10#$got))" -eq "$next_id" ] || echo "NOTE: $f carries id: $got but its prefix is $prefix — the body held a literal id; set id: $next_id" >&2 ;;
+  esac
 fi
 
 if [ -n "$pin_form" ]; then cygpath "$pin_form" "$f"; else printf '%s\n' "$f"; fi

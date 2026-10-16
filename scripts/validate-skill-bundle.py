@@ -1159,6 +1159,10 @@ SCAN_FIXTURES = [
     ("previous scan 2 days old: no GAP line", "recent", True, 0, "files: 2", 2, "GAP:"),
     ("MOVED.md at the root: NOTE names it and its first line", "moved", True, 0,
      'NOTE: pointer at this root (skill-observations/MOVED.md): "Moved to /new/root', 1, ""),
+    ("the helper's skeleton (empty title) is UNFILLED, not LOST", "skeleton", True, 0,
+     "UNFILLED — a header with an empty title", 1, "LOST ENTRIES —"),
+    ("id: below the filename prefix is named with its value", "idmis", True, 0,
+     "NOTE: id: does not read as the filename prefix", 1, ""),
 ]
 
 
@@ -1178,11 +1182,14 @@ def scan_case(scenario, pass_root):
             day = datetime.date.today() - datetime.timedelta(days=21 if scenario == "gap" else 2)
             ck.write_text(f"{day} 09:00 [w] session-start scan: files=2 parsed=2 principles=absent\n",
                           encoding="utf-8")
-        if scenario != "broken":
-            (log / "0001-a.md").write_text('---\nid: 1\ntitle: "ok"\n---\nbody\n', encoding="utf-8")
-            (log / "0002-b.md").write_text("---\nid: 2\ntitle: Fix: unquoted\n---\n", encoding="utf-8")
-        else:
+        if scenario == "broken":
             (log / "0001-a.md").write_text('---\nid: 1\ntitle: "never closed"\n', encoding="utf-8")
+        else:
+            (log / "0001-a.md").write_text('---\nid: 1\ntitle: "ok"\n---\nbody\n', encoding="utf-8")
+            second = {"skeleton": '---\nid: 2\ntitle: ""\nstatus: open\nskill: []\n---\n',
+                      "idmis": '---\nid: 1\ntitle: "retyped"\n---\n'}
+            (log / "0002-b.md").write_text(
+                second.get(scenario, "---\nid: 2\ntitle: Fix: unquoted\n---\n"), encoding="utf-8")
         if scenario == "moved":
             (root / "skill-observations" / "MOVED.md").write_text(
                 "Moved to /new/root on 2026-01-01\r\n", encoding="utf-8")

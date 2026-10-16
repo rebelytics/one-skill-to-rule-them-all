@@ -633,11 +633,11 @@ one), before trusting either outcome.
 path" is a rule, and a rule broken twice needs a barrier (SKILL.md, the
 second-violation rule): a direct create with the editing tool skips the
 id derivation and the prefix collision guard, and two ids each used twice
-are what that looks like afterwards. The helper creates the file with a
-`noclobber` create before any body is written, so a pre-tool hook can
-refuse every editing-tool write that would CREATE a Markdown file in the
-log, and the helper's own two-step write (create, then fill) passes
-untouched. Node, no dependencies; substitute `[ABSOLUTE PATH]` as
+are what that looks like afterwards. The helper creates the file — a
+frontmatter skeleton carrying the id — with a `noclobber` create before
+any body is written, so a pre-tool hook can refuse every editing-tool
+write that would CREATE a Markdown file in the log, and the fill of the
+skeleton the helper made passes untouched. Node, no dependencies; substitute `[ABSOLUTE PATH]` as
 elsewhere, and register it for the editing tool's write call (in Claude
 Code, matcher `Write`) with the interpreter in the command, as above:
 
