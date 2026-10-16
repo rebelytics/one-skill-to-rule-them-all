@@ -649,6 +649,20 @@ a paused session has not released its task (`observation-log.md`,
 hand-kept field disagrees with the mtime,
 print both and trust neither alone.
 
+**A live copy that a sync process maintains cannot be checked until its
+sync mark postdates the install.** Where the installed skill is a mirror
+kept by another process — an account-hosted skill cached locally, a
+skills folder synced from elsewhere — the copy on disk is the state at
+its last sync, not the current state, and a diff against it measures
+the cache's age: a staged copy compared with a mirror that has not yet
+synced the install reads as (c) and re-stages work that landed. So read
+the sync mark first — whatever the process records as its last sync: a
+timestamp file, the cache directory's mtime — and where it predates the
+install the entry awaits, report "cannot be checked yet: live copy
+synced <mark>, install after it" and leave the entry as it is; the gate
+classifies that copy at a later run, never now, and never as (c). The
+mark is named in the finding, so the next run knows what it waited for.
+
 **Where a `.skill` bundle sits beside the staged directory, classify the
 bundle.** The bundle is what was presented and installed; the directory
 is only what its producer wrote last. Compare the two first, member by
