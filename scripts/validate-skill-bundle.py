@@ -466,18 +466,28 @@ def index_misses(body):
     # match a heading as a PREFIX of an entry, not by equality. Requiring
     # equality reported a correctly-indexed section as missing — the
     # check's own first finding was its own defect.
-    entries, cur = [], None
+    entries, cur, num = [], None, ""
     # A bullet is `-`, `*` or `+`: all three are Markdown lists, and an
-    # index written with `*` otherwise had no entries at all.
+    # index written with `*` otherwise had no entries at all. A numbered
+    # list (`1. Alpha`, `1) Alpha`) is a list too; its entry is kept both
+    # whole and without the marker, so it indexes `## 1. Alpha` and
+    # `## Alpha` alike — reading it as no entry reported every heading
+    # of a correct numbered index as missing.
+    def flush():
+        entries.append(plain(cur))
+        if num:
+            entries.append(plain(num + cur))
     for line in m.group(1).splitlines():
-        if re.match(r"^\s*[-*+]\s+", line):
+        mk = re.match(r"^\s*([-*+]|\d+[.)])\s+", line)
+        if mk:
             if cur is not None:
-                entries.append(plain(cur))
-            cur = re.sub(r"^\s*[-*+]\s+", "", line)
+                flush()
+            cur = line[mk.end():]
+            num = mk.group(1) + " " if mk.group(1)[0].isdigit() else ""
         elif cur is not None and line.strip():
             cur += " " + line.strip()
     if cur is not None:
-        entries.append(plain(cur))
+        flush()
     # Headings below the index, excluding the index itself
     missing = []
     for h in re.findall(r"(?m)^#{2,3}\s+(.+?)\s*$", body[m.end():]):
@@ -502,6 +512,10 @@ INDEX_FIXTURES = [
      "# R\n\n## Contents\n\n- [Alpha](#alpha)\n\n## Alpha\n\n## Beta\n", ["Beta"]),
     ("`*` bullets are entries too",
      "# R\n\n## Contents\n\n* [Alpha](#alpha)\n* Beta\n\n## Alpha\n\n## Beta\n", []),
+    ("a numbered list indexes numbered headings",
+     "# R\n\n## Contents\n\n1. Alpha\n2. Beta\n\n## 1. Alpha\n\n## 2. Beta\n", []),
+    ("a numbered list indexes unnumbered headings too",
+     "# R\n\n## Contents\n\n1. Alpha\n2) Beta two\n\n## Alpha\n\n## Beta two\n\n## Gamma\n", ["Gamma"]),
 ]
 
 
