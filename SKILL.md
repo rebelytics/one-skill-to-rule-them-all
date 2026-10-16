@@ -172,22 +172,22 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
    print is not an empty log") before moving either half.
 3. **Review trigger.** Read `skill-observations/last-review-date.txt`. The
    value carries the truth: a date = when the last review actually ran;
-   `never` = no review has run yet. A missing file is abnormal (step 1
-   creates it) — recreate it with `never`, don't invent a date. An existing
-   `skill-observations/review-started.txt` not reading `completed`, or a
-   registered scheduler reporting a later last run, is a run that completed
-   no review: say "fired YYYY-MM-DD, no review recorded" and treat the
-   review as due. If the value is `never` or 7 or more days old AND there
-   are OPEN observations: in an interactive session, offer the review in one
-   line, once per session, and proceed with the user's task unless they opt in;
-   never gate their work on the review. Scale the offer's CONTENT with the
-   backlog, never its frequency: up to ~15 open observations, offer the full
-   review ("the backlog hasn't been reviewed [in N days / yet] — N open; run it
-   now, or carry on?"); above that, offer a bounded slice whose unit of work
-   stays constant as the backlog grows — "review the 10 oldest", "review just
-   the ones targeting <the skill most named>" — and state both numbers, how
-   many are open and roughly how many distinct findings they represent (cluster
-   on the `title` and `skill` fields you just scanned; why:
+   `never` = none yet; a missing file (step 1 creates it) is recreated with
+   `never`, not an invented date. `skill-observations/review-started.txt`
+   not reading `completed`, or a registered scheduler reporting a later
+   last run, is a run that completed no review: say "fired YYYY-MM-DD, no
+   review recorded" and treat the review as due; a date whose
+   `reviews/<date>/` is absent is "review YYYY-MM-DD left no record",
+   treated the same. If the value is `never` or 7 or more days old AND
+   there are OPEN observations: in an interactive session, offer the review
+   in one line, once per session, and proceed with the user's task unless
+   they opt in; never gate their work on the review. Scale the offer's
+   CONTENT with the backlog, never its frequency: up to ~15 open
+   observations, offer the full review ("the backlog hasn't been reviewed
+   [in N days / yet] — N open; run it now, or carry on?"); above that, offer
+   a bounded slice whose unit of work stays constant as the backlog grows
+   ("review the 10 oldest") and state both numbers, open and roughly how
+   many distinct findings (cluster on the scanned `title` and `skill`; why:
    `references/weekly-review.md`). Only a scheduled/autonomous run loads
    `references/weekly-review.md` and runs the review unprompted; a session
    whose output a caller owns does neither: `references/environments.md`

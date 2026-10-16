@@ -13,8 +13,7 @@ input to staged copies — never to live skills. Two modes:
   Delivering updated skills).
 - **In-session 7-day fallback:** pending at session start when BOTH are
   true: no scheduled review is registered (or none has written
-  `last-review-date.txt` in 7+ days — a scheduler's "succeeded" says the
-  job launched, never that the review ran), AND
+  `last-review-date.txt` in 7+ days), AND
   `skill-observations/last-review-date.txt` reads `never` or a date 7+
   days old (the SKILL.md step 3 boundary, which must match); interactively
   it is only offered (step 3), never gating the user's task.
@@ -36,8 +35,8 @@ input to staged copies — never to live skills. Two modes:
   - Step 4 — cross-check principles, and audit the families for drift
   - Step 5 — apply
   - Step 6 — re-scan, then mark ACTIONED
-  - Step 7 — timestamp
-  - Step 8 — deliver and summarise
+  - Step 7 — deliver and summarise
+  - Step 8 — timestamp
 - Constraints
 - Delivering updated skills
 
@@ -89,13 +88,10 @@ follow-up, and still emit the final report — a blocked step N must never
 cost the report for steps 1 through N-1. None of this covers a run that
 stops before Step 1: a session that goes idle after its first call
 writes no timestamp, stages nothing, emits no summary, and the scheduler
-records it as "succeeded" — its honest answer to the wrong question,
-since a scheduler reports whether it launched the job, never whether the
-job did its work. The review's completion signal is its own artefact,
-the Step 7 timestamp; a scheduler's run status is evidence about the
-scheduler only, and the consumer of a schedule compares the artefact's
-date against the scheduler's last-run date rather than trusting either
-alone.
+records it as "succeeded" — a scheduler reports whether it launched the
+job, never whether the job did its work. The review's completion signal
+is its own artefact, the Step 8 timestamp, which the record gates; Step
+0 compares its date against the scheduler's last run, trusting neither alone.
 
 **Several observation logs on one machine — unify the review at the
 integration point.** First check whether the logs should coexist at all:
@@ -137,7 +133,7 @@ Given the roots:
   decide.
 - **Qualify every id that leaves its log.** Ids are allocated per log,
   so `#5` exists in each of them. Any cross-log reference — approval
-  list, `resolution: "by #N"`, Step 8 summary, manifest entry — carries
+  list, `resolution: "by #N"`, Step 7 summary, manifest entry — carries
   the workspace key alongside the number. **The key is an identifier:** it
   is derived from a path, and the path carries the project's name. When a
   cross-log reference leaves the machine — an upstream report, a shared
@@ -464,7 +460,7 @@ find "$d" -maxdepth 1 -name '*.md' | sed 's|.*/||' | LC_ALL=C sort > "$l"
 ```
 
 Both list files are overwritten by the next review's Steps 1 and 6 and
-need no cleanup at Step 7; a Step 6 run against a list Step 1 failed to
+need no cleanup at Step 8; a Step 6 run against a list Step 1 failed to
 refresh shows as a delta of dozens, not as a quiet pass.
 
 **Duplicate-id check — nothing else in the process looks for one.** The id
@@ -505,7 +501,7 @@ one to a fresh id from the snippet, update its filename and its `id:`
 field together, and note the renumber in its body so a citation of the old
 number can still be traced. Then re-run the check until it prints nothing.
 For each collision, and for the files above a lagging floor, record the
-writing sessions — each file's `session_context` and `date` — in the Step 8
+writing sessions — each file's `session_context` and `date` — in the Step 7
 summary: the pair traces the bypass to an environment or write path, which
 is where the fix goes, while a bare count blames a rule every writer that
 ran the snippet obeyed.
@@ -563,7 +559,7 @@ every review, while the frontmatter is already in hand: (a) re-check each
 `parked_until:` condition against the current state of the world, and where it
 has been met, set the entry back to `status: open`, clear `parked_until:`, and
 carry it into this review's queue; (b) list every still-parked entry in the
-Step 8 summary in ONE LINE each — id, title, unpark condition — so a parked
+Step 7 summary in ONE LINE each — id, title, unpark condition — so a parked
 backlog stays visible without re-entering the work queue. A condition
 phrased on the state of a vehicle — a PR merged or closed, a ticket
 resolved — is re-checked on the result it was meant to deliver, the text
@@ -822,7 +818,7 @@ edited, so a skill that is never staged is never checked again, and the
 validator's own checks tighten between releases. Run
 `scripts/validate-skill-bundle.py` over every category-(a) live skill
 directory — seconds for a whole library — and list the failures in the
-Step 8 summary under Log integrity ("N installed skills fail the
+Step 7 summary under Log integrity ("N installed skills fail the
 validator: …"). A failing skill with no observations in the queue gets a
 one-line staging that fixes only the gate failure (the minimal structural
 change). The failure shape: a gate that runs only on what is about to
@@ -843,7 +839,7 @@ more than one. Key each bucket on the skill's listed name, not the raw
 string: a bare name that matches exactly one installed `plugin:name` joins
 that bucket; a bare name matching several, or a descriptive form, is
 resolved from the body, never by guess; and every normalisation is listed
-under Log integrity in the Step 8 summary. Report there too the count of
+under Log integrity in the Step 7 summary. Report there too the count of
 entries whose `skill:` holds a plugin-qualified name (`plugin:name`) and
 the count in bare form: a log carrying both spellings is the one in which
 a lookup given either spelling silently misses the other. One skill written two ways is
@@ -951,7 +947,7 @@ entries target the same member. Then, before anything is presented:
   the authoring-time sweeps never see it.
 
 Interactive: save the full decision list — grouped by skill, as the
-Approval policy requires — in the review record (Step 8). In chat, show
+Approval policy requires — in the review record (Step 7). In chat, show
 at most three recommended next steps, ordered by impact. For each, state
 **problem → concrete change → verification** in plain language; name
 whether the change belongs in a skill, agent instructions, or tooling.
@@ -1089,7 +1085,7 @@ instance the entry describes. **When running a quoted command, flag or
 predicate shows the suggested form is wrong, apply the form that ran and
 record it:** append "applied form differs from the suggestion: <form>" to
 the entry's `resolution:` (Step 6), and list the entry under "corrected
-on apply" in the summary (Step 8). A trailer key the tool does not take
+on apply" in the summary (Step 7). A trailer key the tool does not take
 (`git commit --trailer "BREAKING CHANGE=…"`, which git writes as free
 text) or a filter flag that does not exist (`gh pr diff` has `--exclude`
 and no include form) is applied in the form that works; left unrecorded,
@@ -1385,7 +1381,7 @@ whether the observation is already addressed there, because a maintainer
 who fixed it differently and better is the common case. The session editing
 a skill is a parallel writer like any other, so this is the write-time
 state check the procedure already requires of shared logs, applied to the
-agent's own tools. Name the revision staged from in the Step 8 summary.
+agent's own tools. Name the revision staged from in the Step 7 summary.
 
 Two things fall out of the same fetch. It settles **section-level
 provenance** — whether the passage being edited is upstream content or a
@@ -1628,7 +1624,7 @@ touched a skill runs in the same window as the sessions most likely to be
 using it, and it is the case where a miss costs most, because the next
 review's base is then a staged copy whose provenance nobody re-derived);
 (b) otherwise → leave it OPEN for the next review and list it under the
-"arrived during this run" line of the Step 8 summary. Never let the delta
+"arrived during this run" line of the Step 7 summary. Never let the delta
 pass silently, and never infer it from an id counter — a monotonic id
 surfacing a number above the scan's maximum is a side effect, not a
 detection mechanism. The check is a line-oriented set difference against
@@ -1677,19 +1673,7 @@ gated on it (files archive only when it's before today), so a dateless mark
 breaks the cross-session grace period. Do NOT archive same-session — the
 next write on a later day archives them.
 
-**Step 7 — timestamp.** Write today's date to
-`skill-observations/last-review-date.txt`, then overwrite
-`skill-observations/review-started.txt` with `completed YYYY-MM-DD`.
-A timestamp write whose outcome is unknown — the call timed out, the
-device bridge disconnected — is the run's to verify, never the user's:
-the Step 8 summary and any notification report it as "unconfirmed —
-verified at the next reachable call or by the next session's start",
-never as a file for the user to check. Verify it with one read of both
-files on the next call that reaches the workspace; where the run ends
-first, Session Start step 3's read of `last-review-date.txt` and
-`review-started.txt` is that verification.
-
-**Step 8 — deliver and summarise.** Stage updated skills (see Delivery
+**Step 7 — deliver and summarise.** Stage updated skills (see Delivery
 below). Save the complete record under
 `[workspace folder]/skill-observations/reviews/[date]/REVIEW.md`, using the
 template below. In chat, report what changed and its verification, followed
@@ -1698,7 +1682,7 @@ for the full accounting. Distinguish proposed, staged and installed changes;
 an observation count alone is not an outcome. Records are kept: no step
 prunes `reviews/`, and old ones are the user's to delete.
 
-Step 8 ends with the line **"N bundles staged, N bundles presented"**, and
+Step 7 ends with the line **"N bundles staged, N bundles presented"**, and
 the run does not finish while the two numbers differ. A second line follows
 it: **"keep-two: N copies pruned, N kept as uninstalled, N pending a
 grant"** — the keep-two prune (Delivery) is a fixed step of every review,
@@ -1769,9 +1753,34 @@ keep-two: [N] copies pruned, [N] kept as uninstalled, [N] pending a grant
 work. **In scheduled autonomous mode, do not wait** — there is no user to
 acknowledge, and this is the step a scheduled run must always reach, since
 it is where the run stages its output and records its summary. Finish after
-staging the updated skills, recording the summary and reconciling the
-staged/presented count. A step that blocks on
-an event that cannot occur turns the run's one deliverable into a hang.
+staging the updated skills, recording the summary, reconciling the
+staged/presented count and writing the Step 8 timestamp. A step that blocks
+on an event that cannot occur turns the run's one deliverable into a hang.
+
+**Step 8 — timestamp.** Bound to the record: written only once Step 7's
+`reviews/[date]/REVIEW.md` exists and is non-empty, by one guarded command
+whose date is the one Step 7 saved the record under — never a fresh
+`date`, so a run crossing midnight does not fail its own guard:
+
+```bash
+d="[DATE]"   # the [date] Step 7 saved the record under
+w="[ABSOLUTE PATH]/skill-observations"; r="$w/reviews/$d/REVIEW.md"
+[ -s "$r" ] || { echo "NO REVIEW RECORD — not timestamping"; exit 1; }
+printf '%s\n' "$d" > "$w/last-review-date.txt"
+printf 'completed %s\n' "$d" > "$w/review-started.txt"
+```
+
+A fired guard is reported as "review [date] left no record" and the date
+file keeps its value; Session Start step 3 reads the same gap when a dated
+`last-review-date.txt` has no `reviews/[date]/` beside it. A timestamp
+write whose outcome is unknown — the call timed out, the device bridge
+disconnected — is the run's to verify, never the user's: the Step 7
+summary and any notification report it as "unconfirmed — verified at the
+next reachable call or by the next session's start", never as a file for
+the user to check. Verify it with one read of both files on the next call
+that reaches the workspace; where the run ends first, Session Start step
+3's read of `last-review-date.txt` and `review-started.txt` is that
+verification.
 
 ## Constraints
 
@@ -1840,7 +1849,7 @@ its file in the staged set — another skill's file is cited as
 cross-reference until the backtick no longer starts with the prefix is
 disguising a reference to satisfy a linter, not fixing a defect; (2) the artefact presented is the
 bundle — bare file links fail this gate — and every staged bundle is
-presented (Step 8's staged/presented count); the number of cards is never
+presented (Step 7's staged/presented count); the number of cards is never
 a reason to present fewer, since one call carries them all and each card
 is an install decision the user makes either way; (3) each staged skill's
 folded frontmatter description is at most 1024 characters (soft warning
@@ -1886,7 +1895,7 @@ bundle's members must equal the staged directory byte for byte — `--pack`
 verifies the round trip and exits non-zero on a mismatch — and any edit
 after that means re-pack and re-check before presenting. Do not edit a skill's files in place — nothing goes live
 until the user installs it. **Keep-two rule** — a fixed Delivery step of
-every review, run after packing and before the Step 8 summary, with the
+every review, run after packing and before the Step 7 summary, with the
 delete grant requested in the same step: for any skill, keep only
 the two most recent staged copies under `skill-updates/` **that have been
 installed** — never prune an uninstalled one. Classify each
@@ -1934,7 +1943,7 @@ in the observation workspace — `cross-cutting-principles.md`,
 `skill-updates/PENDING.md` — have no install step, and other steps of
 this procedure already write them. The review writes them directly: it
 re-reads the file immediately before the write and applies its change as
-a patch to that read, never as a copy prepared earlier. The Step 8
+a patch to that read, never as a copy prepared earlier. The Step 7
 summary lists each such file with its diff. A staged copy or patch of
 one of them left by an earlier round is applied the same way by the next
 review, not carried forward as an install instruction. A file another
@@ -2051,7 +2060,7 @@ observation before the summary is written: created with `status: open`, as the
 file-format rule requires of every new entry, and parked in the same turn —
 `status: parked` plus a named `parked_until:` condition, the same two-field
 edit a review makes on any parked entry. That puts it in the queue the next review
-reads by procedure (Step 1 re-checks every parked condition; Step 8 lists
+reads by procedure (Step 1 re-checks every parked condition; Step 7 lists
 every parked entry), and it survives the reconciliation and the prune that remove
 the manifest entry. In an aggregate run, that parked follow-up is written
 to the log of the workspace whose work it concerns — the one whose next

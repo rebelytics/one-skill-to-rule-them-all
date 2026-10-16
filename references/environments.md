@@ -1368,7 +1368,7 @@ and keep the probe's procedure and failure handling in the skill.
 
 **The second listed action leaves a started marker.** After the probe,
 every scheduled review prompt writes the date and time to
-`skill-observations/review-started.txt`, and the review's Step 7
+`skill-observations/review-started.txt`, and the review's Step 8
 overwrites it with `completed <date>`:
 
 ```bash
@@ -1381,7 +1381,7 @@ it got. At the next session start, a marker that does not read
 than `last-review-date.txt` with the marker untouched is a run that fired
 and never reached its second action — two different defects, and neither
 is a review that happened. The marker is judged by its content, never by
-its mtime: Step 7 writes it after the date file, so a completed run's
+its mtime: Step 8 writes it after the date file, so a completed run's
 marker is always the newer of the two.
 
 **The access grant is part of the task definition, not of the path.** A
