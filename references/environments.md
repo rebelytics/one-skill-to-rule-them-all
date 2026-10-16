@@ -524,8 +524,8 @@ d="$OBS_WORKSPACE/skill-observations"      # the pinned absolute path
 open=$(find "$d/observation-log" -maxdepth 1 -name '*.md' -exec grep -l '^status: open$' {} + 2>/dev/null | wc -l | tr -d ' ')
 last=$(tr -d '\r' 2>/dev/null < "$d/last-review-date.txt"); last=${last:-never}   # a CRLF file must not carry \r into the JSON
 msg="Make the first tool call of this session one batched call that both lists the task-observer workspace ($OBS_WORKSPACE) and invokes the task-observer skill; then run its Session Start Protocol. Observation files are created only by scripts/new-observation.sh in the skill directory, never by copying a header."
+msg="$msg $open open observations in $d; last review: $last."   # always, zero included: a mispinned path reads 0 too
 if [ "$open" -gt 0 ]; then
-  msg="$msg $open open observations; last review: $last."
   cutoff=$(date -d '7 days ago' +%F 2>/dev/null || date -v-7d +%F)   # GNU, then BSD/macOS
   case "$last" in
     (never) msg="$msg Offer the review." ;;
@@ -543,7 +543,11 @@ only says "invoke the skill" leaves the probe to a skill not yet read,
 and a tool whose sessions resolve the root another way (a pin in an
 instruction file only some of its sessions load) keeps writing to its
 own log while the injected count, read from the shared one, looks
-healthy. The path is interpolated into a JSON string, so the last step
+healthy. A count of zero is printed, never suppressed, with the path it
+was read from: the hook is an instrument over the log and gets the same
+guard as every scan, and a message that drops the count at zero makes a
+mispinned workspace and a clean backlog read the same. Only the offer is
+gated on the count. The path is interpolated into a JSON string, so the last step
 escapes the whole message: a Windows path's backslashes and a `"` in a
 folder name otherwise produce output that does not parse, and a hook
 whose output does not parse injects nothing.
@@ -568,16 +572,16 @@ Two details that matter when building one: `grep -c` exits 1
 on zero matches while still printing `0`, so `$(grep -c … || echo 0)`
 yields two values — capture the output and ignore the exit code; and prove
 the reminder branch fires by running the hook against fixtures at `never`,
-30 days stale and 2 days stale, confirming the third stays silent. A nag
+30 days stale, 2 days stale and an empty log, confirming the third stays
+silent and the fourth still prints "0 open observations in <path>". A nag
 that never fires and a nag that is correctly silent look identical from a
 passing run.
 
 ### A stop hook — the per-task backstop as a harness event
 
-The per-task backstop in the activation block is prose in the same file as
-the rule it guards, so it fails together with it: a session that skipped
-the protocol skipped the backstop at every task boundary too. Where the
-harness has a stop event, run the check there instead: *has this session
+The per-task backstop fails with the block it lives in (above): a session
+that skipped the protocol skipped the backstop at every task boundary too.
+Where the harness has a stop event, run the check there instead: *has this session
 used tools, and has anything under `observation-log/` or `checkpoints.log`
 been written since it started?* If not, block the stop once per session
 with a one-line instruction; stay silent for conversation, for a session
