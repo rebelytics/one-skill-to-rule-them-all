@@ -547,10 +547,11 @@ def main():
     # lines above answer the first; a field the legacy format never defined
     # is exactly the one they cannot report on. Enumerate the target's own
     # mandatory fields, not the mapping table in migration.md.
-    headers = [render(r).split("\n---", 1)[0] for r in records]
     print("\ntarget conformance (mandatory frontmatter, converted set):")
     for field in MANDATORY_TARGET_FIELDS:
-        have = sum(1 for h in headers if f"\n{field}:" in h)
+        # Count the renderer's field-presence conditions without rendering
+        # each full body just to inspect its frontmatter.
+        have = sum(1 for r in records if field == "status" or r.get(field))
         note = ""
         if field == "siblings_checked" and have < len(records):
             note = " — the first review's sibling backfill populates this; nothing else will"
