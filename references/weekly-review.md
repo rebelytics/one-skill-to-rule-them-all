@@ -560,14 +560,18 @@ find "$d" "$d/archive" -maxdepth 1 -name '[0-9]*.md' | sed 's|.*/||' | grep -oE 
 suspect count catches YAML that will not parse; it cannot see a header
 that parses and is still wrong: an `id` that disagrees with the filename
 prefix, a `status` outside the five values, a missing or blank
-`siblings_checked`, or a near-miss field name (`skills:`,
+`siblings_checked`, a near-miss field name (`skills:`,
 `proposed_skill:`, `sibling_checked:`) that every consumer silently
-ignores. Run it after the duplicate-id check, over the active directory:
+ignores, or a `use_evidence:` item whose context holds `: ` — a parser
+reads that item as a one-key mapping, the scan's suspect rules read only
+line-start keys, and the editing-tool fallback does not refuse it as the
+append command does. Run it after the duplicate-id check, over the
+active directory:
 
 ```bash
 d="[ABSOLUTE PATH]/skill-observations/observation-log"
 nonconf=$(LC_ALL=C find "$d" -maxdepth 1 -name '*.md' -exec awk '
-  FNR==1 { sub(/^\357\273\277/, ""); fm=0; bad=""; idv=""; st=""; sc=""; f=FILENAME; sub(/.*\//,"",f); pre=(match(f,/^[0-9]+/) ? substr(f,1,RLENGTH)+0 : -1) }
+  FNR==1 { sub(/^\357\273\277/, ""); fm=0; bad=""; idv=""; st=""; sc=""; ue=0; f=FILENAME; sub(/.*\//,"",f); pre=(match(f,/^[0-9]+/) ? substr(f,1,RLENGTH)+0 : -1) }
   FNR==1 && /^---[[:space:]]*$/ { fm=1; next }
   fm && /^---[[:space:]]*$/ { fm=0
     if (idv !~ /^0*[1-9][0-9]*$/ || idv+0 != pre) bad=bad " id"
@@ -578,9 +582,12 @@ nonconf=$(LC_ALL=C find "$d" -maxdepth 1 -name '*.md' -exec awk '
   fm && /^status:/ { st=$2 }
   fm && /^siblings_checked:/ { sc=$0; sub(/^siblings_checked:[[:space:]]*/, "", sc) }
   fm && /^(skills|proposed_skill|proposed_skills|proposes_skills|sibling_checked|siblings_check|target_files|skill_qualifier):/ { bad=bad " near-miss:" $1 }
+  fm && /^use_evidence:/ { ue=1; next }
+  fm && ue && /^[[:space:]]+-[[:space:]]/ { if ($0 ~ /^[[:space:]]+-[[:space:]]+[^"\047].*: /) bad=bad " use_evidence-colon"; next }
+  fm && /^[a-z_]+:/ { ue=0 }
 ' {} +)
 n_nc=$(printf '%s' "$nonconf" | grep -c .)
-if [ "$n_nc" -gt 0 ]; then printf 'NOTE: %s non-conforming headers (id / status / siblings_checked / near-miss field):\n%s\n' "$n_nc" "$nonconf"; fi
+if [ "$n_nc" -gt 0 ]; then printf 'NOTE: %s non-conforming headers (id / status / siblings_checked / near-miss field / use_evidence item holding ": "):\n%s\n' "$n_nc" "$nonconf"; fi
 ```
 
 It reports; it does not block the review. Its false-positive rate on a
@@ -860,6 +867,12 @@ frontmatter, the date, and one `sha256  <file>` line per script. Verify by
 re-hashing `.bin/` against the manifest before the summary names it. The
 manifest is the contract sessions check; a `.bin/` without one is not
 used, and a stale one fails its own digest check in every bridged session.
+The digest a session compares is always the INSTALLED script's, hashed
+where the skill is installed, never `.bin/`'s own against the manifest
+written from it; `scripts/bin-check.sh`, refreshed into `.bin/` with the
+rest, is the command that makes the comparison and refuses to run a
+mismatched copy (`references/environments.md`, "Where the scripts are not
+on the device").
 
 Also read all active cross-cutting principles. If there are no OPEN
 observations and no outstanding principles: report "no open observations
@@ -1648,7 +1661,13 @@ because two writers watching one task from two vantages log one finding
 twice, and merging two entries about one fact is not the renumbering the
 duplicate-id check performs (Cross-slice duplicates, below). Reserve
 status marking, archival and observation writes for the parent
-session. The pre-dispatch order is fixed: inbox drain → live-set
+session. Every brief also states the ceiling policy for the round: the
+ceiling is declared at the count after every pass, with both numbers
+reported where a trim preceded the additions; at slack 0 a reasoned
+raise beats rewrites touching more than a handful of paragraphs; and
+every compression that paid for an addition is listed in the report as a
+payment hunk (`references/skill-authoring.md`, "Reference-file ceilings —
+the growth barrier"). The pre-dispatch order is fixed: inbox drain → live-set
 validator → work queue → briefs → seed → stage bodies → dispatch. The seed
 list is derived from the FINAL cluster briefs, and before dispatching the
 parent asserts that every skill named in any brief has a seeded anchor

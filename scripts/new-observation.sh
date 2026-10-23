@@ -233,11 +233,15 @@ fi
 # with its id from the first instant it exists. An empty file in the log is
 # a LOST entry by definition (the scan says so), and a create that leaves
 # one is a LOST entry for as long as the caller takes to write the body.
-# The field list mirrors the core template (How to Log); `title:` is left
-# empty on purpose — the scan reports a header with an empty title as
-# UNFILLED, a write in progress or abandoned, distinct from LOST.
+# The field list mirrors the core template (How to Log) in its order, the
+# optional and conditional fields included (commands_verified, next_actor,
+# use_evidence): a copy that claims to mirror a template drifts the moment
+# the template gains a field, so the selftest asserts each field is here.
+# `title:` is left empty on purpose — the scan reports a header with an
+# empty title as UNFILLED, a write in progress or abandoned, distinct from
+# LOST.
 f="$d/${prefix}-${slug}.md"
-skel=$(printf '%s\nid: %s\ntitle: ""\nstatus: open\ntype:\nskill: []\nproposes_skill: []\ntarget_file: []\nsiblings_checked: ""\narea: ""\ndate: %s\nsession_context: ""\nparked_until:\nresolved:\nresolution:\nreference:\n---' --- "$next_id" "$today")   # the format opens with %s: a leading --- reads as an option
+skel=$(printf '%s\nid: %s\ntitle: ""\nstatus: open\ntype:\nskill: []\nproposes_skill: []\ntarget_file: []\nsiblings_checked: ""\narea: ""\ndate: %s\nsession_context: ""\nparked_until:\nresolved:\nresolution:\nreference:\ncommands_verified:\nnext_actor:\nuse_evidence:\n---' --- "$next_id" "$today")   # the format opens with %s: a leading --- reads as an option
 if ! (set -C; printf '%s\n' "$skel" > "$f") 2>/dev/null; then
   echo "CREATE FAILED — $f exists or is unwritable" >&2; exit 1
 fi

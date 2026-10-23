@@ -20,12 +20,18 @@
 # skill-observations/MOVED.md exists; a GAP line when the previous scan in
 # checkpoints.log is 7 or more days old; the logs found under the root's
 # parent; the active principles' headings; then the frontmatter of every
-# numbered entry, each header followed by one `---` line; and LAST one
-# `end of scan` line repeating the counts and how many finding lines
-# (NOTE / LOST ENTRIES / UNFILLED / SPLIT STORE / GAP) stand above the entries. The findings open the
-# output and the summary closes it, so a view cut by `head` keeps the
-# findings and one cut by `tail` keeps the summary and its finding count;
-# neither replaces reading the output whole, which the summary line says.
+# numbered entry, each header followed by one `---` line; then the summary
+# block: every finding line (NOTE / LOST ENTRIES / UNFILLED / SPLIT STORE /
+# GAP) repeated VERBATIM, and LAST one `end of scan` line repeating the
+# counts and how many finding lines stand above the entries. The findings
+# open the output and close it, so a view cut by `head` keeps them and one
+# cut by `tail` keeps them with the summary; the same lines are written to
+# skill-observations/last-scan-findings.txt (overwritten each run, empty
+# when there are none), which the end line names, so a run whose output was
+# cut anyway still has them on disk. Three places, because an instruction
+# not to cut the output was broken while it was in context: the barrier is
+# the output's shape, not the reader. None of it replaces reading the output
+# whole, which the end line says.
 # Appends one line to skill-observations/checkpoints.log:
 #   YYYY-MM-DD HH:MM [<cwd's last segment>] session-start scan: files=N parsed=N principles=N
 #
@@ -33,6 +39,8 @@
 #   0  the scan ran (NOTE lines are findings, not failures)
 #   1  SCAN COMMAND BROKEN — numbered files exist but no header parsed; the
 #      scan halts there, before the checkpoint line and the content print
+#      (the sidecar file holds that one line, so no earlier run's findings
+#      survive the halt)
 #   2  refused: no workspace root, or a root that is not an absolute path
 #   any other non-zero status is the content print's own (the counts and the
 #   checkpoint line above it already ran, and the end-of-scan line names the
@@ -128,18 +136,24 @@ a_sus=0; [ -d "$d/archive" ] && a_sus=$(LC_ALL=C find "$d/archive" -maxdepth 1 -
 p="$root/skill-observations/cross-cutting-principles.md"
 pa='/^(\140\140\140|~~~)/ {f=!f} f {next} /^## Active Principles/ {a=1; h=1; next} a && /^## / {a=0}'
 pr=absent; [ -f "$p" ] && pr=$(awk "$pa"' a && /^### / {n++} END {print (h ? n+0 : "unparsed")}' "$p")
-# fx counts the finding lines (NOTE / LOST ENTRIES / UNFILLED / SPLIT STORE / GAP) printed above the
-# entries, for the end-of-scan line.
-fx=0
-[ "$pr" = unparsed ] && { echo "NOTE: the principles file has no '## Active Principles' heading — 'could not parse', not 'no principles'; read it directly"; fx=$((fx + 1)); }
+# finding prints one finding line (NOTE / LOST ENTRIES / UNFILLED / SPLIT
+# STORE / GAP) above the entries, keeps it for the summary block and the
+# sidecar file, and counts it (fx) for the end-of-scan line. Every finding
+# goes through it, so the three copies cannot differ.
+fx=0; findings=
+sidecar="$root/skill-observations/last-scan-findings.txt"
+finding() { printf '%s\n' "$1"; findings="$findings$1"$'\n'; fx=$((fx + 1)); }
+[ "$pr" = unparsed ] && finding "NOTE: the principles file has no '## Active Principles' heading — 'could not parse', not 'no principles'; read it directly"
 
 # --- the guard: files present and nothing parsed is a broken command ----------
-if [ "$n" -gt 0 ] && [ "$parsed" -eq 0 ]; then echo "SCAN COMMAND BROKEN — $n files present, 0 headers parsed"; exit 1; fi
+# The sidecar takes the guard line too: a stale finding file from the previous
+# run must not survive a run that halted.
+if [ "$n" -gt 0 ] && [ "$parsed" -eq 0 ]; then echo "SCAN COMMAND BROKEN — $n files present, 0 headers parsed" | tee "$sidecar"; exit 1; fi
 
 # --- findings ----------------------------------------------------------------
 # Lost entries: a zero-byte numbered file, or one with no opening `---`.
 lost=$( { find "$d" -maxdepth 1 -name '[0-9]*.md' -empty; LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' ! -empty -exec awk 'FNR==1 {sub(/^\357\273\277/, ""); if (!/^---[[:space:]]*$/) print FILENAME; nextfile}' {} +; } | sed 's|.*/||' | LC_ALL=C sort | tr '\n' ' ')
-[ -n "$lost" ] && { echo "LOST ENTRIES — no header, an interrupted write; report each, never reuse or delete: $lost"; fx=$((fx + 1)); }
+[ -n "$lost" ] && finding "LOST ENTRIES — no header, an interrupted write; report each, never reuse or delete: $lost"
 # Unfilled and mismatched headers, from one awk over the parsed headers:
 # U <file> for a header whose title: is empty — the skeleton the helper
 # writes at create time, so a write in progress or abandoned, distinct from
@@ -152,12 +166,16 @@ hd=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {sub(/^\
   fm && /^title:/ {v=$0; sub(/^title:[[:space:]]*/, "", v); sub(/[[:space:]]+$/, "", v); ti=(v == "" || v == "\"\"" || v == "\047\047")}
   fm && /^id:/ {idv=$2; gsub(/["\047\r]/, "", idv)}' {} +)
 unfilled=$(printf '%s\n' "$hd" | sed -n 's/^U //p' | LC_ALL=C sort | tr '\n' ' ')
-[ -n "$unfilled" ] && { echo "UNFILLED — a header with an empty title: the helper's skeleton, a write in progress or abandoned; it holds its id, so fill it or decline it, never reuse or delete: $unfilled"; fx=$((fx + 1)); }
+[ -n "$unfilled" ] && finding "UNFILLED — a header with an empty title: the helper's skeleton, a write in progress or abandoned; it holds its id, so fill it or decline it, never reuse or delete: $unfilled"
 idmis=$(printf '%s\n' "$hd" | sed -n 's/^I \(.*\) \(.*\)$/\1 (id: \2)/p' | LC_ALL=C sort | tr '\n' ' ')
-[ -n "$idmis" ] && { echo "NOTE: id: does not read as the filename prefix — another entry's id retyped, or a body written into the wrong file; fix the field, never the filename, after reading the body: $idmis"; fx=$((fx + 1)); }
-# Headers that did not parse, by name: no opening, or no closing `---`.
-[ "$parsed" -lt "$n" ] && { echo "NOTE: $((n - parsed)) of $n headers did not parse (no opening or no closing ---):"; fx=$((fx + 1)); } && LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {if (NR>1 && fm) print f; f=FILENAME; sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) {print f; nextfile}; next} fm && /^---[[:space:]]*$/ {fm=0; nextfile} END {if (fm) print f}' {} +
-[ "$suspect" -gt 0 ] || [ "$a_sus" -gt 0 ] && { echo "NOTE: $suspect of $n headers (and $a_sus in archive/) look like invalid YAML (an unquoted ': ', text after a closing quote, a value opening with a backtick, @ or %, an undefined escape, a colon in an unquoted list entry) — quote or fix them (File format)"; fx=$((fx + 1)); }
+[ -n "$idmis" ] && finding "NOTE: id: does not read as the filename prefix — another entry's id retyped, or a body written into the wrong file; fix the field, never the filename, after reading the body: $idmis"
+# Headers that did not parse, by name: no opening, or no closing `---`. The
+# names ride on the finding line itself, so the repeat and the sidecar carry them.
+if [ "$parsed" -lt "$n" ]; then
+  unparsed=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {if (NR>1 && fm) print f; f=FILENAME; sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) {print f; nextfile}; next} fm && /^---[[:space:]]*$/ {fm=0; nextfile} END {if (fm) print f}' {} + | sed 's|.*/||' | LC_ALL=C sort | tr '\n' ' ')
+  finding "NOTE: $((n - parsed)) of $n headers did not parse (no opening or no closing ---): $unparsed"
+fi
+[ "$suspect" -gt 0 ] || [ "$a_sus" -gt 0 ] && finding "NOTE: $suspect of $n headers (and $a_sus in archive/) look like invalid YAML (an unquoted ': ', text after a closing quote, a value opening with a backtick, @ or %, an undefined escape, a colon in an unquoted list entry) — quote or fix them (File format)"
 printf 'files: %s  parsed: %s  suspect (awk, a floor): %s  archive-suspect: %s\n' "$n" "$parsed" "$suspect" "$a_sus"
 
 # --- split store: a pre-3.0 log.md beside the directory -----------------------
@@ -167,8 +185,7 @@ printf 'files: %s  parsed: %s  suspect (awk, a floor): %s  archive-suspect: %s\n
 # Report it with its entry count; the creation command refuses on it too.
 lg="$root/skill-observations/log.md"
 if [ -e "$lg" ]; then
-  echo "SPLIT STORE — log.md holds $(grep -c '^### Observation ' "$lg" | tr -d ' ') observations not in observation-log/: an older installed copy of the skill still writes the legacy file; name each copy's version, then migrate the remainder (references/migration.md) with ids re-issued from this directory's counter"
-  fx=$((fx + 1))
+  finding "SPLIT STORE — log.md holds $(grep -c '^### Observation ' "$lg" | tr -d ' ') observations not in observation-log/: an older installed copy of the skill still writes the legacy file; name each copy's version, then migrate the remainder (references/migration.md) with ids re-issued from this directory's counter"
 fi
 
 # --- pointer: skill-observations/MOVED.md marks a root as abandoned ------------
@@ -180,8 +197,7 @@ mv_ptr="$root/skill-observations/MOVED.md"
 if [ -f "$mv_ptr" ]; then
   mv_line=$(head -n 1 "$mv_ptr" | tr -d '\r' | cut -c 1-200)
   mv_after=$(find "$d" -maxdepth 1 -name '[0-9]*.md' -newer "$mv_ptr" 2>/dev/null | wc -l | tr -d ' ')
-  echo "NOTE: pointer at this root (skill-observations/MOVED.md): \"$mv_line\" — $mv_after entries written here since it; report both roots and ask, never consolidate or re-anchor on it"
-  fx=$((fx + 1))
+  finding "NOTE: pointer at this root (skill-observations/MOVED.md): \"$mv_line\" — $mv_after entries written here since it; report both roots and ask, never consolidate or re-anchor on it"
 fi
 
 # --- gap: days since the previous session-start scan --------------------------
@@ -198,7 +214,7 @@ gap=$( [ -f "$ck" ] && LC_ALL=C awk -v today="$(date +%F)" '
     return 365 * y + int(y / 4) - int(y / 100) + int(y / 400) + int((153 * (m - 3) + 2) / 5) + d }
   / session-start scan:/ && /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/ { last = substr($ 0, 1, 10) }
   END { if (last != "") { g = dn(today) - dn(last); if (g >= 7) print last " " g } }' "$ck")
-[ -n "$gap" ] && { echo "GAP: the previous session-start scan ran ${gap% *}, ${gap#* } days ago. If work happened in between, the skill was not activated in those sessions: check the activation instruction (references/environments.md, \"Verify activation in a NEW session\")"; fx=$((fx + 1)); }
+[ -n "$gap" ] && finding "GAP: the previous session-start scan ran ${gap% *}, ${gap#* } days ago. If work happened in between, the skill was not activated in those sessions: check the activation instruction (references/environments.md, \"Verify activation in a NEW session\")"
 
 # --- the trace: one line per session, with date, time and source -------------
 printf '%s [%s] session-start scan: files=%s parsed=%s principles=%s\n' "$(date '+%F %H:%M')" "${PWD##*/}" "$n" "$parsed" "$pr" \
@@ -222,11 +238,18 @@ find "$(dirname "$root")" -maxdepth 3 -type d -path '*/skill-observations/observ
     END {if (fm) print "---"}' [0-9]*.md; } )
 rc=$?
 
-# --- LAST: the end-of-scan line ----------------------------------------------
-# Repeats the counts and says how many finding lines stand above the entries,
-# so output cut to its last lines still shows that there were findings to
-# read; it is a pointer to the whole output, never its replacement.
+# --- LAST: the summary block — the findings again, then the end-of-scan line -
+# The finding lines are repeated here VERBATIM, after the entries, and written
+# to the sidecar file (overwritten every run; empty when there are none): a
+# view cut to its last lines, or a grep over the end, still carries every
+# finding, and a run that cut the output anyway finds them on disk. The end
+# line repeats the counts, says how many finding lines stand above the
+# entries, and names the sidecar; it is a pointer to the whole output, never
+# its replacement.
+sc="$sidecar"
+printf '%s' "$findings" > "$sidecar" 2>/dev/null || sc="$sidecar (write failed)"
+printf '%s' "$findings"
 st=; [ "$rc" -eq 0 ] || st="; content print exited $rc"
-printf 'end of scan — files: %s  parsed: %s  suspect: %s  archive-suspect: %s  principles: %s; finding lines above the entries (NOTE / LOST ENTRIES / UNFILLED / SPLIT STORE / GAP): %s%s. Read the output whole: never cut it with head, tail or grep\n' \
-  "$n" "$parsed" "$suspect" "$a_sus" "$pr" "$fx" "$st"
+printf 'end of scan — files: %s  parsed: %s  suspect: %s  archive-suspect: %s  principles: %s; finding lines above the entries (NOTE / LOST ENTRIES / UNFILLED / SPLIT STORE / GAP): %s, repeated just above this line and written to %s%s. Read the output whole: never cut it with head, tail or grep\n' \
+  "$n" "$parsed" "$suspect" "$a_sus" "$pr" "$fx" "$sc" "$st"
 exit "$rc"

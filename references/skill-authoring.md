@@ -144,6 +144,9 @@ the fix is to lower `core_max_lines` (or `.core-ceiling`) to the current
 count in the same commit as the trim — a check that only blocks growth
 leaves each trim as open headroom that the next ordinary additions spend
 without anyone deciding to. Every run reports `core N / ceiling M / slack S`.
+The count is the installed form's: a block-scalar `description: >` or `|`
+counts as the one quoted line the installer rewrites it to, so a ceiling
+declared at the staged count holds on the installed copy.
 
 A skill that declares neither has not opted in. The count and the distance to
 the 500-line target are still reported; nothing is gated. That is deliberate. **A tool one skill ships for the whole library must not carry
@@ -1070,6 +1073,13 @@ but only with a two-tier check:
    copies) and strip the `\r` from each `$line` before grepping; a
    verification whose only difference is the line terminator has found
    nothing.
+6. **For a whole-section move, add the contiguous-run tier.** Each source
+   section — heading to next heading — must match as one unbroken
+   sequence of lines in exactly one destination file. The line tier
+   counts lines as a multiset, so a line present twice in the source and
+   once in the output passes it, and a section cut in the middle passes
+   it too; a run check sees both, and sees a section landed in two files.
+   Run it beside tier 2, never instead of it.
 
 **Cross-reference-dense monoliths: keep section numbers global, add a
 map.** When the document being split is dense with internal

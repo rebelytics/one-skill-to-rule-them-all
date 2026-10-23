@@ -1405,9 +1405,18 @@ installed skill tree, scripts included, can exist only in the cloud
 container while the log lives on the device. First look for the review's
 copy at `skill-observations/.bin/`: its `MANIFEST` records the installed
 `version:` and a sha256 per script, refreshed by every review that confirms
-an install (`weekly-review.md`, Step 1 gate). Hash the installed scripts on
-your side and run the `.bin/` copy only when every digest matches the
-manifest. Absent or mismatched, look for another copy in the workspace — a
+an install (`weekly-review.md`, Step 1 gate). The digest that decides is
+the INSTALLED script's, hashed in the container — never `.bin/`'s own:
+the manifest was written from that copy, so hashing `.bin/` against it is
+a tautology that passes a stale cache under a newer install. The check is
+one command, so the wrong operand cannot be chosen: hash the installed
+scripts in the container (`sha256sum "<skill directory>"/scripts/*.sh
+"<skill directory>"/scripts/*.py`), pass that output to the device as a
+file, and run every `.bin/` script through
+`bash "<root>/skill-observations/.bin/bin-check.sh" "<root>" <digests-file> <script> [args]`,
+which compares each `.bin/` file with the installed digests and refuses to
+run on any difference (exit 3). Absent or mismatched, look for another
+copy in the workspace — a
 staged copy under `skill-updates/*/task-observer/scripts/` — and compare its
 digest (`md5sum` or `sha256sum`, run on both sides) with the installed
 scripts BEFORE running it, and run it only on a match: a staged copy can

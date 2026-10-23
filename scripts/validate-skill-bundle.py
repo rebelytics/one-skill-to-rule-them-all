@@ -405,15 +405,49 @@ def read_core_ceiling(skill_md):
     return None
 
 
+def installed_line_count(text):
+    """Lines of a SKILL.md as the INSTALLER will see it.
+
+    The installer rewrites a block-scalar `description: >` / `|` as one
+    double-quoted line, so a core staged with a ten-line description loses
+    nine lines on install: measured on the staged file, the ratchet passed at
+    staging and failed the installed copy at the next live-set pass, with a
+    fix (lower the ceiling) that would fail the staged form. So the key line
+    is counted and its continuation lines are not. Only `description` is
+    folded this way; every other line counts as `wc -l` counts it.
+    """
+    n = len(text.splitlines())
+    fm = frontmatter(text)
+    if fm:
+        m = re.search(r"(?ms)^description:[ \t]*[>|][-+]?\d?[ \t]*\n(.*?)(?=^\S|\Z)", fm)
+        if m:
+            n -= len(m.group(1).splitlines())
+    return n
+
+
+# (name, SKILL.md text, lines fewer than `wc -l` the installed count must be)
+_FOLDED_DESC = "---\nname: x\ndescription: >\n" + "".join(f"  line {i}\n" for i in range(9)) + "---\nbody\n"
+CORE_COUNT_FIXTURES = [
+    ("a 10-line folded description counts as one line (9 fewer)", _FOLDED_DESC, 9),
+    ("a literal | description folds the same way", _FOLDED_DESC.replace("description: >", "description: |"), 9),
+    ("a one-line quoted description counts as wc -l does",
+     '---\nname: x\ndescription: "d"\n---\nbody\n', 0),
+    ("a folded block in the BODY is not a description: nothing folded",
+     "---\nname: x\n---\ndescription: >\n  not frontmatter\n", 0),
+]
+
+
 def check_core_size(skill_md, fails):
     """The ratchet, against the skill's OWN declared ceiling.
 
     Counted with splitlines() so the number matches `wc -l` on a
     newline-terminated file. Counting newlines and adding one reports 755 for
     a 754-line file, which is a one-line phantom in a check whose whole job is
-    to compare a count to a bound.
+    to compare a count to a bound. A folded description counts as the one
+    line the installer writes (`installed_line_count`).
     """
-    lines = len(skill_md.read_text(encoding="utf-8").splitlines())
+    text = skill_md.read_text(encoding="utf-8")
+    raw, lines = len(text.splitlines()), installed_line_count(text)
     over_target = lines - TARGET_CORE_LINES
     target_note = (f" ({over_target} over the {TARGET_CORE_LINES}-line target)"
                    if over_target > 0 else "")
@@ -421,6 +455,9 @@ def check_core_size(skill_md, fails):
     if ceiling is None:
         print(f"core {lines} / ceiling none / slack n/a — not gated{target_note}")
         return
+    if raw != lines:
+        print(f"note: core counted as the installer writes it: {raw} staged lines, "
+              f"the folded description counts as one")
     slack = ceiling - lines
     print(f"core {lines} / ceiling {ceiling} / slack {slack}{target_note}")
     if lines > ceiling:
@@ -500,19 +537,22 @@ def _entry_covers(entry, anchor):
     return entry == anchor or entry.startswith(anchor + " ") or entry.startswith(anchor + "(")
 
 
-def index_misses(body):
+def index_misses(body, depth=3):
     """Headings below a file's `## Contents` index that the index lacks.
 
     Every `##`/`###` heading after the index, numbered `### N.` entries
     included, must have its line (`_index_entries` says where the index
-    ends and how an entry is read).
+    ends and how an entry is read). `depth=4` reads `####` headings too:
+    measured over the installed library before it was added, that depth
+    newly failed one skill, so the gate stays at 3 and a `####` miss is
+    printed as a note (check_reference_indexes).
     """
     m, groups = _index_entries(body)
     if not m:
         return []
     entries = [e for g in groups for e in g]
     missing = []
-    for h in re.findall(r"(?m)^#{2,3}\s+(.+?)\s*$", body[m.end():]):
+    for h in re.findall(r"(?m)^#{2,%d}\s+(.+?)\s*$" % depth, body[m.end():]):
         hn = _norm(h)
         if not any(_entry_covers(e, hn) for e in entries):
             missing.append(h)
@@ -563,6 +603,17 @@ INDEX_FIXTURES = [
      "# R\n\n## Contents\n\n1. Alpha\n2) Beta two\n\n## Alpha\n\n## Beta two\n\n## Gamma\n", ["Gamma"]),
     ("a preamble paragraph ends the entries; a list inside it is not the index",
      "# R\n\n## Contents\n\n- Alpha\n\nPreamble prose.\n\n- Not an entry\n\n## Alpha\n\n## Beta\n", ["Beta"]),
+    ("a #### heading missing from the index is not a miss at the gate's depth",
+     "# R\n\n## Contents\n\n- Alpha\n\n## Alpha\n\n#### Deep\n", []),
+]
+
+# (name, reference-file text, headings index_misses(depth=4) must report
+# that the gate's depth does not): the `####` note, never a failure.
+DEEP_INDEX_FIXTURES = [
+    ("a #### heading missing from the index is reported at depth 4",
+     "# R\n\n## Contents\n\n- Alpha\n\n## Alpha\n\n#### Deep\n", ["Deep"]),
+    ("a #### heading the index names is not reported",
+     "# R\n\n## Contents\n\n- Alpha\n- Deep\n\n## Alpha\n\n#### Deep\n", []),
 ]
 
 # (name, reference-file text, entries index_orphans must report): the
@@ -617,8 +668,13 @@ def check_reference_indexes(skill_dir, fails):
         return
     for p in sorted(refs.glob("*.md")):
         text = defence(p.read_text(encoding="utf-8"))
-        for h in index_misses(text):
+        shallow = index_misses(text)
+        for h in shallow:
             fails.append(f"{p.name}: heading not in its own Contents index: {h!r}")
+        for h in index_misses(text, 4):
+            if h not in shallow:
+                print(f"note: {p.name}: #### heading not in its own Contents index: {h!r} "
+                      f"— reported, not gated")
         for e in index_orphans(text):
             fails.append(f"{p.name}: index entry without a heading: {e!r}")
 
@@ -678,7 +734,21 @@ def check_reference_indexes(skill_dir, fails):
 # as a cross-check that a declaration has not fallen behind the core.
 REF_CEILINGS_FILE = "ceilings.txt"
 SPLIT_TRIGGER_THRESHOLD = 12
-LOAD_TRIGGERS_RE = re.compile(r"(?m)^Load triggers:[ \t]*(.*?)[ \t]*$")
+# The plain line, or the bold prose form a header already written as a
+# sentence carries (`**Load trigger:** …`, `**Load triggers:** …`): matching
+# the plain form only made a file that declared its episodes in prose fail
+# the gate until a second, mechanical line was added beside the first.
+LOAD_TRIGGERS_RE = re.compile(r"(?m)^(?:\*\*)?Load triggers?:(?:\*\*)?[ \t]*(.*?)[ \t]*$")
+
+# (name, reference-file text, entries declared_load_triggers must return)
+LOAD_TRIGGER_FIXTURES = [
+    ("the plain line", "# A\n\nLoad triggers: one; two\n\n## S\n", ["one", "two"]),
+    ("the bold prose form, plural", "# A\n\n**Load triggers:** one; two\n\n## S\n", ["one", "two"]),
+    ("the bold prose form, singular", "# A\n\n**Load trigger:** one\n\n## S\n", ["one"]),
+    ("a duplicate entry counts once, case apart", "# A\n\nLoad triggers: One; one; two\n\n## S\n", ["One", "two"]),
+    ("a line after the first ## heading is not a declaration", "# A\n\n## S\n\nLoad triggers: one\n", None),
+    ("no line at all", "# A\n\n## S\n", None),
+]
 REF_CEILING_LINE_RE = re.compile(
     r"^(?P<file>[^\s/]+\.md)[ \t]+(?P<ceiling>\d+)"
     r"(?:[ \t]+(?P<date>\d{4}-\d{2}-\d{2})[ \t]+(?P<reason>\S.*?))?[ \t]*$")
@@ -875,6 +945,25 @@ def check_plugin_manifest(skill_dir, fails):
             "validates it there.")
 
 
+def check_cited_path(skill_dir, rel, where, fails):
+    """One cited bundled path exists in the staged set (a `<slot>` segment
+    is matched as a glob); `where` names the citing file when it is not
+    SKILL.md. The message keeps its `cited path` prefix for every caller."""
+    if SLOT_SEG_RE.search(rel):
+        pat = SLOT_SEG_RE.sub("*", rel)
+        if not any(q.is_file() for q in skill_dir.glob(pat)):
+            fails.append(f"cited path pattern has no staged instance: {rel}{where} "
+                         f"(no file matches {pat})")
+        return
+    if not (skill_dir / rel).is_file():
+        fails.append(
+            f"cited path missing from staged set: {rel}{where} "
+            f"— if this file belongs to another skill, cite it as "
+            f"`<skill-name>/{rel}`; if it is a file in the repository the "
+            f"skill operates on, cite it as `./{rel}`; both forms are "
+            f"exempt from this check")
+
+
 def check_dir(skill_dir, fails):
     # Resolve before comparing names: Path('.').name is '' for a relative
     # argument naming the current directory, which false-fails a correct
@@ -964,19 +1053,14 @@ def check_dir(skill_dir, fails):
     # The failure message names both conventions, because a false FAIL here is
     # otherwise indistinguishable from a genuinely missing file.
     for rel in sorted(set(PATH_RE.findall(text)) | command_paths(text)):
-        if SLOT_SEG_RE.search(rel):
-            pat = SLOT_SEG_RE.sub("*", rel)
-            if not any(q.is_file() for q in skill_dir.glob(pat)):
-                fails.append(f"cited path pattern has no staged instance: {rel} "
-                             f"(no file matches {pat})")
-            continue
-        if not (skill_dir / rel).is_file():
-            fails.append(
-                f"cited path missing from staged set: {rel} "
-                f"— if this file belongs to another skill, cite it as "
-                f"`<skill-name>/{rel}`; if it is a file in the repository the "
-                f"skill operates on, cite it as `./{rel}`; both forms are "
-                f"exempt from this check")
+        check_cited_path(skill_dir, rel, "", fails)
+    # A reference file's fenced command names a script too (`python3
+    # scripts/x.py` in a recipe), and only SKILL.md was read: measured over
+    # the installed library, every such path existed, so this is a gate.
+    refs = skill_dir / "references"
+    for p in sorted(refs.glob("*.md")) if refs.is_dir() else []:
+        for rel in sorted(command_paths(p.read_text(encoding="utf-8"))):
+            check_cited_path(skill_dir, rel, f" (in references/{p.name})", fails)
     # exactly one frontmatter block: a second `---` block (or stray
     # name:/description: lines) directly after the first is a duplicated
     # header that every field check passes by construction
@@ -1231,6 +1315,18 @@ CITED_PATH_FIXTURES = [
     ("a `{slot}` naming pattern with no staged instance fails, naming the glob",
      "One file per study: `references/studies/{study}.md`.\n",
      "cited path pattern has no staged instance: references/studies/{study}.md (no file matches references/studies/*.md)"),
+    # a staged entry given as (path, text) stages that text: a reference
+    # file's fenced command is read for bundled paths like SKILL.md's
+    ("a fenced command in a reference file naming a missing script fails, naming the file",
+     "Recipes: `references/how.md`.\n",
+     "cited path missing from staged set: scripts/run.py (in references/how.md)",
+     [("references/how.md", "# How\n\n```bash\npython3 scripts/run.py --all\n```\n")]),
+    ("the same command with its script staged passes",
+     "Recipes: `references/how.md`.\n", None,
+     [("references/how.md", "# How\n\n```bash\npython3 scripts/run.py --all\n```\n"), "scripts/run.py"]),
+    ("a bare path quoted in a reference file with no interpreter stays unchecked",
+     "Recipes: `references/how.md`.\n", None,
+     [("references/how.md", "# How\n\nThe runner is `scripts/run.py --all`.\n")]),
 ]
 
 
@@ -1321,7 +1417,39 @@ def scan_case(scenario, pass_root):
         args = ["bash", str(SCAN_SCRIPT)] + ([str(root)] if pass_root else [])
         r = subprocess.run(args, cwd=tmp, env=env, capture_output=True, text=True,
                            encoding="utf-8", errors="replace")
-        return r.returncode, r.stdout, len(ck.read_text(encoding="utf-8").splitlines())
+        side = root / "skill-observations" / "last-scan-findings.txt"
+        return (r.returncode, r.stdout, len(ck.read_text(encoding="utf-8").splitlines()),
+                side.read_text(encoding="utf-8") if side.is_file() else None)
+
+
+def scan_repeat_ok(scenario, prefix):
+    """The finding line opening with `prefix` is printed above the entries,
+    repeated verbatim after them (before the end line), and is the whole
+    sidecar; with no prefix, the run must leave no finding and an EMPTY
+    sidecar. Returns (ok, detail)."""
+    rc, out, _, side = scan_case(scenario, True)
+    if not prefix:
+        return (rc == 0 and side == "" and ", repeated just above this line" in out
+                and "finding lines above the entries (NOTE / LOST ENTRIES / UNFILLED / SPLIT STORE / GAP): 0," in out,
+                f"sidecar {side!r}")
+    lines = [l for l in out.splitlines() if l.startswith(prefix)]
+    if len(lines) != 2 or lines[0] != lines[1]:
+        return False, f"{len(lines)} copies of the line"
+    first, second, end = out.index(lines[0]), out.rindex(lines[0]), out.rindex("end of scan")
+    entries_at = out.index("logs under the parent")
+    counted = re.search(r"GAP\): (\d+), repeated", out)
+    ok = (first < entries_at < second < end and side is not None and lines[0] + "\n" in side
+          and counted is not None and side.count("\n") == int(counted.group(1)))
+    return ok, f"positions {first} < {entries_at} < {second} < {end}, sidecar {side!r}"
+
+
+# (name, scenario, prefix of the one finding line, or "" for a run with none)
+SCAN_REPEAT_FIXTURES = [
+    ("a NOTE is printed first, repeated after the entries, and is the sidecar", "idmis",
+     "NOTE: id: does not read as the filename prefix"),
+    ("a GAP line is repeated and written the same way", "gap", "GAP: the previous session-start scan ran"),
+    ("no finding: nothing repeated, the sidecar is written empty", "fields", ""),
+]
 
 
 # scripts/skill-load.sh, the per-skill lookup run beside each Skill
@@ -1369,6 +1497,45 @@ def load_case(skill, absolute, scenario=""):
                            text=True, encoding="utf-8", errors="replace")
         written = len(ck.read_text(encoding="utf-8").splitlines()) if ck.is_file() else 0
         return r.returncode, r.stdout, written
+
+
+# scripts/bin-check.sh, the digest gate in front of the workspace copy of the
+# scripts: (name, scenario, exit status, stdout substring, stderr substring).
+# The fixture .bin/ holds one script that echoes its arguments; the digests
+# file is computed over a copy standing in for the installed scripts.
+BINCHECK_SCRIPT = pathlib.Path(__file__).resolve().parent / "bin-check.sh"
+BINCHECK_FIXTURES = [
+    ("every digest matches: the script runs with its arguments", "match", 0, "hello a b", ""),
+    ("the .bin/ copy differs from the installed script: refused, nothing runs", "differs", 3, "", "BIN REFUSED — hello.sh differs"),
+    ("a .bin/ file with no installed digest: refused", "extra", 3, "", "has no digest in the installed set"),
+    ("the named script is absent from .bin/: refused", "absent", 3, "", "BIN REFUSED — no 'gone.sh'"),
+    ("no digests file: usage, exit 2", "nodig", 2, "", "digests file missing"),
+]
+
+
+def bincheck_case(scenario):
+    import hashlib
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / "work space"
+        bin_dir = root / "skill-observations" / ".bin"
+        bin_dir.mkdir(parents=True)
+        installed = pathlib.Path(tmp) / "installed"
+        installed.mkdir()
+        (installed / "hello.sh").write_text('echo hello "$@"\n', encoding="utf-8")
+        (bin_dir / "hello.sh").write_text('echo hello "$@"\n', encoding="utf-8")
+        if scenario == "differs":
+            (bin_dir / "hello.sh").write_text('echo hello "$@" # older\n', encoding="utf-8")
+        if scenario == "extra":
+            (bin_dir / "extra.py").write_text("print(1)\n", encoding="utf-8")
+        dig = pathlib.Path(tmp) / "installed.sha256"
+        dig.write_text("".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p}\n"
+                               for p in sorted(installed.iterdir())), encoding="utf-8")
+        args = ["bash", str(BINCHECK_SCRIPT), str(root),
+                str(dig if scenario != "nodig" else pathlib.Path(tmp) / "none"),
+                "gone.sh" if scenario == "absent" else "hello.sh", "a", "b"]
+        r = subprocess.run(args, cwd=tmp, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        return r.returncode, r.stdout, r.stderr
 
 
 # scripts/migrate-log.py, the pre-3.0 log converter: (name, legacy entry's
@@ -1423,6 +1590,12 @@ def migrate_case(skill_line, ov):
 # is a header the schema accepts, with the two placeholders and a backticked
 # command span that must reach the file verbatim.
 NEWOBS_SCRIPT = pathlib.Path(__file__).resolve().parent / "new-observation.sh"
+# The core template's fields (SKILL.md, File format), in order: the skeleton
+# the helper writes without --body must carry exactly these.
+SKELETON_FIELDS = ["id", "title", "status", "type", "skill", "proposes_skill", "target_file",
+                   "siblings_checked", "area", "date", "session_context", "parked_until",
+                   "resolved", "resolution", "reference", "commands_verified", "next_actor",
+                   "use_evidence"]
 GOOD_BODY = ('---\nid: __ID__\ntitle: "t"\nstatus: open            # open | actioned\n'
              'type: open-source       # open-source | internal\nskill: [foo]\n'
              'siblings_checked: "none — no family"\ndate: __DATE__\n---\n\n'
@@ -1575,6 +1748,11 @@ def selftest():
         ok = bool(NAME_RE.match(fallback_name(f"name: {value}\n"))) == kebab
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} fallback name: {value!r}")
+    for name, text, fewer in CORE_COUNT_FIXTURES:
+        got = len(text.splitlines()) - installed_line_count(text)
+        ok = got == fewer
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} core count: {name}" + ("" if ok else f" (got {got} fewer)"))
     try:
         import yaml  # noqa: F401
         branches = (True, False)
@@ -1593,6 +1771,17 @@ def selftest():
         ok = index_misses(text) == want
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} reference index: {name}")
+    for name, text, want in DEEP_INDEX_FIXTURES:
+        got = [h for h in index_misses(text, 4) if h not in index_misses(text)]
+        ok = got == want
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} reference index (#### note): {name}"
+              + ("" if ok else f" (got {got})"))
+    for name, text, want in LOAD_TRIGGER_FIXTURES:
+        got = declared_load_triggers(text)
+        ok = got == want
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} load triggers line: {name}" + ("" if ok else f" (got {got})"))
     for name, text, want in ORPHAN_FIXTURES:
         got = index_orphans(text)
         ok = got == want
@@ -1627,9 +1816,10 @@ def selftest():
             sk.mkdir()
             (sk / "SKILL.md").write_text('---\nname: cp\ndescription: "D."\n---\n' + body,
                                          encoding="utf-8")
-            for rel in (staged[0] if staged else []):
+            for entry in (staged[0] if staged else []):
+                rel, content = entry if isinstance(entry, tuple) else (entry, "x\n")
                 (sk / rel).parent.mkdir(parents=True, exist_ok=True)
-                (sk / rel).write_text("x\n", encoding="utf-8")
+                (sk / rel).write_text(content, encoding="utf-8")
             import contextlib
             import io
             fails = []
@@ -1656,11 +1846,20 @@ def selftest():
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} scan script: bash -n passes")
         for name, scenario, pass_root, want_rc, want_out, want_ck, absent in SCAN_FIXTURES:
-            rc, out, ck = scan_case(scenario, pass_root)
+            rc, out, ck, _ = scan_case(scenario, pass_root)
             ok = rc == want_rc and want_out in out and ck == want_ck and not (absent and absent in out)
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} scan script: {name}"
                   + ("" if ok else f" (exit {rc}, {ck} checkpoint lines)"))
+        for name, scenario, prefix in SCAN_REPEAT_FIXTURES:
+            ok, detail = scan_repeat_ok(scenario, prefix)
+            bad += not ok; total += 1
+            print(f"{'ok  ' if ok else 'FAIL'} scan script: {name}" + ("" if ok else f" ({detail})"))
+        rc, _, _, side = scan_case("broken", True)   # the halted run leaves its guard line, not an older finding
+        ok = rc == 1 and side is not None and side.startswith("SCAN COMMAND BROKEN")
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} scan script: a halted run writes its guard line to the sidecar"
+              + ("" if ok else f" (sidecar {side!r})"))
     for eol in ("\n", "\r\n"):    # the name-quoting rewrite keeps the file's line endings
         with tempfile.TemporaryDirectory() as td:
             p = pathlib.Path(td) / "SKILL.md"
@@ -1694,8 +1893,10 @@ def selftest():
             rc, out, err, files, floor, text = newobs_case(scenario, slug, body)
             ok = (rc == want_rc and want_out in out and want_err in err
                   and files == want_files and floor == want_floor)
-            if ok and files and body is None:     # the skeleton: id on disk, status open, title empty
+            if ok and files and body is None:     # the skeleton: id on disk, status open, title empty,
                 ok = f"id: {int(files[0][:4])}\n" in text and "status: open\n" in text and 'title: ""\n' in text
+                # and every field of the core template, in its order
+                ok = ok and [l.split(":")[0] for l in text.splitlines()[1:-1]] == SKELETON_FIELDS
             if ok and files and body is not None:  # the copy: placeholders filled, the span verbatim
                 ok = ("id: 1\n" in text and f"date: {today}\n" in text and "`$(date)`" in text
                       and f"on {today} as #1\n" in text and "__ID__" not in text)
@@ -1705,6 +1906,19 @@ def selftest():
     elif shutil.which("bash"):
         bad += 1; total += 1
         print(f"FAIL new-observation script: {NEWOBS_SCRIPT.name} missing beside this file")
+    if shutil.which("bash") and BINCHECK_SCRIPT.is_file():
+        ok = subprocess.run(["bash", "-n", str(BINCHECK_SCRIPT)]).returncode == 0
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} bin-check script: bash -n passes")
+        for name, scenario, want_rc, want_out, want_err in BINCHECK_FIXTURES:
+            rc, out, err = bincheck_case(scenario)
+            ok = rc == want_rc and want_out in out and want_err in err and (want_out or not out.strip())
+            bad += not ok; total += 1
+            print(f"{'ok  ' if ok else 'FAIL'} bin-check script: {name}"
+                  + ("" if ok else f" (exit {rc}, out {out!r}, err {err.strip()!r})"))
+    elif shutil.which("bash"):
+        bad += 1; total += 1
+        print(f"FAIL bin-check script: {BINCHECK_SCRIPT.name} missing beside this file")
     if MIGRATE_SCRIPT.is_file():
         for name, skill_line, ov, want_rc, has, lacks in MIGRATE_FIXTURES:
             rc, text = migrate_case(skill_line, ov)

@@ -1,6 +1,6 @@
 ---
 name: "task-observer"
-core_max_lines: 682
+core_max_lines: 699
 version: "3.8.1"
 description: "Monitors task execution for skill improvement opportunities: logs patterns, user corrections and methodology worth preserving to the workspace, turns them into skill updates in a weekly review, and flags repeating work as new skills. Use during ANY multi-step task, agentic workflow, or work session. Also triggers in post-task feedback discussions and when the user mentions skill observations, the observation log, or skill taxonomy. Also known as \"One Skill to Rule Them All\" — trigger on this phrase too. IMPORTANT: invoke this skill before the FIRST tool call of any session and before writing or proposing a plan — any turn that will involve a tool call counts. This sentence is the session-start trigger and the only activation layer that survives an unreachable config file; pair it with a CLAUDE.md instruction or a session-start hook (references/environments.md). A subagent dispatched by a session already running it does not run it: it writes nothing and puts its findings in its report."
 license: CC-BY-4.0
@@ -165,6 +165,10 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
 
    `scripts/session-start-scan.sh` is the scan (in `<skill directory>`); review
    it there, and read its output whole — never through `tail`, `head` or `grep`.
+   Its finding lines open the output, are repeated verbatim in the summary
+   block after the entries, and are written to
+   `skill-observations/last-scan-findings.txt`, which the end line names: a
+   cut view still shows them, and the file holds them when it did not.
    In a bridged session where that directory is not on the device, run it from
    `skill-observations/.bin/` or a digest-matched staged copy — never a per-skill
    grep instead (`references/environments.md`, "Environment mappings", the
