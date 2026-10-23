@@ -144,7 +144,7 @@ skill that never loads cannot announce that it was relevant.
 ### The activation block
 
 ```text
-(task-observer activation block — template of v3.8.0-r3)
+(task-observer activation block — template of v3.9.0)
 Before the first tool call of any session — and before writing or
 proposing a plan, not merely before executing one — invoke the
 task-observer skill AND execute its Session Start Protocol (storage
