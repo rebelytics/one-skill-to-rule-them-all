@@ -533,8 +533,21 @@ def _index_entries(body):
     return m, groups
 
 
+def heading_matches(short, long):
+    """ONE qualifier rule for both heading matchers — the core-pointer check
+    and the index checks: a name matches a heading when it is the heading,
+    or the heading up to its ` — ` or ` (` qualifier (a dated parenthetical
+    included). Two matchers with two rules accepted `A — x` and rejected
+    `A (x)` in one place and the reverse in the other, so a heading had to
+    be renamed to pass both."""
+    return short == long or long.startswith(short + " — ") or long.startswith(short + " (")
+
+
 def _entry_covers(entry, anchor):
-    return entry == anchor or entry.startswith(anchor + " ") or entry.startswith(anchor + "(")
+    # an index entry may carry MORE than the heading (a parenthetical the
+    # heading lacks) or LESS (the heading's own qualifier dropped)
+    return (entry == anchor or entry.startswith(anchor + " ") or entry.startswith(anchor + "(")
+            or heading_matches(entry, anchor))
 
 
 def index_misses(body, depth=3):
@@ -576,6 +589,8 @@ def index_orphans(body):
     if not m:
         return []
     below = body[m.end():]
+    if not re.search(r"(?m)^#{2,3}\s+\S", below):
+        return []       # no sections below the index: a prose contents line is its form
     heads = {_norm(h) for h in re.findall(r"(?m)^#{2,4}\s+(.+?)\s*$", below)}
     leads = {_norm(h).rstrip(".:") for h in re.findall(r"(?ms)^\*\*(.+?)\*\*", below)}   # a lead wraps
     return [g[0] for g in groups
@@ -636,6 +651,31 @@ ORPHAN_FIXTURES = [
      "# R\n\n## Contents\n\n1. Alpha\n2. Beta\n\n## 1. Alpha\n\n## Beta\n", []),
     ("a list in the preamble is not read as entries",
      "# R\n\n## Contents\n\n- Alpha\n\nPreamble prose.\n\n- Not an entry\n\n## Alpha\n", []),
+    ("a file with no headings below its index is exempt: the entries are a prose contents line",
+     "# R\n\n## Contents\n\n- Alpha\n- Beta\n\nOne paragraph.\n\nAnother, with **a bold run** inside.\n", []),
+    ("an entry naming a heading up to its ` (` qualifier resolves",
+     "# R\n\n## Contents\n\n- Site mechanics\n- Beta\n\n## Site mechanics (stock vertical)\n\n## Beta (2026-01)\n", []),
+]
+
+# (name, reference-file text, headings index_misses must report): the
+# forward pass under the same one qualifier rule.
+QUALIFIER_INDEX_FIXTURES = [
+    ("an index entry without the heading's ` (` qualifier is not a miss",
+     "# R\n\n## Contents\n\n- Site mechanics\n\n## Site mechanics (stock vertical)\n", []),
+    ("an index entry without the heading's ` — ` qualifier is not a miss",
+     "# R\n\n## Contents\n\n- Alpha\n\n## Alpha — what it covers\n", []),
+    ("a heading that merely extends the entry's words is still a miss",
+     "# R\n\n## Contents\n\n- Alpha\n\n## Alpha one\n", ["Alpha one"]),
+]
+
+# (name, pointer text, file heading, must match): the core-pointer side of
+# the same rule.
+POINTER_HEADING_FIXTURES = [
+    ("exact", "Alpha", "Alpha", True),
+    ("up to the ` — ` qualifier", "Alpha", "Alpha — what it covers", True),
+    ("up to the ` (` qualifier, dated", "Site mechanics", "Site mechanics (2026-01-31)", True),
+    ("a prefix of a word is not a match", "Alpha", "Alphabet", False),
+    ("a longer pointer than the heading is not a match", "Alpha — what it covers", "Alpha", False),
 ]
 
 
@@ -684,7 +724,7 @@ def check_reference_indexes(skill_dir, fails):
     # Both pointer forms name a target: `references/x.md` ("Heading") and
     # (`references/x.md`, "Heading"). The second form was invisible to this
     # check, so its targets went unverified. A pointer may name a heading up
-    # to its ` — ` qualifier, as a Contents entry may.
+    # to its qualifier, by the one rule a Contents entry follows (heading_matches).
     named, _ = core_pointers(core)
     for fname in sorted(named):
         target = refs / fname
@@ -694,7 +734,7 @@ def check_reference_indexes(skill_dir, fails):
         heads = {norm(x) for x in re.findall(r"(?m)^#{2,4}\s+(.+?)\s*$",
                                             defence(target.read_text(encoding="utf-8")))}
         for heading in sorted(named[fname]):
-            if not any(h == heading or h.startswith(heading + " — ") for h in heads):
+            if not any(heading_matches(heading, h) for h in heads):
                 fails.append(f"SKILL.md pointer has no target heading: {fname} -> {heading!r}")
 
 
@@ -727,13 +767,31 @@ def check_reference_indexes(skill_dir, fails):
 #
 # The trigger count is DECLARED, not inferred: each reference carries one
 # `Load triggers: a; b; c` line in its header (before its first `## `
-# heading), and the count is the number of distinct entries. Pointer scanning
-# cannot be exact — one episode can be cited from several places, and a
-# filename-only pointer names no section at all — so the scan is kept only as
-# the fallback figure for a file that declares nothing (printed with `~`) and
-# as a cross-check that a declaration has not fallen behind the core.
+# heading), and the count is the number of distinct entries. A trigger is an
+# EPISODE — a reason to load the file — not a pointer: one episode may be
+# cited from several places and may cover several sections, and a file a
+# run walks once (every step of a cycle) has one episode however many of its
+# sections the core names. Pointer scanning therefore cannot be exact, so it
+# is kept as the fallback figure for a file that declares nothing (printed
+# with `~`) and as a cross-check printed beside the declaration: the number
+# of distinct SECTIONS of the core that cite the file is the cheapest lower
+# bound on its episodes — a once-per-run file is cited from the one core
+# section that runs it — and a declaration below that bound by more than
+# POINTER_SLACK is noted as under-declared, since the count is self-declared
+# and a file could otherwise stay under the split threshold by declaring less.
+# A note, not a gate.
+#
+# The threshold is set from the measured distribution over one library at
+# last measurement, not from intuition: one to eight triggers almost
+# everywhere, three files above eight, and the two files just under the
+# earlier threshold of 12 were the ones readers described as overloaded. A
+# file above the threshold whose split is decided but not yet made carries a
+# `split_pending: <file.md> <YYYY-MM-DD> <reason>` line in the sidecar: the
+# split remedies then print as notes and the trim-or-raise remedy applies
+# until the split lands.
 REF_CEILINGS_FILE = "ceilings.txt"
-SPLIT_TRIGGER_THRESHOLD = 12
+SPLIT_TRIGGER_THRESHOLD = 8
+POINTER_SLACK = 2
 # The plain line, or the bold prose form a header already written as a
 # sentence carries (`**Load trigger:** …`, `**Load triggers:** …`): matching
 # the plain form only made a file that declared its episodes in prose fail
@@ -752,6 +810,12 @@ LOAD_TRIGGER_FIXTURES = [
 REF_CEILING_LINE_RE = re.compile(
     r"^(?P<file>[^\s/]+\.md)[ \t]+(?P<ceiling>\d+)"
     r"(?:[ \t]+(?P<date>\d{4}-\d{2}-\d{2})[ \t]+(?P<reason>\S.*?))?[ \t]*$")
+# The marker is read bare or behind `# `: a validator that predates it reads
+# the commented form as a comment and still passes the bundle, so a round
+# can declare a pending split before the validator that knows the word is
+# the installed one. Once it is, write the bare form.
+SPLIT_PENDING_LINE_RE = re.compile(
+    r"^(?:#[ \t]*)?split_pending:[ \t]+(?P<file>[^\s/]+\.md)[ \t]+(?P<date>\d{4}-\d{2}-\d{2})[ \t]+(?P<reason>\S.*?)[ \t]*$")
 # `references/x.md` ("Heading") — up to 40 characters between, newlines
 # included, no backtick — and the parenthesised (`references/x.md`, "Heading").
 REF_POINTER_RE = re.compile(r'`references/([a-z0-9-]+\.md)`(?:[^(`]{0,40}\(|,\s*)"([^"]+)"')
@@ -788,6 +852,25 @@ def core_pointers(core):
     return named, {f: len(b) for f, b in unnamed.items()}
 
 
+def core_pointer_sections(core):
+    """{file: number of distinct `## ` sections of the core that cite it}.
+
+    The cross-check's lower bound on a reference's episodes: a pointer sits
+    in the core section whose moment it serves, so two pointers from one
+    section are one episode and pointers from four sections are at least
+    four. The body before the first `## ` heading is one section. Fenced
+    blocks are read too — a fenced snippet that cites a file loads it."""
+    m = re.match(r"(?s)^---\n.*?\n---\n", core)
+    body = core[m.end():] if m else core
+    sections, sec = {}, 0
+    for line in body.splitlines(True):
+        if line.startswith("## "):
+            sec += 1
+        for pm in REF_ANY_POINTER_RE.finditer(line):
+            sections.setdefault(pm.group(1), set()).add(sec)
+    return {f: len(s) for f, s in sections.items()}
+
+
 def declared_load_triggers(text):
     """The distinct entries of the header's `Load triggers:` line, or None."""
     head = re.split(r"(?m)^## ", text, maxsplit=1)[0]
@@ -803,24 +886,34 @@ def declared_load_triggers(text):
 
 
 def read_ref_ceilings(refs, fails):
-    """{file: (ceiling, date, reason)} from references/ceilings.txt, or None when
-    the skill has not opted in. Every malformed line fails: a skill that
-    opted in and wrote a line the gate cannot read must not pass ungated."""
+    """({file: (ceiling, date, reason)}, {file: (date, reason) split pending})
+    from references/ceilings.txt, or (None, {}) when the skill has not opted
+    in. Every malformed line fails: a skill that opted in and wrote a line
+    the gate cannot read must not pass ungated."""
     import datetime
     f = refs / REF_CEILINGS_FILE
     if not f.is_file():
-        return None
-    out = {}
+        return None, {}
+    out, pending = {}, {}
     for i, raw in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
         line = raw.strip()
-        if not line or line.startswith("#"):
+        where = f"references/{REF_CEILINGS_FILE}:{i}"
+        sp = SPLIT_PENDING_LINE_RE.match(line)   # before the comment test: the marker may sit behind `# `
+        if not sp and (not line or line.startswith("#")):
+            continue
+        if sp:
+            try:
+                datetime.date.fromisoformat(sp.group("date"))
+            except ValueError:
+                fails.append(f"{where}: {sp.group('date')!r} is not a calendar date")
+            pending[sp.group("file")] = (sp.group("date"), sp.group("reason"))
             continue
         m = REF_CEILING_LINE_RE.match(line)
-        where = f"references/{REF_CEILINGS_FILE}:{i}"
         if not m:
             fails.append(f"{where}: unreadable line {line!r} — the form is "
                          f"`<file.md> <lines> [<YYYY-MM-DD> <reason>]`; a raise "
-                         f"carries both a date and a reason")
+                         f"carries both a date and a reason (or `split_pending: "
+                         f"<file.md> <YYYY-MM-DD> <reason>` for a decided split)")
             continue
         date = m.group("date")
         if date:
@@ -833,7 +926,7 @@ def read_ref_ceilings(refs, fails):
             fails.append(f"{where}: {name} has a second ceiling line")
             continue
         out[name] = (int(m.group("ceiling")), date, m.group("reason"))
-    return out
+    return out, pending
 
 
 def check_reference_shape(skill_dir, core, fails):
@@ -842,7 +935,8 @@ def check_reference_shape(skill_dir, core, fails):
     if not refs.is_dir():
         return
     named, unnamed = core_pointers(core)
-    ceilings = read_ref_ceilings(refs, fails)
+    citing = core_pointer_sections(core)
+    ceilings, pending = read_ref_ceilings(refs, fails)
     N, tol = SPLIT_TRIGGER_THRESHOLD, CEILING_SLACK_TOLERANCE
     rows = []
     for p in sorted(refs.glob("*.md")):
@@ -861,23 +955,33 @@ def check_reference_shape(skill_dir, core, fails):
     print(f"reference shape (lines / ceiling / load triggers declared in the header, "
           f"~ = scanned from the core, none declared; split by episode above {N}; {gated}): "
           + ", ".join(shown))
+    # The pointer cross-check: declared episodes against the number of core
+    # sections that cite the file (the lower bound on episodes) — never
+    # against named sections, which a once-per-run file has one trigger for.
     for name, lines, declared, scanned in rows:
-        sections = len(named.get(name, ()))
-        if declared is not None and sections > len(declared):
-            print(f"note: the core names {sections} distinct sections of {name} but its "
-                  f"header declares {len(declared)} load triggers — bring its "
-                  f"`Load triggers:` line up to date")
-        if declared is not None and len(declared) > N:
+        if declared is None:
+            continue
+        secs = citing.get(name, 0)
+        flag = " — UNDER-DECLARED" if secs - len(declared) > POINTER_SLACK else ""
+        print(f"note: pointer cross-check — {name} declares {len(declared)} load trigger(s); "
+              f"the core cites it from {secs} section(s), naming {len(named.get(name, ()))} of "
+              f"its sections{flag}")
+        if len(declared) > N:
             print(f"note: {name} declares {len(declared)} load triggers (> {N}) — split "
                   f"by episode is indicated"
                   + (" once it outgrows its ceiling" if ceilings is not None
-                     else "; size is not the signal"))
+                     else "; size is not the signal")
+                  + (f"; split pending since {pending[name][0]}: {pending[name][1]}"
+                     if name in pending else ""))
     if ceilings is None:
         return
     present = {name for name, *_ in rows}
     for name in sorted(set(ceilings) - present):
         fails.append(f"references/{REF_CEILINGS_FILE} names {name}, which is not in "
                      f"references/ — remove its line, or lower it with the file it moved to")
+    for name in sorted(set(pending) - present):
+        fails.append(f"references/{REF_CEILINGS_FILE} marks a split pending for {name}, "
+                     f"which is not in references/ — remove the line")
     for name, lines, declared, _ in rows:
         if name not in ceilings:
             fails.append(f"references/{name} has no ceiling: this skill opted in with "
@@ -890,7 +994,11 @@ def check_reference_shape(skill_dir, core, fails):
                          f"`## ` heading), one entry per distinct episode that loads it")
             continue
         n = len(declared)
-        if lines > ceiling and n > N:
+        if name in pending and n <= N:
+            print(f"note: references/{REF_CEILINGS_FILE} marks a split pending for {name}, "
+                  f"which declares {n} load triggers (<= {N}) — the line can go")
+        split_due = n > N and name not in pending
+        if lines > ceiling and split_due:
             fails.append(
                 f"references/{name} {lines} lines > ceiling {ceiling}, with {n} load "
                 f"triggers (> {N}): split it by episode, so each trigger loads only "
@@ -908,7 +1016,7 @@ def check_reference_shape(skill_dir, core, fails):
                 f"{ceiling - lines} > tolerance {tol}. Lower its line in "
                 f"references/{REF_CEILINGS_FILE} to {lines} in this commit — a trim "
                 f"is locked in, not left as headroom")
-        if reason and n > N:
+        if reason and split_due:
             fails.append(
                 f"references/{name} carries a raised ceiling ({date}: {reason}) but "
                 f"declares {n} load triggers (> {N}): with that many episodes the "
@@ -1371,18 +1479,26 @@ SCAN_FIXTURES = [
      "SPLIT STORE — log.md holds 2 observations not in observation-log/", 1, ""),
     ("use_evidence and next_actor in a header: parsed, not suspect", "fields", True, 0,
      "files: 2  parsed: 2  suspect (awk, a floor): 0", 1, "NOTE:"),
+    ("two files share a prefix across active and archive: DUPLICATE ID names both", "dupid", True, 0,
+     "DUPLICATE ID — 0002: 0002-b.md, archive/0002-z.md", 1, ""),
+    ("a zero-padded and a bare prefix are one id", "dupid-pad", True, 0,
+     "DUPLICATE ID — 0002: 0002-b.md, 2-c.md", 1, ""),
+    ("an unknown option is refused, nothing written", "healthy", True, 2, "", 0, "", ["--bogus"]),
 ]
 
 
-def scan_case(scenario, pass_root):
+def scan_case(scenario, pass_root, extra=None, entries=None):
     """Run the scan script over a fixture workspace; return (status, stdout,
-    checkpoint lines written)."""
+    checkpoint lines written, sidecar text[, entries-file text when `entries`
+    names a file under the workspace to pass as --entries-to])."""
     import os
     import subprocess
     with tempfile.TemporaryDirectory() as tmp:
         root = pathlib.Path(tmp) / "work space"
         log = root / "skill-observations" / "observation-log"
         (log / "archive").mkdir(parents=True)
+        if scenario == "dupid":
+            (log / "archive" / "0002-z.md").write_text('---\nid: 2\ntitle: "old"\nstatus: actioned\n---\n', encoding="utf-8")
         ck = root / "skill-observations" / "checkpoints.log"
         ck.write_text("", encoding="utf-8")
         if scenario in ("gap", "recent"):
@@ -1404,7 +1520,10 @@ def scan_case(scenario, pass_root):
                     # both id forms exist in live logs: padded and unpadded read as the prefix
                     "padded": [("0002-b.md", '---\nid: 0002\ntitle: "padded"\n---\n'),
                                ("0003-c.md", '---\nid: 3\ntitle: "plain"\n---\n'),
-                               ("0004-d.md", '---\nid: 5\ntitle: "wrong"\n---\n')]}
+                               ("0004-d.md", '---\nid: 5\ntitle: "wrong"\n---\n')],
+                    "dupid": [("0002-b.md", '---\nid: 2\ntitle: "new"\n---\n')],
+                    "dupid-pad": [("0002-b.md", '---\nid: 2\ntitle: "padded"\n---\n'),
+                                  ("2-c.md", '---\nid: 2\ntitle: "bare"\n---\n')]}
             for f, text in rest.get(scenario, [("0002-b.md", "---\nid: 2\ntitle: Fix: unquoted\n---\n")]):
                 (log / f).write_text(text, encoding="utf-8")
         if scenario == "moved":
@@ -1414,12 +1533,22 @@ def scan_case(scenario, pass_root):
             (root / "skill-observations" / "log.md").write_text(
                 "### Observation 1: A\n\n### Observation 2: B\n", encoding="utf-8")
         env = {k: v for k, v in os.environ.items() if k != "TASK_OBSERVER_WORKSPACE"}
-        args = ["bash", str(SCAN_SCRIPT)] + ([str(root)] if pass_root else [])
+        args = ["bash", str(SCAN_SCRIPT)] + list(extra or [])
+        ef = None
+        if entries is not None:                     # (name under the root, pre-existing text or None)
+            ef = root / entries[0]
+            if entries[1] is not None:
+                ef.write_text(entries[1], encoding="utf-8")
+            args += ["--entries-to", str(ef)]
+        args += [str(root)] if pass_root else []
         r = subprocess.run(args, cwd=tmp, env=env, capture_output=True, text=True,
                            encoding="utf-8", errors="replace")
         side = root / "skill-observations" / "last-scan-findings.txt"
-        return (r.returncode, r.stdout, len(ck.read_text(encoding="utf-8").splitlines()),
-                side.read_text(encoding="utf-8") if side.is_file() else None)
+        out = (r.returncode, r.stdout, len(ck.read_text(encoding="utf-8").splitlines()),
+               side.read_text(encoding="utf-8") if side.is_file() else None)
+        if entries is not None:
+            out += (ef.read_text(encoding="utf-8") if ef.is_file() else None,)
+        return out
 
 
 def scan_repeat_ok(scenario, prefix):
@@ -1430,7 +1559,7 @@ def scan_repeat_ok(scenario, prefix):
     rc, out, _, side = scan_case(scenario, True)
     if not prefix:
         return (rc == 0 and side == "" and ", repeated just above this line" in out
-                and "finding lines above the entries (NOTE / LOST ENTRIES / UNFILLED / SPLIT STORE / GAP): 0," in out,
+                and "finding lines above the entries (NOTE / LOST ENTRIES / UNFILLED / DUPLICATE ID / SPLIT STORE / GAP): 0," in out,
                 f"sidecar {side!r}")
     lines = [l for l in out.splitlines() if l.startswith(prefix)]
     if len(lines) != 2 or lines[0] != lines[1]:
@@ -1449,7 +1578,48 @@ SCAN_REPEAT_FIXTURES = [
      "NOTE: id: does not read as the filename prefix"),
     ("a GAP line is repeated and written the same way", "gap", "GAP: the previous session-start scan ran"),
     ("no finding: nothing repeated, the sidecar is written empty", "fields", ""),
+    ("a DUPLICATE ID line is repeated, counted and written like the others", "dupid",
+     "DUPLICATE ID — 0002: 0002-b.md, archive/0002-z.md"),
 ]
+
+
+def scan_entries_ok():
+    """--entries-to: the per-entry headers land in the file and leave stdout;
+    the findings, counts and summary stay on stdout; the end line names the
+    file. Returns (ok, detail)."""
+    rc, out, ck, side, ent = scan_case("idmis", True, entries=("scan-entries.txt", None))
+    ok = (rc == 0 and ck == 1 and ent is not None and 'title: "retyped"' in ent and 'title: "ok"' in ent
+          and 'title: "retyped"' not in out and "files: 2  parsed: 2" in out
+          and out.count("NOTE: id: does not read as the filename prefix") == 2
+          and "entries written to " in out and "scan-entries.txt" in out
+          and side is not None and side.startswith("NOTE: id:"))
+    return ok, f"exit {rc}, checkpoint {ck}, entries {ent!r}, out tail {out[-300:]!r}"
+
+
+def scan_entries_refused_ok():
+    """--entries-to onto an existing non-empty file is refused before anything
+    runs: exit 2, no checkpoint line, the file untouched."""
+    rc, out, ck, side, ent = scan_case("healthy", True, entries=("scan-entries.txt", "another session's scan\n"))
+    ok = rc == 2 and ck == 0 and out == "" and ent == "another session's scan\n"
+    return ok, f"exit {rc}, checkpoint {ck}, entries {ent!r}"
+
+
+def scan_version_ok():
+    """The end line names the script's VERSION, and VERSION equals the
+    skill's frontmatter version when SKILL.md sits beside scripts/."""
+    text = SCAN_SCRIPT.read_text(encoding="utf-8")
+    m = re.search(r'(?m)^VERSION="([^"]+)"', text)
+    if not m:
+        return False, "no VERSION constant in the script"
+    rc, out, *_ = scan_case("healthy", True)
+    ok = rc == 0 and f"session-start-scan.sh v{m.group(1)}" in out.splitlines()[-1]
+    detail = f"end line {out.splitlines()[-1][-80:]!r}"
+    skill_md = SCAN_SCRIPT.parent.parent / "SKILL.md"
+    if skill_md.is_file():
+        fm = re.search(r'(?m)^version:\s*"?([^"\s]+)"?', skill_md.read_text(encoding="utf-8"))
+        ok = ok and fm is not None and fm.group(1) == m.group(1)
+        detail += f", script {m.group(1)} vs skill {fm.group(1) if fm else None}"
+    return ok, detail
 
 
 # scripts/skill-load.sh, the per-skill lookup run beside each Skill
@@ -1706,6 +1876,78 @@ REF_SHAPE_FIXTURES = [
      "declares no load triggers", None),
     ("opted in, file without a ceiling line fails", 100, 3, "# none yet\n",
      "has no ceiling", None),
+    ("over ceiling, > N triggers, split pending: trim or raise, never split",
+     105, SPLIT_TRIGGER_THRESHOLD + 1, "a.md 100\nsplit_pending: a.md 2026-01-31 split decided, lands next round\n",
+     "trim it back", "split it by episode"),
+    ("a raise on a file with > N triggers passes while its split is pending",
+     105, SPLIT_TRIGGER_THRESHOLD + 1,
+     "a.md 105 2026-01-31 more room\nsplit_pending: a.md 2026-01-31 split decided, lands next round\n", None, None),
+    ("a split_pending line without its date and reason is unreadable", 100, 3,
+     "a.md 100\nsplit_pending: a.md\n", "unreadable line", None),
+    ("a split_pending line for a file not in references/ fails", 100, 3,
+     "a.md 100\nsplit_pending: b.md 2026-01-31 why\n", "marks a split pending for b.md", None),
+    ("the marker behind `# ` is read the same way (an older validator reads a comment)",
+     105, SPLIT_TRIGGER_THRESHOLD + 1,
+     "a.md 105 2026-01-31 more room\n# split_pending: a.md 2026-01-31 split decided, lands next round\n", None, None),
+]
+
+
+def crosscheck_case(core, triggers):
+    """Run check_reference_shape over a one-reference fixture (a.md with
+    `triggers` declared and 12 sections) against `core`; return the printed
+    pointer cross-check note for a.md."""
+    with tempfile.TemporaryDirectory() as tmp:
+        refs = pathlib.Path(tmp) / "fixture-skill" / "references"
+        refs.mkdir(parents=True)
+        secs = [f"S{i}" for i in range(1, 13)]
+        text = ("# A\n\nLoad triggers: " + "; ".join(f"episode {i}" for i in range(triggers))
+                + "\n\n## Contents\n\n" + "\n".join(f"- {s}" for s in secs) + "\n\n"
+                + "\n\n".join(f"## {s}\n\ntext" for s in secs) + "\n")
+        (refs / "a.md").write_text(text, encoding="utf-8")
+        import contextlib
+        import io
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            check_reference_shape(refs.parent, core, [])
+        return next((l for l in buf.getvalue().splitlines()
+                     if l.startswith("note: pointer cross-check — a.md")), "")
+
+
+def _core(sections_citing, names_per_section=1, lead=False):
+    """A core whose first `sections_citing` sections each cite a.md, naming
+    `names_per_section` of its sections; `lead` puts one pointer before the
+    first `## ` heading instead of in a section."""
+    out = ["---", "name: x", 'description: "D."', "---", "# X", ""]
+    if lead:
+        out += ['See `references/a.md` ("S1").', ""]
+        sections_citing -= 1
+    for i in range(1, 7):
+        out += [f"## Section {i}", ""]
+        if i <= sections_citing:
+            out += [" ".join(f'load `references/a.md` ("S{j + 1}").' for j in range(names_per_section)), ""]
+        else:
+            out += ["plain text.", ""]
+    return "\n".join(out) + "\n"
+
+
+# (name, core text, declared triggers, must be flagged UNDER-DECLARED)
+CROSSCHECK_FIXTURES = [
+    ("cited from four core sections, one trigger declared: under-declared", _core(4), 1, True),
+    ("cited from one core section naming eleven sections, one trigger: the once-per-run shape passes",
+     _core(1, names_per_section=11), 1, False),
+    ("cited from four sections, two declared: within the slack", _core(4), 2, False),
+    ("cited from five sections, two declared: over the slack", _core(5), 2, True),
+    ("the body before the first heading is one section", _core(3, lead=True), 1, False),
+    ("a pointer before the first heading plus three sections is four", _core(4, lead=True), 1, True),
+]
+
+# (name, core text, {file: distinct citing sections})
+POINTER_SECTION_FIXTURES = [
+    ("two pointers in one section count once", "# X\n\n## A\n\nsee `references/a.md`; and `references/a.md` (\"S\").\n", {"a.md": 1}),
+    ("pointers in two sections count twice", "# X\n\n## A\n\n`references/a.md`\n\n## B\n\n`references/a.md`\n", {"a.md": 2}),
+    ("the lead before the first heading is a section of its own",
+     "# X\n\n`references/a.md`\n\n## A\n\n`references/a.md`\n", {"a.md": 2}),
+    ("frontmatter is skipped", "---\nname: x\ndescription: \"see `references/a.md`\"\n---\n# X\n\n## A\n\ntext\n", {}),
 ]
 
 # (name, core text, {file: section count}, {file: filename-only count})
@@ -1735,6 +1977,25 @@ def selftest():
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} core pointer: {name}"
               + ("" if ok else f" (named {named}, filename-only {unnamed})"))
+    for name, core, want in POINTER_SECTION_FIXTURES:
+        got = core_pointer_sections(core)
+        ok = got == want
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} core pointer sections: {name}" + ("" if ok else f" (got {got})"))
+    for name, core, trig, want_flag in CROSSCHECK_FIXTURES:
+        note = crosscheck_case(core, trig)
+        ok = bool(note) and (("UNDER-DECLARED" in note) == want_flag)
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} pointer cross-check: {name}" + ("" if ok else f" (note {note!r})"))
+    for name, short, long, want in POINTER_HEADING_FIXTURES:
+        ok = heading_matches(short, long) == want
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} heading qualifier rule: {name}")
+    for name, text, want in QUALIFIER_INDEX_FIXTURES:
+        ok = index_misses(text) == want
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} reference index (qualifier rule): {name}"
+              + ("" if ok else f" (got {index_misses(text)})"))
     for name, text, must_fail in RESIDUE_FIXTURES:
         failed = bool(residue_hits(pathlib.Path("fixture.md"), text))
         ok = failed == must_fail
@@ -1845,14 +2106,20 @@ def selftest():
         ok = subprocess.run(["bash", "-n", str(SCAN_SCRIPT)]).returncode == 0
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} scan script: bash -n passes")
-        for name, scenario, pass_root, want_rc, want_out, want_ck, absent in SCAN_FIXTURES:
-            rc, out, ck, _ = scan_case(scenario, pass_root)
+        for name, scenario, pass_root, want_rc, want_out, want_ck, absent, *extra in SCAN_FIXTURES:
+            rc, out, ck, _ = scan_case(scenario, pass_root, extra[0] if extra else None)
             ok = rc == want_rc and want_out in out and ck == want_ck and not (absent and absent in out)
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} scan script: {name}"
                   + ("" if ok else f" (exit {rc}, {ck} checkpoint lines)"))
         for name, scenario, prefix in SCAN_REPEAT_FIXTURES:
             ok, detail = scan_repeat_ok(scenario, prefix)
+            bad += not ok; total += 1
+            print(f"{'ok  ' if ok else 'FAIL'} scan script: {name}" + ("" if ok else f" ({detail})"))
+        for name, fn in (("--entries-to splits the entries off stdout and the end line names the file", scan_entries_ok),
+                         ("--entries-to onto a non-empty file is refused, nothing written", scan_entries_refused_ok),
+                         ("the end line names VERSION, equal to the skill's version:", scan_version_ok)):
+            ok, detail = fn()
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} scan script: {name}" + ("" if ok else f" ({detail})"))
         rc, _, _, side = scan_case("broken", True)   # the halted run leaves its guard line, not an older finding

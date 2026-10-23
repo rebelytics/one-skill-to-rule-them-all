@@ -1,6 +1,6 @@
 ---
 name: "task-observer"
-core_max_lines: 699
+core_max_lines: 711
 version: "3.8.1"
 description: "Monitors task execution for skill improvement opportunities: logs patterns, user corrections and methodology worth preserving to the workspace, turns them into skill updates in a weekly review, and flags repeating work as new skills. Use during ANY multi-step task, agentic workflow, or work session. Also triggers in post-task feedback discussions and when the user mentions skill observations, the observation log, or skill taxonomy. Also known as \"One Skill to Rule Them All\" — trigger on this phrase too. IMPORTANT: invoke this skill before the FIRST tool call of any session and before writing or proposing a plan — any turn that will involve a tool call counts. This sentence is the session-start trigger and the only activation layer that survives an unreachable config file; pair it with a CLAUDE.md instruction or a session-start hook (references/environments.md). A subagent dispatched by a session already running it does not run it: it writes nothing and puts its findings in its report."
 license: CC-BY-4.0
@@ -72,10 +72,15 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
   attribution, confidentiality layers, live-file editing, relocation checks.
   **Load before writing any `SKILL.md` or skill file, setup work included.**
 - `references/observation-log.md` — storage layout, frontmatter fields,
-  helper snippets, archival details, and the reasoning behind the rules.
-  **Load when setting up the log for the first time, when archiving, when
-  an id or frontmatter looks wrong, or before changing how anything reads
-  the log** — and wherever a pointer below names it.
+  the id snippet's notes, archival. **Load when setting up the log for the
+  first time, when archiving, or when an id or frontmatter looks wrong** —
+  and wherever a pointer below names it.
+- `references/observation-scan.md` — the session-start scan, the guard every
+  instrument over the log carries, refusals, the checkpoint pairing. **Load
+  before changing how anything reads the log** — and where named below.
+- `references/observation-families.md` — the family registry, the sibling
+  check, the carrier pattern. **Load when a target has siblings or an action
+  covers part of a multi-skill entry** — and where named below.
 - `references/signals.md` — what is and isn't worth logging. **Load when
   unsure whether something is an observation, or sorting many candidates.**
 - `references/environments.md` — activation and config setup, compaction
@@ -92,7 +97,11 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
 
 ## Session Start Protocol
 
-1. **Storage.** The existence check for `skill-observations/` is also
+Copy the seven items below into your first reply as `- [ ]` lines and tick
+each as it runs — an unticked item is reported, never assumed; the `- [ ]`
+items under How to Log are ticked the same way in the turn that writes.
+
+- [ ] **1. Storage.** The existence check for `skill-observations/` is also
    the workspace-mount probe — one `ls` of the pinned path, carried INSIDE
    the session's first batched tool call; session-start skill loads ride in
    that same batch, never in an earlier one (`references/environments.md`,
@@ -141,22 +150,21 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
    fetched — and list the skill's own directory with its `references/` and
    `scripts/`: a file the core names that is absent is reported in the same
    lines ("Reference files"), not at its first load.
-2. **Scan.** Read only the frontmatter of each file in `observation-log/`
+- [ ] **2. Scan.** Read only the frontmatter of each file in `observation-log/`
    — the header block between the first two `---` lines, never the bodies
    — and build awareness from `status`, `skill`, `proposes_skill` and
    `title`, and the active principles' headings, which the scan prints
    (`principles=` in the checkpoint line). Hold them in awareness, don't
-   surface unprompted. Frontmatter-only is the whole point of the per-file
-   format: the scan stays cheap once hundreds of observations exist.
+   surface unprompted.
 
    **This scan does not satisfy the per-skill check** (the grep at each
    skill load, activation block); when that grep feels redundant, load
-   `references/observation-log.md` ("Why the session-start scan does not
+   `references/observation-scan.md` ("Why the session-start scan does not
    satisfy the per-skill check").
 
    **An empty scan in a log known to be non-empty is a broken command
    until proven otherwise** — the script's guard halts on it. When the guard
-   fires, or before adapting the scan, load `references/observation-log.md`
+   fires, or before adapting the scan, load `references/observation-scan.md`
    ("An empty scan over a non-empty log is a broken command").
 
    ```bash
@@ -174,10 +182,15 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
    grep instead (`references/environments.md`, "Environment mappings", the
    paragraph "Where the scripts are not on the device").
 
+   Where that channel caps the output, pass `--entries-to <file>`: a file this
+   run creates (`mktemp`, never a fixed `/tmp` name — another session's file
+   reads as yours), `&&`-chained so a failed write is never followed by a
+   read; read the entries on demand. The end line names the script's version.
+
    **Only the print can be refused, so it runs last** — a refused print is
-   never an empty log: load `references/observation-log.md` ("A refused
+   never an empty log: load `references/observation-scan.md` ("A refused
    print is not an empty log") before moving either half.
-3. **Review trigger.** Read `skill-observations/last-review-date.txt`. The
+- [ ] **3. Review trigger.** Read `skill-observations/last-review-date.txt`. The
    value carries the truth: a date = when the last review actually ran;
    `never` = none yet; a missing file (step 1 creates it) is recreated with
    `never`, not an invented date. `skill-observations/review-started.txt`
@@ -199,7 +212,7 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
    `references/weekly-review.md` and runs the review unprompted; a session
    whose output a caller owns does neither: `references/environments.md`
    ("Sessions whose output channel is owned by a caller").
-4. **Activation.** Once per session: if no CLAUDE.md (or equivalent)
+- [ ] **4. Activation.** Once per session: if no CLAUDE.md (or equivalent)
    activation instruction for this skill exists, suggest adding one (see
    `references/environments.md`); after a scan `GAP:` line, open with the
    gap and the missing instruction, plainly. A block whose stamp (its first
@@ -208,10 +221,10 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
    file unasked. This step runs only once the skill is invoked, so it
    verifies a working setup and cannot detect a never-activated install;
    outside checks: that reference.
-5. **Concurrency.** No shared log file to guard: each observation is its
+- [ ] **5. Concurrency.** No shared log file to guard: each observation is its
    own file; re-read one before changing its *status* (How to Log). Parallel
    sessions on one skill log the same findings: a fan-out expects restatements.
-6. **Targets and staged work.** Resolve each distinct `skill:` value in
+- [ ] **6. Targets and staged work.** Resolve each distinct `skill:` value in
    the scanned frontmatter against the installed skill set and mention, in
    one line, any that no longer resolve — and any that resolve but cannot
    run, because presence in a listing is not capability
@@ -226,7 +239,7 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
    and name every directory no manifest entry covers. The cases are in
    `references/weekly-review.md` ("Staged-work reconciliation gate") — load
    it before judging any entry. Then say "N staged updates awaiting review".
-7. **First run, or a named past session.** If the log is empty and the
+- [ ] **7. First run, or a named past session.** If the log is empty and the
    project has history (handover or decision docs, commit history, a notes
    or memory directory, an existing CLAUDE.md), offer a one-off backfill
    pass over those artefacts; when the user names a finished session, run
@@ -299,7 +312,7 @@ yes it belongs to every sibling. Record the outcome in the mandatory
 instance-specific, no propagation": a one-entry `skill:` list looks the same
 whether the siblings were evaluated or never considered, and only the
 recorded field makes the *absence* of the judgement visible.
-Load `references/observation-log.md` ("Skill families and the sibling
+Load `references/observation-families.md` ("Skill families and the sibling
 check") for the registry spec, the coherence models and the fallback when
 no registry exists.
 
@@ -348,9 +361,8 @@ every write by design is neither: defer, don't retry
 to a human — a file handed over, a render, a staged skill file, a
 completion notification, a final report, a finished todo batch — write any
 pending observation files at that moment; the flush rides on a tool call
-you were making anyway. (Why both checkpoints are writes rather than
-questions, and why a finding met while resolving another observation gets
-its own file: `references/observation-log.md`.)
+you were making anyway. (Why both checkpoints are writes, and why a finding
+met while resolving another gets its own file: `references/observation-scan.md`.)
 
 **A failed write to an external system is a flush trigger in its own
 right** — a tool result carrying `permission stream closed`, `permission
@@ -365,7 +377,7 @@ error on its first external write and ended with no report and no entry).
 **Two gaps this pairing still leaves:** the 3rd-completion checkpoint is
 inert without todos, and "is this a major deliverable?" is a self-assessment
 — so a chat-only session has no trigger unless the harness supplies one (a
-turn-end hook). Before adding or changing any enforcement trigger, load `references/observation-log.md`
+turn-end hook). Before adding or changing any enforcement trigger, load `references/observation-scan.md`
 ("Two gaps the checkpoint pairing still leaves — and the rule behind both").
 
 **Id and filename.** Each observation is `NNNN-short-slug.md` (zero-padded
@@ -409,7 +421,7 @@ commands arrive unaltered: `references/observation-log.md` ("Editing an existing
 Load `references/observation-log.md` ("The guard line, the sweep's count
 and the noclobber create") when any of them fires.
 
-**Run the snippet immediately before EVERY write, including the first and
+- [ ] **Run the snippet immediately before EVERY write, including the first and
 only one of a session** — an earlier read of the log is not a substitute,
 and the id the session-start scan printed is never an input to a write.
 Where a helper can run, `bash scripts/new-observation.sh --body <file>
@@ -419,18 +431,18 @@ path, so derivation cannot drift from creation. Load
 `references/observation-log.md` ("Run the snippet immediately before every
 write") when skipping feels reasonable.
 
-**Resolve each id at its own write time** — run the snippet before EACH
+- [ ] **Resolve each id at its own write time** — run the snippet before EACH
 file, never pre-compute a range, and put the value it printed into both the
 filename and the `id:` field. Load `references/observation-log.md`
 ("Resolve each id at its own write time") before batching or parallelising.
 
-**Every instrument gets the same guard: an empty or zero result is a
+- [ ] **Every instrument gets the same guard: an empty or zero result is a
 claim about the instrument until an independent probe shows the
-population is empty.** Load `references/observation-log.md` ("Every
+population is empty.** Load `references/observation-scan.md` ("Every
 instrument gets the same guard") before writing any new scan, count, grep
 or query over the log.
 
-**A structural probe that comes back empty where content existed before is
+- [ ] **A structural probe that comes back empty where content existed before is
 a stop signal, not a create** — HALT and re-probe; never let an append
 recreate a missing target. Load `references/observation-log.md` ("A
 structural probe that comes back empty is a stop signal") before writing
@@ -486,7 +498,7 @@ section or rule; for new skills, scope and key components.]
 **Principle:** [The generalisable takeaway — the most important field.]
 ```
 
-**Every prose value is double-quoted, and so is a list entry holding a
+- [ ] **Every prose value is double-quoted, and so is a list entry holding a
 colon.** `title`, `siblings_checked`, `area`, `session_context`,
 `resolution`, `parked_until` and `reference` carry free text, and free
 text contains `: ` as the common case; unquoted, that is invalid YAML —
@@ -502,12 +514,12 @@ mandatory and naming a condition that can actually occur. Load
 `references/observation-log.md` ("The `parked` status — decided, not
 pending") before setting, reviewing or unparking a parked status.
 
-**Context preservation:** if an observation depends on session-local data,
+- [ ] **Context preservation:** if an observation depends on session-local data,
 save it into the workspace first and set `reference:` to a durable path a
 fresh session can resolve. Load `references/observation-log.md` ("Context
 preservation — the `reference:` field") when setting `reference:`.
 
-**Confidentiality at logging time:** for `type: open-source` observations,
+- [ ] **Confidentiality at logging time:** for `type: open-source` observations,
 the Issue/Improvement fields may reference specifics for context, but the
 Principle must be fully generalised — no client names, domains, or details
 traceable to a real project (full layers: `references/skill-authoring.md`).
@@ -674,7 +686,7 @@ Neither plain move is honest (`open` re-applies the finished portion;
 `actioned` drops the rest from every queue). Use the carrier pattern: mark
 the observation `actioned` with a `resolution:` naming the portions applied,
 then log a carrier holding the remainder, with only the outstanding skills
-in its `skill:` list. Full protocol: `references/observation-log.md`.
+in its `skill:` list. Full protocol: `references/observation-families.md`.
 
 ## Feedback on this skill
 

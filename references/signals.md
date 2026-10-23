@@ -134,7 +134,7 @@ prominent, a checklist item, or a promise to be careful.
 **A barrier counts once it is armed, not once it is written** — and a
 change to an existing one, including a new branch added behind an entry
 point that is already registered, is a new barrier for this purpose.
-Arm it the way `observation-log.md` arms any enforcement trigger ("Two
+Arm it the way `observation-scan.md` arms any enforcement trigger ("Two
 gaps the checkpoint pairing still leaves — and the rule behind both"): the
 real command it must refuse, and a legitimate one from the real tool
 record, both run through it. Passing synthetic payloads are evidence about

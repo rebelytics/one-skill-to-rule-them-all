@@ -752,7 +752,7 @@ green result whose coverage is unstated is unauditable. A count produced
 by an enumerated set of shapes is a **lower bound**, never a "corrected"
 figure, and a check that has passed every run is evidence about the
 check, not about the artefact — the instrument guard
-(`observation-log.md`, "Every instrument gets the same guard") applies to
+(`observation-scan.md`, "Every instrument gets the same guard") applies to
 green results exactly as to empty ones. **One paired form is exempt
 (maintainer decision):** a measured fact may carry "Last verified
 YYYY-MM-DD · Re-test: `<one command>`" — the date plus a backticked
@@ -1219,7 +1219,7 @@ description drafted to pass them is the narrower one.
 siblings before drafting.** Intent → interview → draft is right for a
 genuinely new skill and wrong for one joining an existing family (the
 registry is `skill-observations/skill-families.md`; see
-`observation-log.md`), because the family already contains most of the
+`observation-families.md`), because the family already contains most of the
 answer, distributed unevenly across its members; drafting from the
 current session's experience produces a third divergent member. The cost
 is asymmetric and front-loaded — reading two siblings first is minutes;

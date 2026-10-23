@@ -3,27 +3,45 @@
 # log, as one command.
 #
 # Usage:
-#   bash scripts/session-start-scan.sh [workspace-root]
+#   bash scripts/session-start-scan.sh [--entries-to <file>] [workspace-root]
 #
 #   [workspace-root]  the pinned absolute workspace path — the directory that
 #                     holds skill-observations/. Defaults to the environment
 #                     variable TASK_OBSERVER_WORKSPACE. One of the two is
 #                     required; the log is never resolved from the cwd. The
 #                     path may contain spaces.
+#   --entries-to <file>
+#                     write the per-entry frontmatter listing to <file>
+#                     instead of stdout, for a channel that caps the output
+#                     (a bridged device shell): stdout then carries only the
+#                     finding lines, the counts, the principles' headings and
+#                     the summary block, and the entries are read from the
+#                     file on demand. <file> is a path THIS run created
+#                     (`mktemp`), never a fixed name in a shared scratch
+#                     directory: an existing non-empty file is refused (exit
+#                     2), because a redirect onto another session's file
+#                     followed by a read returns that session's scan.
 #
-# Prints, on stdout, in this order: any NOTE / LOST ENTRIES / UNFILLED lines
+# Prints, on stdout, in this order: any NOTE / LOST ENTRIES / UNFILLED /
+# DUPLICATE ID lines
 # (UNFILLED: a header whose title: is empty — the skeleton new-observation.sh
 # writes at create time, a write in progress or abandoned; NOTE: id: … when
-# a header's id does not read as its filename prefix); the counts
+# a header's id does not read as its filename prefix; DUPLICATE ID — NNNN:
+# <file1>, <file2> when two files across observation-log/ and archive/ share
+# a numeric prefix — a write that went around the id snippet's prefix
+# guard); the counts
 # line (files, parsed, suspect, archive-suspect); a SPLIT STORE line when a
 # pre-3.0 log.md sits beside the directory; a NOTE: pointer line when
 # skill-observations/MOVED.md exists; a GAP line when the previous scan in
 # checkpoints.log is 7 or more days old; the logs found under the root's
 # parent; the active principles' headings; then the frontmatter of every
-# numbered entry, each header followed by one `---` line; then the summary
-# block: every finding line (NOTE / LOST ENTRIES / UNFILLED / SPLIT STORE /
-# GAP) repeated VERBATIM, and LAST one `end of scan` line repeating the
-# counts and how many finding lines stand above the entries. The findings
+# numbered entry, each header followed by one `---` line (or, with
+# --entries-to, that listing goes to the file); then the summary
+# block: every finding line (NOTE / LOST ENTRIES / UNFILLED / DUPLICATE ID /
+# SPLIT STORE / GAP) repeated VERBATIM, and LAST one `end of scan` line
+# repeating the counts, how many finding lines stand above the entries, and
+# this script's version (VERSION below, equal to the skill's `version:`), so
+# a run can tell a script that lacks a feature from one that is broken. The findings
 # open the output and close it, so a view cut by `head` keeps them and one
 # cut by `tail` keeps them with the summary; the same lines are written to
 # skill-observations/last-scan-findings.txt (overwritten each run, empty
@@ -41,7 +59,8 @@
 #      scan halts there, before the checkpoint line and the content print
 #      (the sidecar file holds that one line, so no earlier run's findings
 #      survive the halt)
-#   2  refused: no workspace root, or a root that is not an absolute path
+#   2  refused: no workspace root, a root that is not an absolute path, an
+#      --entries-to path that exists and is not empty, or an unknown option
 #   any other non-zero status is the content print's own (the counts and the
 #   checkpoint line above it already ran, and the end-of-scan line names the
 #   status) — a refused or failed print is never an empty log
@@ -60,7 +79,23 @@
 
 set -u
 
+VERSION="3.8.0"   # equal to the skill's frontmatter version:; the end line names it
+
+entries=   # --entries-to target; empty = the entries print to stdout
+while [ $# -gt 0 ]; do
+  case $1 in
+    (--entries-to) [ $# -ge 2 ] || { echo "--entries-to needs a file path" >&2; exit 2; }; entries="$2"; shift 2 ;;
+    (--entries-to=*) entries="${1#--entries-to=}"; shift ;;
+    (--) shift; break ;;
+    (-*) echo "unknown option '$1' (the options are --entries-to <file>)" >&2; exit 2 ;;
+    (*) break ;;
+  esac
+done
 root="${1:-${TASK_OBSERVER_WORKSPACE:-}}"
+
+if [ -n "$entries" ] && [ -s "$entries" ]; then
+  echo "--entries-to '$entries' exists and is not empty: pass a path this run created (mktemp), never a fixed name another session may hold" >&2; exit 2
+fi
 
 if [ -z "$root" ]; then
   echo "no workspace root: pass it as the first argument or set TASK_OBSERVER_WORKSPACE" >&2; exit 2
@@ -169,6 +204,18 @@ unfilled=$(printf '%s\n' "$hd" | sed -n 's/^U //p' | LC_ALL=C sort | tr '\n' ' '
 [ -n "$unfilled" ] && finding "UNFILLED — a header with an empty title: the helper's skeleton, a write in progress or abandoned; it holds its id, so fill it or decline it, never reuse or delete: $unfilled"
 idmis=$(printf '%s\n' "$hd" | sed -n 's/^I \(.*\) \(.*\)$/\1 (id: \2)/p' | LC_ALL=C sort | tr '\n' ' ')
 [ -n "$idmis" ] && finding "NOTE: id: does not read as the filename prefix — another entry's id retyped, or a body written into the wrong file; fix the field, never the filename, after reading the body: $idmis"
+# Duplicate numeric prefixes across observation-log/ and archive/: two files
+# sharing one id are a write that went around the snippet's prefix guard
+# (the guard lives on one write path; this check reads them all). The
+# prefix is compared as a number, so 0063- and 63- are one id; archived
+# files are named with their archive/ prefix. One finding line per id,
+# counted and written to the sidecar like every other.
+dups=$( { find "$d" -maxdepth 1 -name '[0-9]*.md' | sed 's|.*/||'; [ -d "$d/archive" ] && find "$d/archive" -maxdepth 1 -name '[0-9]*.md' | sed 's|.*/\([^/]*\)$|archive/\1|'; } \
+  | LC_ALL=C sort | LC_ALL=C awk '{f=$0; sub(/^archive\//, "", f); n=substr(f, 1, match(f, /[^0-9]/) - 1) + 0; c[n]++; if (n in l) l[n]=l[n] ", " $0; else l[n]=$0} END {for (n in c) if (c[n] > 1) printf "%04d: %s\n", n, l[n]}' | LC_ALL=C sort)
+if [ -n "$dups" ]; then
+  # a here-string, not a pipe: `finding` must update fx and findings in THIS shell
+  while IFS= read -r line; do [ -n "$line" ] && finding "DUPLICATE ID — $line — two writes share one id; re-id the later file in the next review and never cite the number bare"; done <<< "$dups"
+fi
 # Headers that did not parse, by name: no opening, or no closing `---`. The
 # names ride on the finding line itself, so the repeat and the sidecar carry them.
 if [ "$parsed" -lt "$n" ]; then
@@ -230,13 +277,22 @@ find "$(dirname "$root")" -maxdepth 3 -type d -path '*/skill-observations/observ
 # The frontmatter of every numbered entry, one awk for the whole set over the
 # directory's own glob (no word splitting of a spaced path). This is the only
 # half a content classifier can refuse, so everything above has already run
-# when it is.
-( export LC_ALL=C; [ "$n" -eq 0 ] || { cd "$d" && awk 'FNR==1 && NR>1 && fm {print "---"}
+# when it is. With --entries-to, the same print goes to that file: a failed
+# redirect skips the print and surfaces as the content print's exit status.
+print_entries() {
+  ( export LC_ALL=C; [ "$n" -eq 0 ] || { cd "$d" && awk 'FNR==1 && NR>1 && fm {print "---"}
     FNR==1 {sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) {print "---"; nextfile}; next}
     fm && /^---[[:space:]]*$/ {fm=0; print "---"; nextfile}
     fm
     END {if (fm) print "---"}' [0-9]*.md; } )
-rc=$?
+}
+if [ -n "$entries" ]; then
+  print_entries > "$entries"; rc=$?
+  ent="; entries written to $entries"
+else
+  print_entries; rc=$?
+  ent=
+fi
 
 # --- LAST: the summary block — the findings again, then the end-of-scan line -
 # The finding lines are repeated here VERBATIM, after the entries, and written
@@ -250,6 +306,6 @@ sc="$sidecar"
 printf '%s' "$findings" > "$sidecar" 2>/dev/null || sc="$sidecar (write failed)"
 printf '%s' "$findings"
 st=; [ "$rc" -eq 0 ] || st="; content print exited $rc"
-printf 'end of scan — files: %s  parsed: %s  suspect: %s  archive-suspect: %s  principles: %s; finding lines above the entries (NOTE / LOST ENTRIES / UNFILLED / SPLIT STORE / GAP): %s, repeated just above this line and written to %s%s. Read the output whole: never cut it with head, tail or grep\n' \
-  "$n" "$parsed" "$suspect" "$a_sus" "$pr" "$fx" "$sc" "$st"
+printf 'end of scan — files: %s  parsed: %s  suspect: %s  archive-suspect: %s  principles: %s; finding lines above the entries (NOTE / LOST ENTRIES / UNFILLED / DUPLICATE ID / SPLIT STORE / GAP): %s, repeated just above this line and written to %s%s%s. Read the output whole: never cut it with head, tail or grep — session-start-scan.sh v%s\n' \
+  "$n" "$parsed" "$suspect" "$a_sus" "$pr" "$fx" "$sc" "$ent" "$st" "$VERSION"
 exit "$rc"

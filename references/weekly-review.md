@@ -234,6 +234,19 @@ of existing content; (3) it self-flags uncertainty ("not sure if…",
 should still apply every non-escalated item — a review that applies
 nothing is just a report generator.
 
+**Recommended, applied by default — the disposition between the two.** A
+scheduled run applies its recommended option to a staged copy, without
+escalating, when ALL hold: reversible by not installing; the structural,
+measure-first or keep-the-adopted-model variant; no outward-facing effect
+(no publish, send or repo write); no cost in the user's time or money; not
+a new skill; no household or client VALUE set (a mechanism may be staged
+with the value left "to set"); and no other observation conflicts. The
+summary lists these under "Applied by default — object and it reverts",
+one line each with the option taken; the escalation list keeps everything
+else, each with a recommended option so the interactive pass stays fast.
+Record the acceptance rate of the previous review's defaults in the
+record, so the tier is tightened or loosened on evidence.
+
 **Separate the recommendation from the choice before counting agreement
 as evidence.** A decision that is SUBSTANTIVE — it changes a rule, retires
 a prior decision or sets a value — is presented as unlabelled options in a
@@ -248,19 +261,6 @@ of reviews. The failure shape: every decision presented
 recommendation-first and labelled is accepted, and the loop cannot tell
 good recommendations from anchoring — yet reads the number as grounds to
 loosen.
-
-**Recommended, applied by default — the disposition between the two.** A
-scheduled run applies its recommended option to a staged copy, without
-escalating, when ALL hold: reversible by not installing; the structural,
-measure-first or keep-the-adopted-model variant; no outward-facing effect
-(no publish, send or repo write); no cost in the user's time or money; not
-a new skill; no household or client VALUE set (a mechanism may be staged
-with the value left "to set"); and no other observation conflicts. The
-summary lists these under "Applied by default — object and it reverts",
-one line each with the option taken; the escalation list keeps everything
-else, each with a recommended option so the interactive pass stays fast.
-Record the acceptance rate of the previous review's defaults in the
-record, so the tier is tightened or loosened on evidence.
 
 Criterion (2) is about whose judgement is driving the change, not about
 the size of the diff. Where the observation records the removal or
@@ -490,7 +490,7 @@ point-in-time assertion, not a standing guarantee:** the log is
 multi-writer and a long review is exactly when other sessions are logging,
 so the result decays for the duration of the run. Keep the Step 1 file list ON DISK — never in a shell variable,
 which does not survive the next tool call and is not word-split under zsh
-(`observation-log.md`, "Under zsh…") — so Step 6 can re-scan against it
+(`observation-scan.md`, "Under zsh…") — so Step 6 can re-scan against it
 before anything is marked:
 
 ```bash
@@ -989,7 +989,7 @@ entries target the same member. Then, before anything is presented:
   is already applied, with a resolution naming where it was found.
   Search two surfaces, not one: the substance grep is worded by the
   reviewer and the fix by whoever applied it, so a zero there is a claim
-  about the pattern (`observation-log.md`, "Every instrument gets the same
+  about the pattern (`observation-scan.md`, "Every instrument gets the same
   guard"). Where the project cites observation ids in commit messages or
   code comments, also search the citation, for example
   `git log --since=<entry date> -E --grep='#0*<id>([^0-9]|$)'` and
@@ -1053,17 +1053,17 @@ entries target the same member. Then, before anything is presented:
   in `resolution:` and carry it into the Family coherence block of the
   summary. Where a legitimate partial application exists (one session owns
   a subset of the listed skills), the carrier pattern in
-  `observation-log.md` resolves it — and a carrier observation enters this
+  `observation-families.md` resolves it — and a carrier observation enters this
   queue as first-class, never deferred on account of its provenance. Also check `siblings_checked:` while the frontmatter is in
   hand: an entry with the field missing or blank was logged without the
   check, so before actioning it, do the check now (registry, tests and
-  fallback in `observation-log.md`) and widen `skill:` if it was
+  fallback in `observation-families.md`) and widen `skill:` if it was
   under-scoped. Count these — "N observations logged without a sibling
   check" is a health metric of the logging practice, not a per-entry
   nuisance. Count the `assumed` exclusions the same way, from the
   frontmatter alone, and open each such sibling before actioning the
   entry: an exclusion grounded on `assumed` is a review item, not a
-  verdict (`observation-log.md`, "Record the verdict"). Check
+  verdict (`observation-families.md`, "Record the verdict"). Check
   `commands_verified:` in the same pass: a body that quotes a command or
   proposes a predicate with the field missing or blank quotes one nobody
   ran — run it now, on the instance the entry describes, or record
@@ -1161,7 +1161,7 @@ member Step 2 put in (b) or (c) carries only what its upstream wrote, so
 for a rule written locally grep the destination Step 2 routed it to (the
 `{skill}-extras` companion or the instruction-file entry), and say so in
 the audit line. A zero over a population that cannot contain the rule is
-a statement about the instrument, not drift (`observation-log.md`,
+a statement about the instrument, not drift (`observation-scan.md`,
 "Every instrument gets the same guard"). It is mechanical, takes minutes,
 and is the only part of the family mechanism that catches drift predating
 the rule or introduced by a skill authored outside the log. Two
@@ -1580,7 +1580,7 @@ with a resolution noting that a prior session applied them, and leave
 the section alone. A `partially-applied` entry names the remainder in
 `resolution:` ("suggestion applied; issue still open: <what can still
 happen>") and logs that remainder as its own observation in the same
-turn — the carrier pattern in `observation-log.md` — so it stays in the
+turn — the carrier pattern in `observation-families.md` — so it stays in the
 queue after this one archives. When this run applies the remainder
 itself, it adds only the points without a line, never restates the ones
 that have one — a second copy of a present rule drifts from the first —
@@ -1902,7 +1902,9 @@ for the next review; or "none" — the line is never omitted]
 
 ### Applied by default — object and it reverts
 [one line each: #id — the option taken (Approval policy); or "none";
-then "defaults of the previous review accepted: N/M"]
+then "defaults of the previous review accepted: N/M" — counted over the
+substantive decisions presented unlabelled; per decision, status-quo or
+substantive, and whether the pick matched the recommendation]
 
 ### Unconfirmed
 [one line each: #id — title — no use_evidence line N days after its date;
