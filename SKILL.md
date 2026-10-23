@@ -437,7 +437,9 @@ by the Issue → Improvement → Principle body. **The frontmatter is mandatory;
 always write `status: open` and a non-empty `siblings_checked:` at creation
 time** — an observation without a `status` field is treated as OPEN by
 reviews, never as nonexistent, and one without `siblings_checked:` counts
-as logged without a sibling check.
+as logged without a sibling check. The helper refuses a `--body` whose
+header breaks either, or whose `type:` is outside the two values, and
+creates no file.
 
 ```markdown
 ---
@@ -466,6 +468,9 @@ resolution:             # what was done — set only when actioned/declined/supe
 reference:              # optional — path to saved session-local evidence
 commands_verified:      # MANDATORY when the body quotes a command or predicate —
                         #   each `run` with its result, or `NOT RUN` with why; else none
+next_actor:             # optional, set with a decision: publishing-run | review | maintainer
+use_evidence:           # optional, append-only: one line per session that NEEDED the entry,
+                        #   - YYYY-MM-DD accepted|declined|used — short context, no colon-space
 ---
 
 **Issue:** [What happened — specific enough to understand weeks later
@@ -501,31 +506,34 @@ preservation — the `reference:` field") when setting `reference:`.
 **Confidentiality at logging time:** for `type: open-source` observations,
 the Issue/Improvement fields may reference specifics for context, but the
 Principle must be fully generalised — no client names, domains, or details
-traceable to a real project. Full confidentiality layers:
-`references/skill-authoring.md`.
+traceable to a real project (full layers: `references/skill-authoring.md`).
 
 **Changing an existing observation:** re-read that one file, edit only the
 frontmatter fields you are changing (`status`, `parked_until`, `resolved`,
 `resolution`), never batch-rewrite the directory. Archival is a plain `mv`.
+A `use_evidence:` line is appended inside the header, before its closing
+`---`, by one insert command, never a rewrite of the file (the command:
+`references/observation-log.md`, "Frontmatter fields"). A decision appended
+to the body sets `next_actor:` and prefixes `title:` with `DECIDED:` in the
+same edit, so a title-only scan stops showing a settled item as open.
 
 ## Referencing Observations
 
 Cite an observation by the `id` field in its frontmatter (= the `NNNN-`
-filename prefix), never a `grep -n` line number, which is positional metadata;
-in chat write every surfaced id as `observation NNNN`, never a bare number. An
-id must fall inside the range across `observation-log/`, `archive/` and
-`.id-floor`; one far outside it is a line number misread as an id.
+filename prefix), never a `grep -n` line number; in chat write every surfaced
+id as `observation NNNN`, never a bare number. An id must fall inside the range
+across `observation-log/`, `archive/` and `.id-floor`; one far outside it is a
+line number misread as an id.
 
 ## Taxonomy (quick version)
 
 **Open-source** — client-agnostic, methodology-driven, useful to other
 practitioners. **Internal** — contains user/client/project specifics or
 personal preferences. Default to open-source when it could go either way,
-stripping specifics. The boundary is also a confidentiality boundary and
-the two errors are not symmetric — over-classifying as internal costs only
-reach, under-classifying can leak — so when genuinely uncertain, prefer
-internal and promote later. Full requirements (attribution, licensing,
-structure): `references/skill-authoring.md`.
+stripping specifics. The boundary is a confidentiality boundary with
+asymmetric errors — internal costs only reach, open-source can leak — so
+when genuinely uncertain, prefer internal and promote later. Full
+requirements (attribution, licensing, structure): `references/skill-authoring.md`.
 
 ## Archival on Write
 
@@ -555,36 +563,41 @@ needs user input to be complete, when a skill is actively producing wrong
 output, or when observations cluster on one skill.
 
 **Deferral wears a second disguise: not a promise, but an argument** ("let's
-gather more data first"). Before writing any "later" into a
-recommendation, load `references/signals.md` ("Deferral disguised as
-diligence") and name which specific observation would change the decision
-and when it could arrive.
+gather more data first"). Before writing any "later" into a recommendation,
+load `references/signals.md` ("Deferral disguised as diligence") and name
+which specific observation would change the decision, and when.
 
 **Default to log-and-defer.** Surfacing an observation is not an invitation
-to act on it: state that it is logged for the next review, and stop.
-Reserve in-session application strictly for the triggers under "Acting on
-Observations". Do NOT routinely offer a binary "apply now vs leave for next
-review" choice; for users who run regular reviews that offer is unwanted
-friction, and if a user has said they always defer, suppress it entirely.
+to act on it: state that it is logged for the next review, and stop;
+in-session application is reserved for the triggers under "Acting on
+Observations". Never routinely offer "apply now vs leave for next review":
+for users who run regular reviews it is friction, and one who always defers
+has said so once.
 
 **Log-and-defer means the observation is the sole carrier of the change**,
 and applying an insight to the work in front of you is not the same act.
 Letting an open observation change what you do in THIS task is the point of
-the log. Writing the rule anywhere a later run reads it — a state file the
-skill loads (registry, dossier, config note), a prompt, a handoff doc, a
-project instruction file — is acting on it. The test: **does it leave a
-durable change outside the observation log?** The disguise is a bridge —
-"the rule has to live somewhere until the review runs". It does, and that
-somewhere is the observation; a parked copy has no update path, so when the
-review edits the skill the next run reads both. A state file that genuinely
-needs to point at the rule gets one line naming the owner and the pending
-change, never a restatement. A harness's skill-save control is the sharper
-version: it installs a copy rather than parking one, possibly over what a
-parallel review has staged. See "Acting on Observations".
+the log, with the user's consent at the point of use: when a loaded open
+observation actually changes what you are about to do, surface it once per
+session, at a natural break (never mid-task), in one line with accept /
+opt-out — follow it in this task or not, never an offer to edit the skill —
+and append the answer to its `use_evidence:` (How to Log). An opt-out
+records its context and never closes the entry, since a rejection in one
+context can be right in another; an unattended run appends `used` without
+asking; an entry with no evidence line 30 days after its `date:` is offered
+with the note that it has not been needed since it was logged. Writing the
+rule anywhere a later run reads it — a state file the skill loads (registry,
+dossier, config note), a prompt, a handoff doc, a project instruction file —
+is acting on it. The test: **does it leave a durable change outside the
+observation log?** The bridge disguise — "the rule has to live somewhere
+until the review runs" — is answered by the observation itself; a parked
+copy has no update path, so the next run reads both. A state file that
+must point at the rule gets one line naming the owner and the pending
+change, never a restatement ("Acting on Observations").
 
 **Self-check before surfacing:** observations were logged throughout the
-whole session (including discussion phases) without interrupting the task; each follows
-Issue → Improvement → Principle; each is typed; existing-skill items name
+session, discussion phases included, without interrupting the task; each
+follows Issue → Improvement → Principle; each is typed; existing-skill items name
 the section; no open-source Principle contains client-identifying info;
 every file carries `status:` and a non-empty `siblings_checked:` (if one lacks
 it, do the sibling check now, never back-fill `none`); every id the summary

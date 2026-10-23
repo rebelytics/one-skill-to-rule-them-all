@@ -171,6 +171,8 @@ promise about the rest.
 | `resolution` | What was done, or why declined. When the fix is a prescription (a rule, a check, a form to use), an `actioned` resolution names where it now lives — a file and section, a staged skill copy, or a registered backlog entry. If no such place can be named, the prescription has been described, not applied: leave the entry `open`, or resolve the part that landed and carry the rest in a carrier observation (below). A review's own resolution already names the staged copy (`weekly-review.md`, Step 6); this is the rule for a resolution set outside a review. |
 | `reference` | Optional path to saved session-local evidence. |
 | `commands_verified` | One clause per executable command, and per predicate (a regex, a search pattern, a hook or check condition), the body quotes: `run`, with what it returned — for a predicate, whether it matched the positive case and the negative — or `NOT RUN` with why; the literal `none` where the body quotes neither. Blank on a body that quotes a command or predicate means it was never run. See "Commands inside an observation" below. |
+| `next_actor` | Optional, set in the edit that appends a decision to the body: `publishing-run`, `review` or `maintainer` — who executes it next. The same edit prefixes `title:` with `DECIDED:` (core, How to Log), so a title-only scan reads the entry as settled rather than as an open question. |
+| `use_evidence` | Optional, append-only block list: one line per session in which the entry was NEEDED to decide the agent's behaviour, `- YYYY-MM-DD accepted\|declined\|used — short context`. `accepted` / `declined` is the user's answer in an interactive session (core, Surfacing Protocol); `used` is an unattended run that applied it without asking. Lines are appended by the command below and never removed; a `declined` line never closes the entry. The context is a plain scalar: no `: ` and no ` #` in it — the first turns the item into a mapping, the second cuts it. The review orders its queue by the count of these lines and flags an entry with none 30 days after its `date:` as unconfirmed (`weekly-review.md`, Step 3). |
 | `skill_qualifiers` | Optional map: skill name → the section or part of that skill meant. |
 | `migration_note` | Present only on files converted from a legacy log where the converter refused to guess; clear it once reviewed. |
 
@@ -185,6 +187,29 @@ on one: 4 hits, 0 defects, 0 normalised). A scan that parses every header and ch
 none of them against this table touches such an entry on schedule and
 reports a clean count. The failure produces a smaller number, never an error, which is
 why a near-miss name is flagged rather than skipped wherever a check runs.
+
+**Appending a `use_evidence:` line is one insert inside the header, never
+a rewrite of the file.** The line goes before the header's closing `---`,
+under an existing `use_evidence:` key or a new one; the verdict and the
+context travel as arguments, so no shell quoting touches them, and the
+command refuses a context the header cannot carry:
+
+```bash
+python3 - "<observation file>" accepted "<short context, no colon-space>" <<'PY'   # accepted | declined | used
+import sys, datetime, pathlib
+p, v, c = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+assert v in ("accepted", "declined", "used") and ": " not in c and " #" not in c, "verdict or context not allowed"
+t = p.read_text(encoding="utf-8").split("\n"); e = t.index("---", 1)
+k = next((i for i in range(1, e) if t[i].startswith("use_evidence:")), None)
+if k is None: t.insert(e, "use_evidence:"); k = e; e += 1
+j = k + 1
+while j < e and t[j].startswith("  - "): j += 1
+t.insert(j, f"  - {datetime.date.today():%Y-%m-%d} {v} — {c}"); p.write_text("\n".join(t), encoding="utf-8")
+PY
+```
+
+Where no Python runs, the editing tool inserts the same line at the same
+place; either way the file is re-read first, as for any status edit.
 
 **An entry is UTF-8 without a byte order mark.** Every header reader tests
 line 1 for `---`, and a BOM in front of it hides the header: the scan

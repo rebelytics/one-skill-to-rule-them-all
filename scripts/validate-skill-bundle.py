@@ -436,37 +436,42 @@ def check_core_size(skill_md, fails):
             f"commit — a trim is locked in, not left as headroom.")
 
 
-def index_misses(body):
-    """Headings below a file's `## Contents` index that the index lacks.
+def _norm(s):
+    return " ".join(s.split())
+
+
+def _index_entries(body):
+    """(match, entry groups) of a file's `## Contents` index, or (None, []).
 
     The index ends at the next `## ` heading, or — in a file whose entries
     are all `###` (a numbered principles list) — at the first `###` entry, a
     horizontal rule, or the end of the file. Bounding it by `## ` alone
     matched nothing in such a file, so the check skipped exactly the index
     that changes most often, and a numbered entry shipped with no Contents
-    line. Every `##`/`###` heading after the index, numbered `### N.`
-    entries included, must have its line.
+    line. Within that span the ENTRIES end at the first paragraph — a
+    non-blank line that neither opens a list item nor is indented under one
+    — because a preamble between the index and the first section is prose,
+    and reading its lines as entries let a later list in that preamble
+    stand in for headings nothing indexed. Each group holds one entry's
+    forms: the text, and for a numbered item the text with its marker.
     """
-    def norm(s):
-        return " ".join(s.split())
-
     def plain(s):
         # An entry written as an anchor link, `[Alpha](#alpha)`, is the
         # other common way to write an index; reading the brackets as text
         # failed every heading of a correct index, so the link is reduced
         # to its text before matching.
-        return norm(re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", s))
+        return _norm(re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", s))
 
     m = re.search(r"(?ms)^## Contents[ \t]*\n(.*?)(?=^## |^### |^-{3,}[ \t]*$|\Z)", body)
     if not m:
-        return []             # a file may legitimately have no index
+        return None, []       # a file may legitimately have no index
     # Index entries wrap, and legitimately carry a parenthetical the
     # heading does not ("Lean Content (including progressive
     # disclosure…)"). So: join continuation lines into their entry, then
     # match a heading as a PREFIX of an entry, not by equality. Requiring
     # equality reported a correctly-indexed section as missing — the
     # check's own first finding was its own defect.
-    entries, cur, num = [], None, ""
+    groups, cur, num = [], None, ""
     # A bullet is `-`, `*` or `+`: all three are Markdown lists, and an
     # index written with `*` otherwise had no entries at all. A numbered
     # list (`1. Alpha`, `1) Alpha`) is a list too; its entry is kept both
@@ -474,9 +479,7 @@ def index_misses(body):
     # `## Alpha` alike — reading it as no entry reported every heading
     # of a correct numbered index as missing.
     def flush():
-        entries.append(plain(cur))
-        if num:
-            entries.append(plain(num + cur))
+        groups.append([plain(cur)] + ([plain(num + cur)] if num else []))
     for line in m.group(1).splitlines():
         mk = re.match(r"^\s*([-*+]|\d+[.)])\s+", line)
         if mk:
@@ -485,17 +488,59 @@ def index_misses(body):
             cur = line[mk.end():]
             num = mk.group(1) + " " if mk.group(1)[0].isdigit() else ""
         elif cur is not None and line.strip():
+            if not line[0].isspace():
+                break         # a paragraph: the entries are over
             cur += " " + line.strip()
     if cur is not None:
         flush()
-    # Headings below the index, excluding the index itself
+    return m, groups
+
+
+def _entry_covers(entry, anchor):
+    return entry == anchor or entry.startswith(anchor + " ") or entry.startswith(anchor + "(")
+
+
+def index_misses(body):
+    """Headings below a file's `## Contents` index that the index lacks.
+
+    Every `##`/`###` heading after the index, numbered `### N.` entries
+    included, must have its line (`_index_entries` says where the index
+    ends and how an entry is read).
+    """
+    m, groups = _index_entries(body)
+    if not m:
+        return []
+    entries = [e for g in groups for e in g]
     missing = []
     for h in re.findall(r"(?m)^#{2,3}\s+(.+?)\s*$", body[m.end():]):
-        hn = norm(h)
-        if not any(e == hn or e.startswith(hn + " ") or e.startswith(hn + "(")
-                   for e in entries):
+        hn = _norm(h)
+        if not any(_entry_covers(e, hn) for e in entries):
             missing.append(h)
     return missing
+
+
+def index_orphans(body):
+    """Index entries that resolve to no anchor in the same file — the
+    reverse of `index_misses`. The forward pass certifies a stale index: an
+    entry whose heading was renamed or deleted passes it, and a stale index
+    is exactly what a trim or a relocation leaves behind. An anchor is a
+    `##`–`####` heading below the index, or a bold lead opening a paragraph
+    (`**Step 1 — load.**`, its closing `.` or `:` dropped) — an index
+    legitimately lists the steps of a procedure written that way. A lead
+    is a sentence where a heading is a title, so an entry may name a lead
+    by its opening clause (`Step 2 — inventory skills` for a lead that
+    goes on to say how). Measured before those rules: every hit on the
+    bundle was one of the three shapes, and none was a defect.
+    """
+    m, groups = _index_entries(body)
+    if not m:
+        return []
+    below = body[m.end():]
+    heads = {_norm(h) for h in re.findall(r"(?m)^#{2,4}\s+(.+?)\s*$", below)}
+    leads = {_norm(h).rstrip(".:") for h in re.findall(r"(?ms)^\*\*(.+?)\*\*", below)}   # a lead wraps
+    return [g[0] for g in groups
+            if not any(_entry_covers(e, a) for e in g for a in heads)
+            and not any(_entry_covers(e, a) or a.startswith(e + " ") for e in g for a in leads)]
 
 
 # (name, reference-file text, headings index_misses must report)
@@ -516,6 +561,30 @@ INDEX_FIXTURES = [
      "# R\n\n## Contents\n\n1. Alpha\n2. Beta\n\n## 1. Alpha\n\n## 2. Beta\n", []),
     ("a numbered list indexes unnumbered headings too",
      "# R\n\n## Contents\n\n1. Alpha\n2) Beta two\n\n## Alpha\n\n## Beta two\n\n## Gamma\n", ["Gamma"]),
+    ("a preamble paragraph ends the entries; a list inside it is not the index",
+     "# R\n\n## Contents\n\n- Alpha\n\nPreamble prose.\n\n- Not an entry\n\n## Alpha\n\n## Beta\n", ["Beta"]),
+]
+
+# (name, reference-file text, entries index_orphans must report): the
+# reverse pass — every entry resolves to a heading or a bold lead.
+ORPHAN_FIXTURES = [
+    ("every entry has its heading: nothing reported",
+     "# R\n\n## Contents\n\n- Alpha\n- Beta two — what it covers\n\n## Alpha\n\n## Beta two\n", []),
+    ("an entry whose heading was deleted is an orphan",
+     "# R\n\n## Contents\n\n- Alpha\n- Beta\n\n## Alpha\n", ["Beta"]),
+    ("an entry whose heading was renamed is an orphan",
+     "# R\n\n## Contents\n\n- [Alpha](#alpha)\n\n## Alpha one\n", ["Alpha"]),
+    ("a bold lead with its closing period anchors a step entry",
+     "# R\n\n## Contents\n\n- Steps\n  - Step 1 — load\n\n## Steps\n\n**Step 1 — load.** Text.\n", []),
+    ("an entry naming a lead's opening clause passes; a heading's prefix does not",
+     "# R\n\n## Contents\n\n- Steps\n  - Step 2 — inventory\n- Alpha\n\n## Steps\n\n"
+     "**Step 2 — inventory skills,\nby survival.** Text.\n\n## Alpha one\n", ["Alpha"]),
+    ("a #### heading anchors an entry",
+     "# R\n\n## Contents\n\n- Alpha\n- Deep\n\n## Alpha\n\n#### Deep\n", []),
+    ("a numbered entry resolves through either of its forms",
+     "# R\n\n## Contents\n\n1. Alpha\n2. Beta\n\n## 1. Alpha\n\n## Beta\n", []),
+    ("a list in the preamble is not read as entries",
+     "# R\n\n## Contents\n\n- Alpha\n\nPreamble prose.\n\n- Not an entry\n\n## Alpha\n", []),
 ]
 
 
@@ -547,8 +616,11 @@ def check_reference_indexes(skill_dir, fails):
     if not refs.is_dir():
         return
     for p in sorted(refs.glob("*.md")):
-        for h in index_misses(defence(p.read_text(encoding="utf-8"))):
+        text = defence(p.read_text(encoding="utf-8"))
+        for h in index_misses(text):
             fails.append(f"{p.name}: heading not in its own Contents index: {h!r}")
+        for e in index_orphans(text):
+            fails.append(f"{p.name}: index entry without a heading: {e!r}")
 
     core = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
     check_reference_shape(skill_dir, core, fails)
@@ -1201,6 +1273,8 @@ SCAN_FIXTURES = [
      "after reading the body: 0004-d.md (id: 5)", 1, "0002-b.md (id"),
     ("a pre-3.0 log.md beside the directory: SPLIT STORE with its count", "split", True, 0,
      "SPLIT STORE — log.md holds 2 observations not in observation-log/", 1, ""),
+    ("use_evidence and next_actor in a header: parsed, not suspect", "fields", True, 0,
+     "files: 2  parsed: 2  suspect (awk, a floor): 0", 1, "NOTE:"),
 ]
 
 
@@ -1226,6 +1300,11 @@ def scan_case(scenario, pass_root):
             (log / "0001-a.md").write_text('---\nid: 1\ntitle: "ok"\n---\nbody\n', encoding="utf-8")
             rest = {"skeleton": [("0002-b.md", '---\nid: 2\ntitle: ""\nstatus: open\nskill: []\n---\n')],
                     "idmis": [("0002-b.md", '---\nid: 1\ntitle: "retyped"\n---\n')],
+                    # the two optional fields: a bare word, and an append-only list
+                    "fields": [("0002-b.md", '---\nid: 2\ntitle: "DECIDED: fields"\nstatus: open\n'
+                                'next_actor: review\nuse_evidence:\n'
+                                '  - 2026-01-02 accepted — one line of context\n'
+                                '  - 2026-01-03 used — unattended run\n---\n')],
                     # both id forms exist in live logs: padded and unpadded read as the prefix
                     "padded": [("0002-b.md", '---\nid: 0002\ntitle: "padded"\n---\n'),
                                ("0003-c.md", '---\nid: 3\ntitle: "plain"\n---\n'),
@@ -1334,6 +1413,75 @@ def migrate_case(skill_line, ov):
         r = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", errors="replace")
         files = sorted((t / "out").glob("0088-*.md")) if (t / "out").is_dir() else []
         return r.returncode, files[0].read_text(encoding="utf-8") if files else None
+
+
+# scripts/new-observation.sh, the only write path where a script can run.
+# Each case runs it against a throwaway workspace (with a space in its path)
+# and pins one boundary: (name, scenario, slug, body text or None, exit
+# status, stdout substring, stderr substring, names of the numbered files
+# the log holds afterwards, the floor file's content or None). GOOD_BODY
+# is a header the schema accepts, with the two placeholders and a backticked
+# command span that must reach the file verbatim.
+NEWOBS_SCRIPT = pathlib.Path(__file__).resolve().parent / "new-observation.sh"
+GOOD_BODY = ('---\nid: __ID__\ntitle: "t"\nstatus: open            # open | actioned\n'
+             'type: open-source       # open-source | internal\nskill: [foo]\n'
+             'siblings_checked: "none — no family"\ndate: __DATE__\n---\n\n'
+             '**Issue:** `$(date)` on __DATE__ as #__ID__\n')
+NEWOBS_FIXTURES = [
+    ("empty log: the path is printed, the skeleton holds the id, the floor moves",
+     "empty", "first-slug", None, 0, "/0001-first-slug.md", "", ["0001-first-slug.md"], "1"),
+    ("a claimed number is skipped: 0002 issued over a claim on 0001",
+     "claimed", "second", None, 0, "/0002-second.md", "", ["0002-second.md"], "2"),
+    ("--body: id and date filled, the backticked span intact",
+     "empty", "with-body", GOOD_BODY, 0, "/0001-with-body.md", "", ["0001-with-body.md"], "1"),
+    ("--body file missing: refused, nothing created",
+     "nobody", "slug", None, 1, "", "missing or unreadable", [], None),
+    ("--body with status actioned: refused by name, nothing created",
+     "empty", "slug", GOOD_BODY.replace("status: open ", "status: actioned "), 1, "",
+     "status: must read open", [], None),
+    ("--body with a type outside the vocabulary: refused",
+     "empty", "slug", GOOD_BODY.replace("type: open-source ", "type: process "), 1, "",
+     "type: must be open-source or internal", [], None),
+    ("--body with an empty siblings_checked: refused",
+     "empty", "slug", GOOD_BODY.replace('siblings_checked: "none — no family"', 'siblings_checked: ""'),
+     1, "", "siblings_checked: must be non-empty", [], None),
+    ("a prefix in use under another slug the listing cannot see: COLLISION, no file",
+     "hidden", "slug", None, 1, "", "COLLISION", [], None),
+    ("a slug carrying an id prefix: refused",
+     "empty", "0001-slug", None, 1, "", "must not start with an id prefix", [], None),
+]
+
+
+def newobs_case(scenario, slug, body):
+    """Run the helper over a fixture workspace; return (status, stdout,
+    stderr, numbered files in the log, floor content or None, created text)."""
+    import os
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / "work space"
+        log = root / "skill-observations" / "observation-log"
+        (log / "archive").mkdir(parents=True)
+        if scenario == "claimed":
+            (log / "archive" / ".id-claims").mkdir()
+            (log / "archive" / ".id-claims" / "0001").write_text("", encoding="utf-8")
+        if scenario == "hidden":
+            (log / "other").mkdir()
+            (log / "other" / "0001-x.md").write_text("---\nid: 1\n---\n", encoding="utf-8")
+        args = ["bash", str(NEWOBS_SCRIPT)]
+        if scenario == "nobody":
+            args += ["--body", str(pathlib.Path(tmp) / "absent.md")]
+        elif body is not None:
+            (pathlib.Path(tmp) / "body.md").write_text(body, encoding="utf-8")
+            args += ["--body", str(pathlib.Path(tmp) / "body.md")]
+        args += [slug, str(root)]
+        env = {k: v for k, v in os.environ.items() if k != "TASK_OBSERVER_WORKSPACE"}
+        r = subprocess.run(args, cwd=tmp, env=env, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace")
+        files = sorted(p.name for p in log.glob("[0-9]*.md"))
+        floor = log / "archive" / ".id-floor"
+        text = (log / files[0]).read_text(encoding="utf-8") if files else ""
+        return (r.returncode, r.stdout, r.stderr, files,
+                floor.read_text(encoding="utf-8").strip() if floor.is_file() else None, text)
 
 
 def ref_shape_case(lines, triggers, sidecar):
@@ -1445,6 +1593,12 @@ def selftest():
         ok = index_misses(text) == want
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} reference index: {name}")
+    for name, text, want in ORPHAN_FIXTURES:
+        got = index_orphans(text)
+        ok = got == want
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} reference index (reverse): {name}"
+              + ("" if ok else f" (got {got})"))
     for name, text, want in TEMPLATE_FIXTURES:
         ok = template_tokens(text) == want
         bad += not ok; total += 1
@@ -1530,6 +1684,27 @@ def selftest():
     elif shutil.which("bash"):
         bad += 1; total += 1
         print(f"FAIL skill-load script: {LOAD_SCRIPT.name} missing beside this file")
+    if shutil.which("bash") and NEWOBS_SCRIPT.is_file():
+        import datetime
+        ok = subprocess.run(["bash", "-n", str(NEWOBS_SCRIPT)]).returncode == 0
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} new-observation script: bash -n passes")
+        today = datetime.date.today().isoformat()
+        for name, scenario, slug, body, want_rc, want_out, want_err, want_files, want_floor in NEWOBS_FIXTURES:
+            rc, out, err, files, floor, text = newobs_case(scenario, slug, body)
+            ok = (rc == want_rc and want_out in out and want_err in err
+                  and files == want_files and floor == want_floor)
+            if ok and files and body is None:     # the skeleton: id on disk, status open, title empty
+                ok = f"id: {int(files[0][:4])}\n" in text and "status: open\n" in text and 'title: ""\n' in text
+            if ok and files and body is not None:  # the copy: placeholders filled, the span verbatim
+                ok = ("id: 1\n" in text and f"date: {today}\n" in text and "`$(date)`" in text
+                      and f"on {today} as #1\n" in text and "__ID__" not in text)
+            bad += not ok; total += 1
+            print(f"{'ok  ' if ok else 'FAIL'} new-observation script: {name}"
+                  + ("" if ok else f" (exit {rc}, files {files}, floor {floor!r}, err {err.strip()!r})"))
+    elif shutil.which("bash"):
+        bad += 1; total += 1
+        print(f"FAIL new-observation script: {NEWOBS_SCRIPT.name} missing beside this file")
     if MIGRATE_SCRIPT.is_file():
         for name, skill_line, ov, want_rc, has, lacks in MIGRATE_FIXTURES:
             rc, text = migrate_case(skill_line, ov)

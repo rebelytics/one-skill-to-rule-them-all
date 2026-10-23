@@ -183,7 +183,14 @@ target_file: field carries by any path.)
 (Use find, not a bare *.md glob: under zsh an unmatched glob aborts the
 whole block, and on an empty log it is unmatched in every session.)
 Apply their insights to the current work — meaning: let them change what
-you do in THIS task. Editing the skill file, or writing the rule into any
+you do in THIS task, with the user's consent at the point of use: when one
+actually changes what you are about to do, surface it once per session,
+at a natural break (never mid-task), in one line with accept / opt-out —
+follow it in this task or not — and append the answer to the entry's
+`use_evidence:` (SKILL.md, How to Log). An opt-out keeps the entry open;
+an unattended run appends `used` without asking; an entry with no
+evidence line 30 days after its `date:` is offered with that note.
+Editing the skill file, or writing the rule into any
 other file a later session reads, is acting on the observation and waits
 for the review. See "Log, don't act" in SKILL.md: the test is whether the
 action leaves a durable change outside the observation log. Run this at every skill load, however many skills load

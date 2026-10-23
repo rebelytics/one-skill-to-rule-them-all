@@ -249,6 +249,19 @@ recommendation-first and labelled is accepted, and the loop cannot tell
 good recommendations from anchoring — yet reads the number as grounds to
 loosen.
 
+**Recommended, applied by default — the disposition between the two.** A
+scheduled run applies its recommended option to a staged copy, without
+escalating, when ALL hold: reversible by not installing; the structural,
+measure-first or keep-the-adopted-model variant; no outward-facing effect
+(no publish, send or repo write); no cost in the user's time or money; not
+a new skill; no household or client VALUE set (a mechanism may be staged
+with the value left "to set"); and no other observation conflicts. The
+summary lists these under "Applied by default — object and it reverts",
+one line each with the option taken; the escalation list keeps everything
+else, each with a recommended option so the interactive pass stays fast.
+Record the acceptance rate of the previous review's defaults in the
+record, so the tier is tightened or loosened on evidence.
+
 Criterion (2) is about whose judgement is driving the change, not about
 the size of the diff. Where the observation records the removal or
 restructure as DECIDED by the user AND carries a complete specification
@@ -528,6 +541,20 @@ writing sessions — each file's `session_context` and `date` — in the Step 7
 summary: the pair traces the bypass to an environment or write path, which
 is where the fix goes, while a bare count blames a rule every writer that
 ran the snippet obeyed.
+
+**Contiguity and conservation — nothing else notices a missing
+generation.** The union of ids across `observation-log/` and `archive/`
+(NNNN-prefixed files) is contiguous from 1; print every gap as one line.
+A gap reported every run — the ids a review once cleared before any
+rollup kept them — is the intended behaviour for a hole in the record,
+not noise to suppress. And the Step 1 sweep is verified by conservation:
+the count of files across both directories before and after it differs
+by zero (`observation-log.md`, Archival).
+
+```bash
+d="[ABSOLUTE PATH]/skill-observations/observation-log"
+find "$d" "$d/archive" -maxdepth 1 -name '[0-9]*.md' | sed 's|.*/||' | grep -oE '^[0-9]+' | sed 's/^0*//' | sort -n | uniq | awk 'BEGIN {p=0} $1 > p+1 {printf "ids missing: %d–%d\n", p+1, $1-1} {p=$1}'
+```
 
 **Per-entry header conformance — a count, not a gate.** The scan's
 suspect count catches YAML that will not parse; it cannot see a header
@@ -957,8 +984,21 @@ entries target the same member. Then, before anything is presented:
   as an already-applied candidate, opened and read point by point. Record
   `outstanding` only when both surfaces are empty. In an aggregate review
   the id is qualified by its workspace (above); where commits also cite
-  issue numbers, a `#<id>` hit may be an issue, so open it before counting
-  it.
+  issue numbers, a `#<id>` hit may be an issue, so open it before counting it.
+
+- **Evidence from use orders the queue and settles consent.** Work
+  through the OPEN entries in descending count of `use_evidence:` lines
+  (`observation-log.md`, Frontmatter fields): the most-needed first. An
+  entry carrying an `accepted` line is applied without re-asking, with
+  one info line in the summary ("accepted in session on <date>"); its
+  diff is still shown, and a conflict between two accepted entries is
+  still escalated. Keep "applied and the friction did not recur" apart
+  from "friction recurred despite it" — the second raises the entry's
+  priority, because its mitigation is not working. An entry with no
+  evidence line 30 days after its `date:` is listed as `unconfirmed` in
+  the Step 7 summary and offered for closing rather than applying.
+  Weighting changes what is offered and in what order, never what is
+  applied without consent.
 
 - **Fix the system that owns the problem.** Before adding a skill rule,
   check whether a code, configuration or CI change would remove the
@@ -1554,6 +1594,15 @@ stays; bare rules get violated more than rules with context). Re-check the
 draft against the observation so the shorter wording preserves every
 required behaviour and verification step.
 
+**Regression re-check before packing.** Before a staged change to a skill
+is packed, list that skill's observations — active and archive — whose
+body names a section the diff touches, re-read each against the new text,
+and record "N past instances re-checked, 0 handled worse" in the manifest
+entry (Delivery, Staging manifest). An instance the new text would now
+handle worse is a regression and blocks the staging: a change is judged
+against the cases that produced the skill, not only the case that
+prompted the change.
+
 **Scaling note — fan out when the apply-phase is large.** When the
 apply-phase spans more than ~3 skills or ~10 observations, delegate Step 5
 to parallel subagents clustered by skill rather than applying everything
@@ -1599,7 +1648,14 @@ because two writers watching one task from two vantages log one finding
 twice, and merging two entries about one fact is not the renumbering the
 duplicate-id check performs (Cross-slice duplicates, below). Reserve
 status marking, archival and observation writes for the parent
-session. Before dispatching, the parent snapshots the output tree (a
+session. The pre-dispatch order is fixed: inbox drain → live-set
+validator → work queue → briefs → seed → stage bodies → dispatch. The seed
+list is derived from the FINAL cluster briefs, and before dispatching the
+parent asserts that every skill named in any brief has a seeded anchor
+and every observation id named in any brief has a readable body at the
+path the brief gives — a mismatch stops the dispatch, because a snapshot
+proves the tree the delegates start from, not that the briefs describe
+it. Then the parent snapshots the output tree (a
 listing with sizes) and records, per cluster, a `diff -rq` of the staged
 copy against live with the time it was seeded, and puts both into that
 cluster's brief: a subagent that finds a different state before its first
@@ -1825,6 +1881,14 @@ whose condition has been met and was returned to the queue this review]
 [from the Step 6 re-scan: #id — title — folded into [skill] / left OPEN
 for the next review; or "none" — the line is never omitted]
 
+### Applied by default — object and it reverts
+[one line each: #id — the option taken (Approval policy); or "none";
+then "defaults of the previous review accepted: N/M"]
+
+### Unconfirmed
+[one line each: #id — title — no use_evidence line N days after its date;
+offered for closing (Step 3); or "none"]
+
 ### Log integrity
 [duplicate ids renumbered and any floor lag (Step 1), each with the
 writing sessions' session_context and date; `skill:` names normalised for
@@ -1878,23 +1942,23 @@ verification.
 - Don't modify observation files beyond their `status`, `parked_until`,
   `resolved`, and `resolution` frontmatter fields — plus `reference:` in the
   one case the Approval policy names (a user-decided restructure of a
-  published skill, left `open` with its staged path recorded there) —
-  **with one exception: correcting a target that was recorded wrongly.** `skill:` and
-  `proposes_skill:` are validated at write time, and that validation can
-  return the wrong answer: a session in a stale checkout, or one resolving
-  against the wrong install, judges an existing skill absent and files the
-  observation under `proposes_skill:` instead. Left alone, such entries sit under a new-skill candidate
-  for a skill that already exists, and every later review re-reads them the
-  same way. A review that establishes the target does exist may correct
-  those two fields, and records the correction in `resolution:`. Nothing
-  else in the body changes.
+  published skill, left `open` with its staged path recorded there), and
+  the decision edit of SKILL.md, How to Log (`next_actor:` with the
+  `DECIDED:` title prefix) — **with one exception: correcting a target
+  that was recorded wrongly.** `skill:` and `proposes_skill:` are
+  validated at write time, and that validation can return the wrong
+  answer: a session in a stale checkout, or one resolving against the
+  wrong install, judges an existing skill absent and files the
+  observation under `proposes_skill:` instead. A review that establishes
+  the target does exist may correct those two fields, and records the
+  correction in `resolution:`. Nothing else in the body changes.
 - Don't create new skills in a review — note candidates for the user to
   action via the skill-creator. The one exception is the `{skill}-extras`
-  companion for a read-only or volatile target (Step 2): it is a routing
-  container for approved deltas, not a candidate skill, and creating it
-  when the user chooses that route is part of applying the observation.
-  It is still staged, never installed, by the review; and it still needs
-  the routing entry, or nothing loads it.
+  companion for a read-only or volatile target (Step 2): a routing
+  container for approved deltas, not a candidate skill, created as part
+  of applying the observation when the user chooses that route — still
+  staged, never installed, and still needing the routing entry, or
+  nothing loads it.
 - Unsure how to integrate an observation → skip it and say so in the
   summary.
 - Treat internal observations with the same rigour as open-source.
@@ -2134,8 +2198,9 @@ directory already under `skill-updates/<date>/` that is not identical to
 live, so the manifest's first state describes the tree it indexes rather
 than the one delivery that happened to create it. For a delivery, the entry carries the skill, the date
 directory, the producer (which session or scheduled run staged it), the
-observation ids applied, and a per-change summary
-(observation id → section touched → one-line rationale). The install
+observation ids applied, a per-change summary
+(observation id → section touched → one-line rationale) and the
+regression line "N past instances re-checked, 0 handled worse" (Step 5). The install
 artefact is always the `.skill` bundle, so the entry never distinguishes
 a single-file from a multi-file skill. For a published skill it also
 carries the community-item classification from Step 5 (include now /

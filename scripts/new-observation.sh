@@ -18,6 +18,15 @@
 #                     (YYYY-MM-DD). A quoted heredoc cannot carry the id, and
 #                     an unquoted one runs every backticked span in the body;
 #                     this flag fills the two values so neither is needed.
+#                     The body's header is checked BEFORE anything is
+#                     touched: `status:` must read `open`, `type:` must be
+#                     `open-source` or `internal`, and `siblings_checked:`
+#                     must be non-empty — a header breaking any of these is
+#                     refused by name (BODY REFUSED) and no file, claim or
+#                     floor write happens. These are the three mandatory
+#                     fields a writer measurably forgets, and a rule with no
+#                     gate behind it is a convention; the gate is here
+#                     because this is the only write path.
 #
 # Prints the created file's absolute path on stdout (one line) and exits 0.
 # Any guard firing prints its message on stderr and exits 1 with NO file
@@ -39,7 +48,8 @@
 # needs the write path itself to enforce it. Where this script can run, it
 # is the only write path.
 #
-# Steps, in order: archival sweep of stale resolved files (a side effect of
+# Steps, in order: body header check (--body only; a refusal touches
+# nothing) → archival sweep of stale resolved files (a side effect of
 # deriving the id, never a separate duty; a same-named archived file is
 # never overwritten) → id = max(active prefixes, archive prefixes,
 # .id-floor) + 1, the listing guarded against find's count before the floor
@@ -83,6 +93,29 @@ if [ -z "$slug" ]; then
 fi
 if [ -n "$body" ] && ! { [ -f "$body" ] && [ -r "$body" ]; }; then
   echo "--body file is missing or unreadable: '$body'" >&2; exit 1
+fi
+# --- body schema: refuse a header the log's rules forbid, before any write ---
+# Read as data, like the copy below. A value is taken bare, with a trailing
+# `# comment` (the core template carries one on status: and type:) and
+# trailing spaces stripped; status words stay bare, so a quoted `"open"` is
+# refused too — the archival sweep reads `$2` and would never match it.
+if [ -n "$body" ]; then
+  why=$(LC_ALL=C awk '
+    FNR==1 {sub(/^\357\273\277/, ""); if (/^---[[:space:]]*$/) fm=1; else nofm=1; next}
+    fm && /^---[[:space:]]*$/ {closed=1; exit}
+    fm && /^status:/ {st=$0; sub(/^status:[[:space:]]*/, "", st); sub(/[[:space:]]+#.*$/, "", st); sub(/[[:space:]]+$/, "", st); hs=1}
+    fm && /^type:/ {ty=$0; sub(/^type:[[:space:]]*/, "", ty); sub(/[[:space:]]+#.*$/, "", ty); sub(/[[:space:]]+$/, "", ty); ht=1}
+    fm && /^siblings_checked:/ {sc=$0; sub(/^siblings_checked:[[:space:]]*/, "", sc); sub(/[[:space:]]+$/, "", sc); hc=1}
+    END {
+      if (nofm) {print "line 1 is not ---"; exit}
+      if (!closed) {print "the header never closes (no second ---)"; exit}
+      if (!hs || st != "open") print "status: must read open" (hs ? " (read \047" st "\047)" : " (missing)")
+      if (!ht || (ty != "open-source" && ty != "internal")) print "type: must be open-source or internal" (ht ? " (read \047" ty "\047)" : " (missing)")
+      if (!hc || sc == "" || sc == "\"\"" || sc == "\047\047") print "siblings_checked: must be non-empty" (hc ? "" : " (missing)")
+    }' "$body")
+  if [ -n "$why" ]; then
+    printf 'BODY REFUSED — no file created; fix the header of %s:\n%s\n' "$body" "$why" >&2; exit 1
+  fi
 fi
 case $slug in
   (*[!a-z0-9-]*|-*|*-|*--*|"")
