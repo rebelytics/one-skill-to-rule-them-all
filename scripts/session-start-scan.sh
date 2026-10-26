@@ -4,6 +4,7 @@
 #
 # Usage:
 #   bash scripts/session-start-scan.sh [--entries-to <file>] [workspace-root]
+#   (options first: an argument after the root is refused, exit 2)
 #
 #   [workspace-root]  the pinned absolute workspace path — the directory that
 #                     holds skill-observations/. Defaults to the environment
@@ -60,7 +61,10 @@
 #      (the sidecar file holds that one line, so no earlier run's findings
 #      survive the halt)
 #   2  refused: no workspace root, a root that is not an absolute path, an
-#      --entries-to path that exists and is not empty, or an unknown option
+#      --entries-to path that exists and is not empty, an unknown option, or
+#      any argument after the root (an option there is a usage error)
+#   3  --entries-to left its file empty while numbered files exist: a broken
+#      run, named by a NOTE line in the summary block and the sidecar
 #   any other non-zero status is the content print's own (the counts and the
 #   checkpoint line above it already ran, and the end-of-scan line names the
 #   status) — a refused or failed print is never an empty log
@@ -79,7 +83,7 @@
 
 set -u
 
-VERSION="3.8.0"   # equal to the skill's frontmatter version:; the end line names it
+VERSION="3.9.0"   # equal to the skill's frontmatter version:; the end line names it
 
 entries=   # --entries-to target; empty = the entries print to stdout
 while [ $# -gt 0 ]; do
@@ -92,6 +96,14 @@ while [ $# -gt 0 ]; do
   esac
 done
 root="${1:-${TASK_OBSERVER_WORKSPACE:-}}"
+# Nothing may follow the root: the loop above stops at it, so an option
+# written after it was never parsed — a trailing --entries-to silently fell
+# back to printing the entries on stdout and left its file empty. Refused
+# by name instead, before anything is written.
+[ $# -gt 0 ] && shift
+if [ $# -gt 0 ]; then
+  echo "argument after the workspace root: '$1' — options go BEFORE the root (bash session-start-scan.sh --entries-to <file> <root>); nothing was scanned" >&2; exit 2
+fi
 
 if [ -n "$entries" ] && [ -s "$entries" ]; then
   echo "--entries-to '$entries' exists and is not empty: pass a path this run created (mktemp), never a fixed name another session may hold" >&2; exit 2
@@ -289,6 +301,12 @@ print_entries() {
 if [ -n "$entries" ]; then
   print_entries > "$entries"; rc=$?
   ent="; entries written to $entries"
+  # A zero-line entries file beside files: N > 0 is a broken run, not an
+  # empty log: said in the summary block and the sidecar, and the exit is 3.
+  if [ "$rc" -eq 0 ] && [ "$n" -gt 0 ] && [ ! -s "$entries" ]; then
+    findings="${findings}NOTE: entries file '$entries' is empty beside files: $n — a broken run, not an empty log; re-run the scan into a new mktemp file"$'\n'
+    rc=3; empty_ent=1
+  fi
 else
   print_entries; rc=$?
   ent=
@@ -306,6 +324,7 @@ sc="$sidecar"
 printf '%s' "$findings" > "$sidecar" 2>/dev/null || sc="$sidecar (write failed)"
 printf '%s' "$findings"
 st=; [ "$rc" -eq 0 ] || st="; content print exited $rc"
+[ -n "${empty_ent:-}" ] && st="; the entries file is EMPTY (exit 3)"
 printf 'end of scan — files: %s  parsed: %s  suspect: %s  archive-suspect: %s  principles: %s; finding lines above the entries (NOTE / LOST ENTRIES / UNFILLED / DUPLICATE ID / SPLIT STORE / GAP): %s, repeated just above this line and written to %s%s%s. Read the output whole: never cut it with head, tail or grep — session-start-scan.sh v%s\n' \
   "$n" "$parsed" "$suspect" "$a_sus" "$pr" "$fx" "$sc" "$ent" "$st" "$VERSION"
 exit "$rc"

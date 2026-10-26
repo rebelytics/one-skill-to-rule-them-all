@@ -163,7 +163,7 @@ promise about the rest.
 | `resolution` | What was done, or why declined. When the fix is a prescription (a rule, a check, a form to use), an `actioned` resolution names where it now lives — a file and section, a staged skill copy, or a registered backlog entry. If no such place can be named, the prescription has been described, not applied: leave the entry `open`, or resolve the part that landed and carry the rest in a carrier observation (below). A review's own resolution already names the staged copy (`weekly-review.md`, Step 6); this is the rule for a resolution set outside a review. |
 | `reference` | Optional path to saved session-local evidence. |
 | `commands_verified` | One clause per executable command, and per predicate (a regex, a search pattern, a hook or check condition), the body quotes: `run`, with what it returned — for a predicate, whether it matched the positive case and the negative — or `NOT RUN` with why; the literal `none` where the body quotes neither. Blank on a body that quotes a command or predicate means it was never run. See "Commands inside an observation" below. |
-| `next_actor` | Optional, set in the edit that appends a decision to the body: `publishing-run`, `review` or `maintainer` — who executes it next. The same edit prefixes `title:` with `DECIDED:` (core, How to Log), so a title-only scan reads the entry as settled rather than as an open question. |
+| `next_actor` | Optional, set in the edit that appends a decision to the body: who acts on it next — `review`, `maintainer`, or a named run such as a publishing step. The value is open: no script parses it, so name your own runs. The same edit prefixes `title:` with `DECIDED:` (core, How to Log), so a title-only scan reads the entry as settled rather than as an open question. |
 | `use_evidence` | Optional, append-only block list: one line per session in which the entry was NEEDED to decide the agent's behaviour, `- YYYY-MM-DD accepted\|declined\|used — short context`. `accepted` / `declined` is the user's answer in an interactive session (core, Surfacing Protocol); `used` is an unattended run that applied it without asking. Lines are appended by the command below and never removed; a `declined` line never closes the entry. The context is a plain scalar: no `: ` and no ` #` in it — the first turns the item into a mapping, the second cuts it. The review orders its queue by the count of these lines and flags an entry with none 30 days after its `date:` as unconfirmed (`weekly-review.md`, Step 3). |
 | `skill_qualifiers` | Optional map: skill name → the section or part of that skill meant. |
 | `migration_note` | Present only on files converted from a legacy log where the converter refused to guess; clear it once reviewed. |
@@ -410,6 +410,19 @@ only as the script's output cannot be carried in memory from an earlier
 read to a later write, which is the drift every rule in this section is
 trying to prevent. The inline snippet remains for harnesses where a
 script cannot be invoked.
+
+**The helper issues no id while a duplicate prefix stands.** Before the
+claim it lists the numeric prefixes of `observation-log/` and `archive/`
+(compared as numbers, so `0007-` and `7-` are one id) and, when two files
+share one, exits non-zero naming both (`DUPLICATE PREFIX`) with nothing
+claimed or created. The renumber: keep the number on the earlier file (by
+`date:`); move the later one out of the listing by renaming it with a
+leading dot, which no `[0-9]*.md` glob sees; set its `id:` to `__ID__`;
+re-create it with `--body <the moved file>` (a resolved entry, which the
+body check refuses, is re-created without `--body` and filled in place);
+then delete the moved copy and note the old number in the new body. A uniqueness invariant is enforced
+where it can break, the write; the scan's DUPLICATE ID line stays as the
+read-time catch for a write that went around the helper.
 
 The `10#` prefix in the arithmetic is load-bearing, not cosmetic: shell
 arithmetic reads a leading-zero number as octal, so `$(( 0105 + 1 ))`

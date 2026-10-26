@@ -1423,8 +1423,13 @@ file (the command per environment is a row of the table below: "Refresh
 the digests"), and run every `.bin/` script through
 `bash "<root>/skill-observations/.bin/bin-check.sh" "<root>" <digests-file> <script> [args]`,
 which compares each `.bin/` file with the installed digests and refuses to
-run on any difference (exit 3). Absent or mismatched, look for another
-copy in the workspace — a
+run on any difference (exit 3). The check runs at session start, before the
+first `.bin/` script — the scan included — never at the next review: on a
+refusal, or where `.bin/` holds no `bin-check.sh` (compare the installed
+digests with `.bin/MANIFEST` instead), refresh `.bin/` and its MANIFEST from
+the installed scripts in the same batch (`weekly-review.md`, Step 1 gate,
+names the refresh), then run the scan. Where `.bin/` is absent or cannot be
+refreshed, look for another copy in the workspace — a
 staged copy under `skill-updates/*/task-observer/scripts/` — and compare its
 digest (`md5sum` or `sha256sum`, run on both sides) with the installed
 scripts BEFORE running it, and run it only on a match: a staged copy can

@@ -1,22 +1,22 @@
 # Line ceilings for the reference files, read by scripts/validate-skill-bundle.py.
-# One line per file: <file.md> <ceiling> [<YYYY-MM-DD> <reason for the last raise>]
+# One line per file: <file.md> <ceiling> [<short reason for the last raise>]
 # Over its ceiling, a file with more than 8 load triggers is split by episode;
-# one with 8 or fewer is trimmed, or its ceiling raised with a dated reason.
+# one with 8 or fewer is trimmed, or its ceiling raised with a reason.
 # A file whose split is decided but not yet made carries a
-# `split_pending: <file.md> <YYYY-MM-DD> <reason>` line: the split remedies
+# `split_pending: <file.md> [<reason>]` line: the split remedies
 # print as notes and trim-or-raise applies until the split lands. The line is
 # read bare or behind `# `; it is written behind `# ` while the installed
 # validator predates the marker, so that validator passes the bundle too.
 # A ceiling more than 3 lines above its file's count is lowered to the count.
 # The core's ceiling is core_max_lines in SKILL.md; its raises are recorded here as comments:
-# SKILL.md core_max_lines 711 2026-10-23 the checklist form and its instruction, two pointer bullets for the split reference files, the capped-channel scan sentence; paid in part by two rationale trims; with the text folded in on main on 2026-10-26
-environments.md 1887 2026-10-23 the checklist sentence in the activation block, the channel test for a bridged probe and the prompt clause naming it, the digests row of the mappings table; with the text folded in on main on 2026-10-26
-# split_pending: environments.md 2026-10-23 the next split by episode, decided when the threshold dropped to 8; waits for a later round so two structural splits never share one test period
-migration.md 262 2026-10-16 the test branch: the split store, a log.md beside the observation directory
-observation-log.md 866 2026-10-23 split by episode into three files: this one keeps the layout, the frontmatter fields, the id snippet's notes and archival; with the text folded in on main on 2026-10-26
-observation-scan.md 449 2026-10-23 new in the split by episode: the session-start scan, its guards, refusals and the checkpoint pairing, moved verbatim
-observation-families.md 188 2026-10-23 new in the split by episode: skill families, the sibling check and the carrier pattern, moved verbatim
+# SKILL.md core_max_lines 715 the session-start checklist, pointers to the split reference files, the bridged scan and script check, the duplicate-prefix refusal
+environments.md 1892 activation checks, the bridged-session channel test, the script digest check at session start
+# split_pending: environments.md the next split by episode
+migration.md 262 the split store: a log.md beside the observation directory
+observation-log.md 879 the layout, the frontmatter fields, the id helper's notes including the duplicate-prefix refusal, archival
+observation-scan.md 449 the session-start scan, its guards, refusals and the checkpoint pairing
+observation-families.md 188 skill families, the sibling check and the carrier pattern
 signals.md 234
-skill-authoring.md 1449 2026-10-23 the trigger-as-episode definition, the pointer cross-check, the threshold at 8 with its measured reason, the split_pending marker and the next split candidate; with the text folded in on main on 2026-10-26
-starter-principles.md 504 2026-10-16 the marker is written after the answer, cited bodies are read, entry 23 covers the unmeasured baseline
-weekly-review.md 2271 2026-10-23 the -ruN round diff, the merge-review measurement row, unlabelled substantive decisions in the approval policy and the record, project-level skills in the inventory; with the text folded in on main on 2026-10-26
+skill-authoring.md 1450 the trigger-as-episode definition, the pointer cross-check, the split threshold and the split_pending marker
+starter-principles.md 504 the reply marker, cited bodies read before use, the unmeasured-baseline entry
+weekly-review.md 2279 the round diff and its hunk labels, the merge-review measurement, approval policy for unlabelled decisions, project-level skills in the inventory

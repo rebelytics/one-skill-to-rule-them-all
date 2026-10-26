@@ -1378,6 +1378,14 @@ the summary carries.
    hunk (a context-breaking blank line, or the order of the edits) rather
    than labelling the hunk by its larger half.
 
+   The label has one form, the line the merge parses: before every `@@`
+   hunk header, `### [<class>] <ids> — <note>`, class `safe-to-main` or
+   `needs-test`. No hunk carries two classes: split it at the paragraph
+   boundary before the diff is written, never leave it to the merge. A
+   safe hunk whose context only a needs-test hunk creates says so in its
+   note (`depends-on: <that hunk's ids>`), and a restructure's pointer
+   re-targets take the restructure's class, so the group travels together.
+
 **Standing rule — the review that changes a published skill bumps its
 version.** When the staged skill is published, or built and awaiting its
 first push (however your publication process records that state), the

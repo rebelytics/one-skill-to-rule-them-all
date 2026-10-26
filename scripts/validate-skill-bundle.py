@@ -753,14 +753,17 @@ def check_reference_indexes(skill_dir, fails):
 # and exceeding it fails and forces a decision whose remedy is chosen by the
 # file's load-trigger count —
 #   * more than SPLIT_TRIGGER_THRESHOLD triggers: split by episode;
-#   * that many or fewer: trim, or raise the ceiling with a dated one-line
+#   * that many or fewer: trim, or raise the ceiling with a short one-line
 #     reason written beside the number.
 # Size alone never forces a split, so a single-episode file is never split to
 # meet a size rule. The ceiling follows trims down with the core's tolerance.
 #
 # Opt-in, per skill: a `references/ceilings.txt` file holds one line per file —
-#   <file.md> <ceiling> [<YYYY-MM-DD> <reason for the last raise>]
-# with `#` comments and blank lines allowed. Not a dotfile: an install route
+#   <file.md> <ceiling> [<short neutral reason for the last raise>]
+# with `#` comments and blank lines allowed. No date: the file ships to every
+# adopter, and when a raise happened is version control's record. A line from
+# an older version, with a date before its reason, still parses; the date is
+# ignored. Not a dotfile: an install route
 # that drops dotfiles would silently switch the gate off. A skill without one
 # has not opted in: the shape line is printed and nothing is gated, so the public validator
 # imposes no budget on a skill whose author never set one.
@@ -786,7 +789,7 @@ def check_reference_indexes(skill_dir, fails):
 # everywhere, three files above eight, and the two files just under the
 # earlier threshold of 12 were the ones readers described as overloaded. A
 # file above the threshold whose split is decided but not yet made carries a
-# `split_pending: <file.md> <YYYY-MM-DD> <reason>` line in the sidecar: the
+# `split_pending: <file.md> [<reason>]` line in the sidecar: the
 # split remedies then print as notes and the trim-or-raise remedy applies
 # until the split lands.
 REF_CEILINGS_FILE = "ceilings.txt"
@@ -807,15 +810,18 @@ LOAD_TRIGGER_FIXTURES = [
     ("a line after the first ## heading is not a declaration", "# A\n\n## S\n\nLoad triggers: one\n", None),
     ("no line at all", "# A\n\n## S\n", None),
 ]
+# An optional YYYY-MM-DD before the reason is the older dated form: read and
+# ignored, so an install that predates the undated form keeps validating.
 REF_CEILING_LINE_RE = re.compile(
     r"^(?P<file>[^\s/]+\.md)[ \t]+(?P<ceiling>\d+)"
-    r"(?:[ \t]+(?P<date>\d{4}-\d{2}-\d{2})[ \t]+(?P<reason>\S.*?))?[ \t]*$")
+    r"(?:[ \t]+\d{4}-\d{2}-\d{2})?(?:[ \t]+(?P<reason>\S.*?))?[ \t]*$")
 # The marker is read bare or behind `# `: a validator that predates it reads
 # the commented form as a comment and still passes the bundle, so a round
 # can declare a pending split before the validator that knows the word is
 # the installed one. Once it is, write the bare form.
 SPLIT_PENDING_LINE_RE = re.compile(
-    r"^(?:#[ \t]*)?split_pending:[ \t]+(?P<file>[^\s/]+\.md)[ \t]+(?P<date>\d{4}-\d{2}-\d{2})[ \t]+(?P<reason>\S.*?)[ \t]*$")
+    r"^(?:#[ \t]*)?split_pending:[ \t]+(?P<file>[^\s/]+\.md)"
+    r"(?:[ \t]+\d{4}-\d{2}-\d{2})?(?:[ \t]+(?P<reason>\S.*?))?[ \t]*$")
 # `references/x.md` ("Heading") — up to 40 characters between, newlines
 # included, no backtick — and the parenthesised (`references/x.md`, "Heading").
 REF_POINTER_RE = re.compile(r'`references/([a-z0-9-]+\.md)`(?:[^(`]{0,40}\(|,\s*)"([^"]+)"')
@@ -886,11 +892,10 @@ def declared_load_triggers(text):
 
 
 def read_ref_ceilings(refs, fails):
-    """({file: (ceiling, date, reason)}, {file: (date, reason) split pending})
+    """({file: (ceiling, reason)}, {file: reason, split pending})
     from references/ceilings.txt, or (None, {}) when the skill has not opted
     in. Every malformed line fails: a skill that opted in and wrote a line
     the gate cannot read must not pass ungated."""
-    import datetime
     f = refs / REF_CEILINGS_FILE
     if not f.is_file():
         return None, {}
@@ -899,33 +904,22 @@ def read_ref_ceilings(refs, fails):
         line = raw.strip()
         where = f"references/{REF_CEILINGS_FILE}:{i}"
         sp = SPLIT_PENDING_LINE_RE.match(line)   # before the comment test: the marker may sit behind `# `
-        if not sp and (not line or line.startswith("#")):
-            continue
         if sp:
-            try:
-                datetime.date.fromisoformat(sp.group("date"))
-            except ValueError:
-                fails.append(f"{where}: {sp.group('date')!r} is not a calendar date")
-            pending[sp.group("file")] = (sp.group("date"), sp.group("reason"))
+            pending[sp.group("file")] = sp.group("reason") or ""
+            continue
+        if not line or line.startswith("#"):
             continue
         m = REF_CEILING_LINE_RE.match(line)
         if not m:
             fails.append(f"{where}: unreadable line {line!r} — the form is "
-                         f"`<file.md> <lines> [<YYYY-MM-DD> <reason>]`; a raise "
-                         f"carries both a date and a reason (or `split_pending: "
-                         f"<file.md> <YYYY-MM-DD> <reason>` for a decided split)")
+                         f"`<file.md> <lines> [<reason>]` (or `split_pending: "
+                         f"<file.md> [<reason>]` for a decided split)")
             continue
-        date = m.group("date")
-        if date:
-            try:
-                datetime.date.fromisoformat(date)
-            except ValueError:
-                fails.append(f"{where}: {date!r} is not a calendar date")
         name = m.group("file")
         if name in out:
             fails.append(f"{where}: {name} has a second ceiling line")
             continue
-        out[name] = (int(m.group("ceiling")), date, m.group("reason"))
+        out[name] = (int(m.group("ceiling")), m.group("reason"))
     return out, pending
 
 
@@ -971,7 +965,7 @@ def check_reference_shape(skill_dir, core, fails):
                   f"by episode is indicated"
                   + (" once it outgrows its ceiling" if ceilings is not None
                      else "; size is not the signal")
-                  + (f"; split pending since {pending[name][0]}: {pending[name][1]}"
+                  + (f"; split pending" + (f": {pending[name]}" if pending[name] else "")
                      if name in pending else ""))
     if ceilings is None:
         return
@@ -987,7 +981,7 @@ def check_reference_shape(skill_dir, core, fails):
             fails.append(f"references/{name} has no ceiling: this skill opted in with "
                          f"references/{REF_CEILINGS_FILE}, so add `{name} {lines}` there")
             continue
-        ceiling, date, reason = ceilings[name]
+        ceiling, reason = ceilings[name]
         if declared is None:
             fails.append(f"references/{name} declares no load triggers: add one "
                          f"`Load triggers: a; b; c` line to its header (before the first "
@@ -1008,8 +1002,8 @@ def check_reference_shape(skill_dir, core, fails):
             fails.append(
                 f"references/{name} {lines} lines > ceiling {ceiling}, with {n} load "
                 f"trigger(s) (<= {N}): trim it back to {ceiling} lines or fewer, or raise the "
-                f"ceiling in references/{REF_CEILINGS_FILE} to {lines} with a dated "
-                f"one-line reason beside the number (`{name} {lines} YYYY-MM-DD why`)")
+                f"ceiling in references/{REF_CEILINGS_FILE} to {lines} with a short "
+                f"one-line reason beside the number (`{name} {lines} why`)")
         elif ceiling - lines > tol:
             fails.append(
                 f"references/{name} {lines} lines, ceiling {ceiling}: slack "
@@ -1018,7 +1012,7 @@ def check_reference_shape(skill_dir, core, fails):
                 f"is locked in, not left as headroom")
         if reason and split_due:
             fails.append(
-                f"references/{name} carries a raised ceiling ({date}: {reason}) but "
+                f"references/{name} carries a raised ceiling ({reason}) but "
                 f"declares {n} load triggers (> {N}): with that many episodes the "
                 f"remedy is a split by episode, not a raise")
 
@@ -1487,10 +1481,11 @@ SCAN_FIXTURES = [
 ]
 
 
-def scan_case(scenario, pass_root, extra=None, entries=None):
+def scan_case(scenario, pass_root, extra=None, entries=None, after=None):
     """Run the scan script over a fixture workspace; return (status, stdout,
     checkpoint lines written, sidecar text[, entries-file text when `entries`
-    names a file under the workspace to pass as --entries-to])."""
+    names a file under the workspace to pass as --entries-to][, stderr when
+    `after` lists arguments to pass AFTER the root])."""
     import os
     import subprocess
     with tempfile.TemporaryDirectory() as tmp:
@@ -1541,6 +1536,7 @@ def scan_case(scenario, pass_root, extra=None, entries=None):
                 ef.write_text(entries[1], encoding="utf-8")
             args += ["--entries-to", str(ef)]
         args += [str(root)] if pass_root else []
+        args += [str(root / a) if a.startswith("./") else a for a in (after or [])]
         r = subprocess.run(args, cwd=tmp, env=env, capture_output=True, text=True,
                            encoding="utf-8", errors="replace")
         side = root / "skill-observations" / "last-scan-findings.txt"
@@ -1548,6 +1544,8 @@ def scan_case(scenario, pass_root, extra=None, entries=None):
                side.read_text(encoding="utf-8") if side.is_file() else None)
         if entries is not None:
             out += (ef.read_text(encoding="utf-8") if ef.is_file() else None,)
+        if after is not None:
+            out += (r.stderr,)
         return out
 
 
@@ -1589,7 +1587,7 @@ def scan_entries_ok():
     file. Returns (ok, detail)."""
     rc, out, ck, side, ent = scan_case("idmis", True, entries=("scan-entries.txt", None))
     ok = (rc == 0 and ck == 1 and ent is not None and 'title: "retyped"' in ent and 'title: "ok"' in ent
-          and 'title: "retyped"' not in out and "files: 2  parsed: 2" in out
+          and 'title: "retyped"' not in out and "\n---\n" not in out and "files: 2  parsed: 2" in out
           and out.count("NOTE: id: does not read as the filename prefix") == 2
           and "entries written to " in out and "scan-entries.txt" in out
           and side is not None and side.startswith("NOTE: id:"))
@@ -1602,6 +1600,30 @@ def scan_entries_refused_ok():
     rc, out, ck, side, ent = scan_case("healthy", True, entries=("scan-entries.txt", "another session's scan\n"))
     ok = rc == 2 and ck == 0 and out == "" and ent == "another session's scan\n"
     return ok, f"exit {rc}, checkpoint {ck}, entries {ent!r}"
+
+
+def scan_trailing_ok():
+    """An argument after the root is refused by name before anything runs —
+    the misplaced --entries-to that once fell back silently to stdout, and a
+    bare second positional: exit 2, no checkpoint line, no sidecar."""
+    res = []
+    for after, named in ((["--entries-to", "./e.txt"], "'--entries-to'"), (["extra"], "'extra'")):
+        rc, out, ck, side, err = scan_case("healthy", True, after=after)
+        res.append(rc == 2 and ck == 0 and out == "" and side is None
+                   and f"argument after the workspace root: {named}" in err)
+    return all(res), f"cases {res}"
+
+
+def scan_entries_empty_ok():
+    """--entries-to that leaves its file empty while numbered files exist is
+    a broken run: a NOTE in the summary block and the sidecar, exit 3."""
+    import os
+    if not os.path.exists("/dev/null"):
+        return True, "no /dev/null: skipped"
+    rc, out, ck, side = scan_case("healthy", True, extra=["--entries-to", "/dev/null"])
+    want = "NOTE: entries file '/dev/null' is empty beside files: 2"
+    ok = rc == 3 and ck == 1 and want in out and side is not None and want in side and "EMPTY (exit 3)" in out
+    return ok, f"exit {rc}, checkpoint {ck}, sidecar {side!r}"
 
 
 def scan_version_ok():
@@ -1792,6 +1814,10 @@ NEWOBS_FIXTURES = [
      "hidden", "slug", None, 1, "", "COLLISION", [], None),
     ("a slug carrying an id prefix: refused",
      "empty", "0001-slug", None, 1, "", "must not start with an id prefix", [], None),
+    ("two files share prefix 0007: refused naming both and the renumber, nothing claimed",
+     "dup7", "slug", None, 1, "", "id 7 is carried by both 0007-a.md and 0007-b.md", ["0007-a.md", "0007-b.md"], None),
+    ("after the renumber (the later file moved out of the listing): 8 is issued",
+     "dup7-moved", "renumbered", None, 0, "/0008-renumbered.md", "", ["0007-a.md", "0008-renumbered.md"], "8"),
 ]
 
 
@@ -1807,6 +1833,10 @@ def newobs_case(scenario, slug, body):
         if scenario == "claimed":
             (log / "archive" / ".id-claims").mkdir()
             (log / "archive" / ".id-claims" / "0001").write_text("", encoding="utf-8")
+        if scenario in ("dup7", "dup7-moved"):
+            (log / "0007-a.md").write_text('---\nid: 7\ntitle: "earlier"\n---\n', encoding="utf-8")
+            later = log / ("0007-b.md" if scenario == "dup7" else ".0007-b.md")
+            later.write_text('---\nid: 7\ntitle: "later"\n---\n', encoding="utf-8")
         if scenario == "hidden":
             (log / "other").mkdir()
             (log / "other" / "0001-x.md").write_text("---\nid: 1\n---\n", encoding="utf-8")
@@ -1822,7 +1852,10 @@ def newobs_case(scenario, slug, body):
                            encoding="utf-8", errors="replace")
         files = sorted(p.name for p in log.glob("[0-9]*.md"))
         floor = log / "archive" / ".id-floor"
-        text = (log / files[0]).read_text(encoding="utf-8") if files else ""
+        made = pathlib.Path(r.stdout.strip()) if r.stdout.strip() else None   # the file this run created
+        text = made.read_text(encoding="utf-8") if made and made.is_file() else ""
+        if scenario == "dup7-moved" and not (log / "archive" / ".id-claims" / "0008").is_file():
+            text = ""   # the claim must be the issued number
         return (r.returncode, r.stdout, r.stderr, files,
                 floor.read_text(encoding="utf-8").strip() if floor.is_file() else None, text)
 
@@ -1862,33 +1895,41 @@ REF_SHAPE_FIXTURES = [
     ("at the tolerance boundary (slack 3) passes", 97, 3, "a.md 100\n", None, None),
     ("over ceiling, <= N triggers: trim or reasoned raise, never split",
      105, SPLIT_TRIGGER_THRESHOLD, "a.md 100\n", "trim it back", "split"),
-    ("reasoned raise clears it (dated reason beside the number)",
-     105, 3, "a.md 105 2026-01-31 one new episode section, single-trigger\n", None, None),
+    ("reasoned raise clears it (a short reason beside the number)",
+     105, 3, "a.md 105 one new episode section, single-trigger\n", None, None),
     ("over ceiling, > N triggers: split indicated",
      105, SPLIT_TRIGGER_THRESHOLD + 1, "a.md 100\n", "split it by episode", "trim"),
     ("a raise on a file with > N triggers fails: the remedy is a split",
-     105, SPLIT_TRIGGER_THRESHOLD + 1, "a.md 105 2026-01-31 more room\n", "not a raise", None),
+     105, SPLIT_TRIGGER_THRESHOLD + 1, "a.md 105 more room\n", "not a raise", None),
     ("shrink beyond tolerance: the ceiling must be lowered",
      96, 3, "a.md 100\n", "Lower its line", None),
-    ("a raise with a reason but no date is unreadable", 100, 3, "a.md 100 more room\n",
+    ("a dated line from an older version still parses, the date is ignored",
+     105, 3, "a.md 105 2026-01-31 one new episode section\n", None, None),
+    ("a dated raise on a file with > N triggers is still a raise: the remedy is a split",
+     105, SPLIT_TRIGGER_THRESHOLD + 1, "a.md 105 2026-01-31 more room\n", "not a raise", None),
+    ("a line that is not <file.md> <lines> is unreadable", 100, 3, "a.md more room\n",
      "unreadable line", None),
     ("opted in, file without a declaration fails", 100, None, "a.md 100\n",
      "declares no load triggers", None),
     ("opted in, file without a ceiling line fails", 100, 3, "# none yet\n",
      "has no ceiling", None),
     ("over ceiling, > N triggers, split pending: trim or raise, never split",
-     105, SPLIT_TRIGGER_THRESHOLD + 1, "a.md 100\nsplit_pending: a.md 2026-01-31 split decided, lands next round\n",
+     105, SPLIT_TRIGGER_THRESHOLD + 1, "a.md 100\nsplit_pending: a.md split decided, lands next round\n",
      "trim it back", "split it by episode"),
     ("a raise on a file with > N triggers passes while its split is pending",
      105, SPLIT_TRIGGER_THRESHOLD + 1,
-     "a.md 105 2026-01-31 more room\nsplit_pending: a.md 2026-01-31 split decided, lands next round\n", None, None),
-    ("a split_pending line without its date and reason is unreadable", 100, 3,
-     "a.md 100\nsplit_pending: a.md\n", "unreadable line", None),
+     "a.md 105 more room\nsplit_pending: a.md split decided, lands next round\n", None, None),
+    ("a split_pending line that names no file is unreadable", 100, 3,
+     "a.md 100\nsplit_pending:\n", "unreadable line", None),
+    ("a split_pending line with no reason is read", 105, SPLIT_TRIGGER_THRESHOLD + 1,
+     "a.md 105 more room\nsplit_pending: a.md\n", None, None),
+    ("a split_pending line from an older version, dated, still reads", 105, SPLIT_TRIGGER_THRESHOLD + 1,
+     "a.md 105 more room\nsplit_pending: a.md 2026-01-31 split decided\n", None, None),
     ("a split_pending line for a file not in references/ fails", 100, 3,
-     "a.md 100\nsplit_pending: b.md 2026-01-31 why\n", "marks a split pending for b.md", None),
+     "a.md 100\nsplit_pending: b.md\n", "marks a split pending for b.md", None),
     ("the marker behind `# ` is read the same way (an older validator reads a comment)",
      105, SPLIT_TRIGGER_THRESHOLD + 1,
-     "a.md 105 2026-01-31 more room\n# split_pending: a.md 2026-01-31 split decided, lands next round\n", None, None),
+     "a.md 105 more room\n# split_pending: a.md split decided, lands next round\n", None, None),
 ]
 
 
@@ -2118,6 +2159,8 @@ def selftest():
             print(f"{'ok  ' if ok else 'FAIL'} scan script: {name}" + ("" if ok else f" ({detail})"))
         for name, fn in (("--entries-to splits the entries off stdout and the end line names the file", scan_entries_ok),
                          ("--entries-to onto a non-empty file is refused, nothing written", scan_entries_refused_ok),
+                         ("an argument after the root is refused by name, nothing written", scan_trailing_ok),
+                         ("--entries-to leaving its file empty beside files: N > 0 is a broken run, exit 3", scan_entries_empty_ok),
                          ("the end line names VERSION, equal to the skill's version:", scan_version_ok)):
             ok, detail = fn()
             bad += not ok; total += 1
@@ -2160,11 +2203,11 @@ def selftest():
             rc, out, err, files, floor, text = newobs_case(scenario, slug, body)
             ok = (rc == want_rc and want_out in out and want_err in err
                   and files == want_files and floor == want_floor)
-            if ok and files and body is None:     # the skeleton: id on disk, status open, title empty,
-                ok = f"id: {int(files[0][:4])}\n" in text and "status: open\n" in text and 'title: ""\n' in text
+            if ok and want_rc == 0 and body is None:     # the skeleton: id on disk, status open, title empty,
+                ok = f"id: {int(pathlib.Path(out.strip()).name[:4])}\n" in text and "status: open\n" in text and 'title: ""\n' in text
                 # and every field of the core template, in its order
                 ok = ok and [l.split(":")[0] for l in text.splitlines()[1:-1]] == SKELETON_FIELDS
-            if ok and files and body is not None:  # the copy: placeholders filled, the span verbatim
+            if ok and want_rc == 0 and body is not None:  # the copy: placeholders filled, the span verbatim
                 ok = ("id: 1\n" in text and f"date: {today}\n" in text and "`$(date)`" in text
                       and f"on {today} as #1\n" in text and "__ID__" not in text)
             bad += not ok; total += 1

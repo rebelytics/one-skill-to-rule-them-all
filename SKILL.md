@@ -1,6 +1,6 @@
 ---
 name: "task-observer"
-core_max_lines: 711
+core_max_lines: 715
 version: "3.9.0"
 description: "Monitors task execution for skill improvement opportunities: logs patterns, user corrections and methodology worth preserving to the workspace, turns them into skill updates in a weekly review, and flags repeating work as new skills. Use during ANY multi-step task, agentic workflow, or work session. Also triggers in post-task feedback discussions and when the user mentions skill observations, the observation log, or skill taxonomy. Also known as \"One Skill to Rule Them All\" — trigger on this phrase too. IMPORTANT: invoke this skill before the FIRST tool call of any session and before writing or proposing a plan — any turn that will involve a tool call counts. This sentence is the session-start trigger and the only activation layer that survives an unreachable config file; pair it with a CLAUDE.md instruction or a session-start hook (references/environments.md). A subagent dispatched by a session already running it does not run it: it writes nothing and puts its findings in its report."
 license: CC-BY-4.0
@@ -180,7 +180,9 @@ items under How to Log are ticked the same way in the turn that writes.
    In a bridged session where that directory is not on the device, run it from
    `skill-observations/.bin/` or a digest-matched staged copy — never a per-skill
    grep instead (`references/environments.md`, "Environment mappings", the
-   paragraph "Where the scripts are not on the device").
+   paragraph "Where the scripts are not on the device"). Before the first
+   `.bin/` script, check it against the INSTALLED digests (`bin-check.sh`); on a
+   mismatch refresh `.bin/` in the same batch — a MANIFEST self-check is not it.
 
    Where that channel caps the output, pass `--entries-to <file>`: a file this
    run creates (`mktemp`, never a fixed `/tmp` name — another session's file
@@ -427,7 +429,9 @@ and the id the session-start scan printed is never an input to a write.
 Where a helper can run, `bash scripts/new-observation.sh --body <file>
 <slug> "[ABSOLUTE PATH]"` is the only write path: it runs this whole snippet,
 copies the body in with `__ID__` and `__DATE__` filled and prints the created
-path, so derivation cannot drift from creation. Load
+path, so derivation cannot drift from creation. It issues no id while two
+files share a numeric prefix across `observation-log/` and `archive/`, and
+names both with the renumber. Load
 `references/observation-log.md` ("Run the snippet immediately before every
 write") when skipping feels reasonable.
 
@@ -484,7 +488,7 @@ resolution:             # what was done — set only when actioned/declined/supe
 reference:              # optional — path to saved session-local evidence
 commands_verified:      # MANDATORY when the body quotes a command or predicate —
                         #   each `run` with its result, or `NOT RUN` with why; else none
-next_actor:             # optional, set with a decision: publishing-run | review | maintainer
+next_actor:             # optional, set with a decision: who acts on it next — e.g. review, maintainer, or the name of the run that executes it
 use_evidence:           # optional, append-only: one line per session that NEEDED the entry,
                         #   - YYYY-MM-DD accepted|declined|used — short context, no colon-space
 ---

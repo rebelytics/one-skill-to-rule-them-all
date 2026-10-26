@@ -1406,11 +1406,12 @@ With the sidecar present, `validate-skill-bundle.py` fails when:
   load effect named (an edit seam, a ceiling ratchet, or a token saving;
   episodes that fire with every trigger save no tokens); 8 or fewer,
   trim it, or raise
-  the ceiling with a dated one-line reason beside the number
-  (`<file.md> <lines> YYYY-MM-DD <why>`). The reason names the change
+  the ceiling with a reason: a short one-line reason beside the number
+  (`<file.md> <lines> <why>`), no date. The reason names the change
   that added the lines, in words a reader without the repository
   understands — the file ships inside the skill — never an issue, PR or
-  observation number. The threshold comes from the measured distribution
+  observation number, and never process history: when and why in detail
+  belong in the commit message. The threshold comes from the measured distribution
   over one library at last measurement, not from intuition: one to eight
   triggers almost everywhere, three files above eight, and the two files
   just under the earlier threshold of 12 were the ones readers described
@@ -1421,7 +1422,7 @@ With the sidecar present, `validate-skill-bundle.py` fails when:
 - a file has no ceiling line or no `Load triggers:` line.
 
 A file above the threshold whose split is decided but not yet made carries
-`split_pending: <file.md> YYYY-MM-DD <why>` in the sidecar: the validator
+`split_pending: <file.md> [<why>]` in the sidecar: the validator
 then prints the split remedies as notes and applies the trim-or-raise
 remedy until the split lands, so a decided restructure does not block the
 round before it. The line is read bare or behind `# `, so a round can

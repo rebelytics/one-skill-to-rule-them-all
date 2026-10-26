@@ -53,7 +53,8 @@
 # deriving the id, never a separate duty; a same-named archived file is
 # never overwritten) → id = max(active prefixes, archive prefixes,
 # .id-floor) + 1, the listing guarded against find's count before the floor
-# enters → number claim (a noclobber marker per id in archive/.id-claims/,
+# enters → DUPLICATE PREFIX refusal (two files across active and archive
+# already sharing a number: no id is issued until one is renumbered) → number claim (a noclobber marker per id in archive/.id-claims/,
 # so two writers running at once never share one) → PREFIX collision guard
 # across active and archive (two slugs sharing one number is the failure; a
 # path check cannot see it) → noclobber create of the skeleton → floor
@@ -184,6 +185,23 @@ for attempt in 1 2 3; do
   fi
   sleep 1
 done
+
+# --- duplicate prefix: no id is issued while two files share one ------------
+# The uniqueness invariant is enforced here, on the write path, where it can
+# break; the scan's DUPLICATE ID line only reports it when read. Numbers are
+# compared as numbers, so 0007- and 7- are one id. The renumber keeps the
+# earlier file's number and re-creates the later one through this helper,
+# which this refusal would block while both are listed: so the later file is
+# moved out of the listing first (a leading dot, which no `[0-9]*.md` glob
+# sees), re-created from it with --body, and the moved copy deleted.
+dup=$(for p in "$d"/[0-9]*.md "$d"/archive/[0-9]*.md; do [ -e "$p" ] && printf '%s\n' "${p#"$d"/}"; done \
+  | LC_ALL=C awk '{b=$0; sub(/^archive\//, "", b); n=substr(b, 1, match(b, /[^0-9]/) - 1) + 0; if (n in s) {print n "|" s[n] "|" $0; exit}; s[n]=$0}')
+if [ -n "$dup" ]; then
+  dn=${dup%%|*}; rest=${dup#*|}
+  printf 'DUPLICATE PREFIX — id %s is carried by both %s and %s; no id is issued while it stands. Renumber first: keep the number on the earlier file (by date:), move the later one out of the listing (rename it with a leading dot), set its id: to __ID__, re-create it with --body <the moved file>, then delete the moved copy (references/observation-log.md, "Assigning an id")\n' \
+    "$dn" "${rest%%|*}" "${rest#*|}" >&2
+  exit 1
+fi
 hi=$(printf '%s\n' "$ids" | sort -n | tail -1); hi=$((10#${hi:-0}))
 if [ "$hi" -lt "$floor" ]; then
   echo "NOTE: highest file id $hi is below .id-floor $floor — ids issued without a file; the new id goes above the floor" >&2
