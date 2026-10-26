@@ -171,8 +171,10 @@ still needs the skill whose description names its subject.
 
 After completing each task, list the observation records written this
 session in the same turn and report a one-line summary from that listing
-(ids and titles, or "none logged and why") — never from memory of
-writing them. This is the activation backstop: it forces a look at the log,
+(ids and titles, or "none logged" followed by one line per user correction
+and per incident in the task, each with why it is not an observation —
+one-off, already captured in <skill>; a "none" with no such line is a
+claim nobody checked) — never from memory of writing them. This is the activation backstop: it forces a look at the log,
 so a session that silently skipped the protocol is discovered at the
 first task boundary instead of never.
 
@@ -245,6 +247,9 @@ location; do not derive one per session, tool or project.
 
 The user's repositories live under:
   [PROJECTS ROOT]
+[UPSTREAM CHECK: the line "the review may check upstream versions" lets the
+review's Step 2 fetch a foreign-maintained skill's upstream version — the
+one network use a review starts; delete this line to keep reviews local]
 (the root the sibling check sweeps before declaring a skill absent;
 observation-families.md, "Skill families and the sibling check").
 
@@ -420,13 +425,16 @@ legitimate (see the multi-log block in `weekly-review.md`).
 
 **The session-start scan lists the neighbours on every run.** One line of
 the scan (`scripts/session-start-scan.sh`) finds every
-`skill-observations/observation-log/` up to three levels under the
-pinned root's parent and prints each with its file count — `logs under
-the parent (…): /a/proj=157  /a/other=19`. One entry is the ordinary
+`skill-observations/observation-log/` up to five levels under the
+pinned root's parent (one project folder below a projects folder; `.git`,
+`node_modules` and `skill-updates` trees pruned) and prints each with its
+file count and the date of its `checkpoints.log`'s last line — `logs under
+the parent (…): /a/proj=157 last=<date>  /a/other=19 last=none`; a shard
+still being written shows a recent date. One entry is the ordinary
 case. Several are either shards or the legitimate plural case, and the
 line cannot tell which: report it in one line, route to "Several
 observation logs on one machine" in `weekly-review.md`, and never
-consolidate from the scan. The probe is bounded by the parent's depth-3
+consolidate from the scan. The probe is bounded by the parent's depth-5
 tree, not by any log's size; an empty line means the probe could not read
 the parent, since the pinned log itself is always under it.
 
@@ -692,8 +700,9 @@ const touched = files.some((f) => { try { return fs.statSync(f).mtimeMs > starte
 if (touched) process.exit(0);
 
 block('task-observer backstop: this session used tools but wrote no observation file and no checkpoint line. ' +
-  'If the skill was never invoked, invoke it now; then write pending observations or append a ' +
-  '"no observations" line to checkpoints.log, and report the one-line summary. Fires once per session.');
+  'If the skill was never invoked, invoke it now; then write pending observations, or append a ' +
+  '"no observations" line to checkpoints.log naming each user correction and incident of the session and why it ' +
+  'is not an observation, and report the one-line summary. Fires once per session.');
 ```
 
 **The session's start time is the fragile input.** A transcript's birth
@@ -1506,8 +1515,10 @@ overwrites it with `completed <date>`:
 printf '%s\n' "$(date '+%F %H:%M')" > "[ABSOLUTE PATH]/skill-observations/review-started.txt"
 ```
 
-A scheduler's "succeeded" says the job launched; the marker says how far
-it got. At the next session start, a marker that does not read
+The review's Step 5 overwrites it with `started <date> <time> <label>
+step5 <anchor>` as it claims its anchor (`weekly-review.md`, Step 5), so an
+interactive or commissioned review leaves a live claim too. A scheduler's
+"succeeded" says the job launched; the marker says how far it got. At the next session start, a marker that does not read
 `completed` is a run that died mid-way, and a scheduler last run later
 than `last-review-date.txt` with the marker untouched is a run that fired
 and never reached its second action — two different defects, and neither
@@ -1634,6 +1645,15 @@ unanswerable offer as surfaced. Never run the review unprompted either:
 "autonomous" in step 3 means a scheduled run whose prompt asks for the
 review, not a worker whose caller asked for something else.
 
+**A whole review delegated to a subagent is the one exception to the
+subagent rule**, and only where the brief says so explicitly and quotes the
+user's permission. The parent then writes nothing to the log until the
+executor has reported; the run's approval mode is the scheduled-autonomous
+one (escalation criteria apply, nothing needing consent is applied) unless
+the brief quotes the user's approval of a specific list; and before
+accepting the record the parent re-runs the Step 6 re-scan and the
+validator itself — a delegate's "done" is a claim about its own edits.
+
 What happens to logging depends on who the caller is. Where the caller
 is itself a session running this protocol, the activation block's
 subagent rule applies: the worker writes nothing, and a finding worth
@@ -1739,6 +1759,7 @@ This skill consists of `SKILL.md`, the reference files it lists
 `signals.md`, `migration.md`,
 `starter-principles.md`) and `scripts/bin-check.sh`, `scripts/diff-staged.sh`,
 `scripts/migrate-log.py`, `scripts/new-observation.sh`, `scripts/session-start-scan.sh`,
+`scripts/set-fields.sh`,
 `scripts/skill-load.sh` and `scripts/validate-skill-bundle.py`. If any is
 missing, SKILL.md "Reference files" applies (the rule lives there because
 this file can be the missing one). `references/ceilings.txt` travels with

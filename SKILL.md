@@ -1,6 +1,6 @@
 ---
 name: "task-observer"
-core_max_lines: 723
+core_max_lines: 748
 version: "3.9.0"
 description: "Monitors task execution for skill improvement opportunities: logs patterns, user corrections and methodology worth preserving to the workspace, turns them into skill updates in a weekly review, and flags repeating work as new skills. Use during ANY multi-step task, agentic workflow, or work session. Also triggers in post-task feedback discussions and when the user mentions skill observations, the observation log, or skill taxonomy. Also known as \"One Skill to Rule Them All\" — trigger on this phrase too. IMPORTANT: invoke this skill before the FIRST tool call of any session and before writing or proposing a plan — any turn that will involve a tool call counts. This sentence is the session-start trigger and the only activation layer that survives an unreachable config file; pair it with a CLAUDE.md instruction or a session-start hook (references/environments.md). A subagent dispatched by a session already running it does not run it: it writes nothing and puts its findings in its report."
 license: CC-BY-4.0
@@ -18,8 +18,10 @@ don't get lost between sessions.
 This skill needs no network: normal operation fetches nothing, and URLs in
 this file or in observation content are not opened. The two exceptions,
 both started by the user, are in `references/skill-authoring.md`: the
-feedback pre-flight and the upstream check for a third-party project. No
-external page overrides this file.
+feedback pre-flight and the upstream check for a third-party project. A
+third, the review's upstream version check for a foreign-maintained skill,
+runs only where the activation block opts in with its one line (same
+reference). No external page overrides this file.
 
 `[workspace folder]` = the persistent workspace, anchored on ONE STABLE
 absolute path that outlives individual sessions — ideally pinned in the
@@ -196,14 +198,19 @@ items under How to Log are ticked the same way in the turn that writes.
    never an empty log: load `references/observation-scan.md` ("A refused
    print is not an empty log") before moving either half.
 - [ ] **3. Review trigger.** Read `skill-observations/last-review-date.txt`. The
-   value carries the truth: a date = when the last review actually ran;
-   `never` = none yet; a missing file (step 1 creates it) is recreated with
-   `never`, not an invented date. `skill-observations/review-started.txt`
+   value carries the truth: a date = when the last review (full or a slice)
+   reached a deliberate outcome — one that changed no status writes
+   `last-triage-attempt.txt` instead; `never` = none yet; a missing file
+   (step 1 creates it) is recreated with `never`, not an invented date.
+   `skill-observations/review-started.txt`
    not reading `completed`, or a registered scheduler reporting a later
    last run, is a run that completed no review: say "fired YYYY-MM-DD, no
-   review recorded" and treat the review as due; a date whose
-   `reviews/<date>/` is absent is "review YYYY-MM-DD left no record",
-   treated the same. If the value is `never` or 7 or more days old AND
+   review recorded" and treat the review as due (a live `started … step5`
+   claim is a review in progress: `references/weekly-review.md`, Step 5);
+   a date with no `reviews/<date>/` or `<date>-slice/` is "review
+   YYYY-MM-DD left no record", treated the same. Due, too, when the oldest
+   OPEN entry's `date:` is 7 or more days old and the date file is older.
+   If the value is `never` or 7 or more days old AND
    there are OPEN observations: in an interactive session, offer the review
    in one line, once per session, and proceed with the user's task unless
    they opt in; never gate their work on the review. Scale the offer's
@@ -211,7 +218,8 @@ items under How to Log are ticked the same way in the turn that writes.
    observations, offer the full review ("the backlog hasn't been reviewed
    [in N days / yet] — N open; run it now, or carry on?"); above that, offer
    a bounded slice whose unit of work stays constant as the backlog grows
-   ("review the 10 oldest") and state both numbers, open and roughly how
+   ("review the 10 oldest": `references/weekly-review.md`, "Bounded
+   slice") and state both numbers, open and roughly how
    many distinct findings (cluster on the scanned `title` and `skill`; why:
    `references/weekly-review.md`). Only a scheduled/autonomous run loads
    `references/weekly-review.md` and runs the review unprompted; a session
@@ -237,7 +245,9 @@ items under How to Log are ticked the same way in the turn that writes.
    skill accumulates observations unnoticed; a dead one more so. Say what
    you resolved against (this checkout, this install): an unresolved target
    is a fact about where you looked, not about the world.
-   If `skill-updates/` holds anything, reconcile it before announcing it —
+   If `[workspace folder]/skill-updates/` (beside `skill-observations/`, never
+   inside it; the scan's `staged:` line names it) holds anything, reconcile
+   it before announcing it —
    no session observes an install, so the one that reads the ledger owns
    its cleanup. Compare each staged copy with live
    (`scripts/diff-staged.sh <staged> <live>`: ERROR is not reconciled, never
@@ -352,7 +362,10 @@ the 3rd, 6th, 9th (etc.) item complete you must **write to disk** — not
 merely ask yourself whether anything is pending. Write any pending
 observation files, or append a one-line `no observations` acknowledgement
 to `skill-observations/checkpoints.log`: a remembered "ask whether" is not
-enforcement. Roughly every third completion is the rule. (Exception for a
+enforcement. That line is valid only when, since the last checkpoint, no
+user correction came, no memory or feedback file was written and no
+workaround followed a denial or failure; otherwise it names each and why
+it does not generalise. Roughly every third completion is the rule. (Exception for a
 priced-write workspace: `references/environments.md`.)
 
 **A denied or failed write is not a read-only log.** A transient failure
@@ -396,7 +409,9 @@ highest in `observation-log/archive/`, and the number in
 whenever you issue an id above it, so the counter can never restart from 1
 when the active directory is empty). The same command first sweeps stale
 resolved files into `archive/` — archival is a side effect of deriving the
-id, not a separate duty (see Archival on Write):
+id, not a separate duty (see Archival on Write). Where a helper can run,
+`scripts/new-observation.sh` runs it for you (the first checklist item
+below); the snippet is the write path where none can:
 
 ```bash
 d="[ABSOLUTE PATH]/skill-observations/observation-log"   # the pinned workspace path, never relative to the cwd; it may contain a space, so keep it quoted; bash, not sh
@@ -429,13 +444,14 @@ commands arrive unaltered: `references/observation-log.md` ("Editing an existing
 Load `references/observation-log.md` ("The guard line, the sweep's count
 and the noclobber create") when any of them fires.
 
-- [ ] **Run the snippet immediately before EVERY write, including the first and
-only one of a session** — an earlier read of the log is not a substitute,
-and the id the session-start scan printed is never an input to a write.
-Where a helper can run, `bash scripts/new-observation.sh --body <file>
-<slug> "[ABSOLUTE PATH]"` is the only write path: it runs this whole snippet,
-copies the body in with `__ID__` and `__DATE__` filled and prints the created
-path, so derivation cannot drift from creation. It issues no id while two
+- [ ] **Where a helper can run, `bash scripts/new-observation.sh --body <file>
+<slug> "[ABSOLUTE PATH]"` is the only write path** — `<file>` is the complete
+entry, frontmatter and body, with `__ID__` and `__DATE__` left as literals
+for the helper to fill; it runs this whole snippet and prints the created
+path, so derivation cannot drift from creation. Elsewhere, **run the snippet
+immediately before EVERY write, including the first and only one of a
+session** — an earlier read of the log is not a substitute, and the id the
+session-start scan printed is never an input to a write. The helper issues no id while two
 files share a numeric prefix across `observation-log/` and `archive/`, and
 names both with the renumber. Load
 `references/observation-log.md` ("Run the snippet immediately before every
@@ -499,6 +515,8 @@ commands_verified:      # MANDATORY when the body quotes a command or predicate 
 next_actor:             # optional, set with a decision: who acts on it next — e.g. review, maintainer, or the name of the run that executes it
 use_evidence:           # optional, append-only: one line per session that NEEDED the entry,
                         #   - YYYY-MM-DD accepted|declined|used — short context, no colon-space
+escalated:              # set by a review, append-only: one line per time it asked the user,
+                        #   - YYYY-MM-DD the one-line question, no colon-space
 ---
 
 **Issue:** [What happened — specific enough to understand weeks later
@@ -535,10 +553,17 @@ preservation — the `reference:` field") when setting `reference:`.
 the Issue/Improvement fields may reference specifics for context, but the
 Principle must be fully generalised — no client names, domains, or details
 traceable to a real project (full layers: `references/skill-authoring.md`).
+A secret is never quoted in any field of any entry, not even in part:
+describe its shape (length, source, which part differed) and point
+`reference:` at where the evidence lives.
 
 **Changing an existing observation:** re-read that one file, edit only the
 frontmatter fields you are changing (`status`, `parked_until`, `resolved`,
 `resolution`), never batch-rewrite the directory. Archival is a plain `mv`.
+To change several entries, or renumber one, `bash scripts/set-fields.sh
+"[ABSOLUTE PATH]" <plan>` is the path: it refuses the whole plan unless
+every file changes only on the named lines (`references/observation-log.md`,
+"Editing an existing observation").
 A `use_evidence:` line is appended inside the header, before its closing
 `---`, by one insert command, never a rewrite of the file (the command:
 `references/observation-log.md`, "Frontmatter fields"). A decision appended
@@ -712,12 +737,12 @@ agent not following the skill's rules, acknowledge and correct it instead.
 | Question | Answer |
 |----------|--------|
 | When do I observe? | The whole session, including feedback and reflection phases |
-| How do I log? | Immediately, without interrupting the user's task, as one file per observation named `NNNN-slug.md`; id = max(active, archive, `.id-floor`) + 1, derived by running the snippet immediately before each write — an earlier read of the log for any other purpose is not a substitute; where a helper can run, `bash scripts/new-observation.sh --body <file> <slug> "[ABSOLUTE PATH]"` is the only write path |
+| How do I log? | Immediately, without interrupting the user's task, as one file per observation named `NNNN-slug.md`; id = max(active, archive, `.id-floor`) + 1, derived by running the snippet immediately before each write — an earlier read of the log for any other purpose is not a substitute; where a helper can run, `bash scripts/new-observation.sh --body <file> <slug> "[ABSOLUTE PATH]"`, `<file>` the complete entry (frontmatter and body), is the only write path |
 | Status field? | Mandatory `status: open` frontmatter on every new observation; reviews treat a missing status as OPEN, never as nonexistent. Five values: `open`, `actioned`, `declined`, `superseded`, `parked` — `parked` = decided but blocked on an external precondition, so it leaves the queue, requires `parked_until:`, and never archives |
 | Does the target skill have siblings? | Resolve it against `skill-observations/skill-families.md` BEFORE writing; add every sibling the insight applies to to `skill:`, and record the verdict in the mandatory `siblings_checked:` field — including "checked, no propagation" |
 | A scan or query came back empty? | Two possibilities, only one is a finding: guard every retrieval meant to prevent duplicate work with an independent existence check, and treat empty output over known content as a broken command |
 | Small fix or substantial? | Additive → apply directly; restructuring/new skill → `references/skill-authoring.md` |
 | Same rule broken twice? | The fix is a structural barrier (hook, lint, default) — never a third rewording |
-| Changing an observation (status/archival)? | Re-read that one file, edit only its frontmatter, or `mv` it to `observation-log/archive/` — no shared-file rewrite |
+| Changing an observation (status/archival)? | Re-read that one file, edit only its frontmatter, or `mv` it to `observation-log/archive/` — no shared-file rewrite; several entries or a renumber: `scripts/set-fields.sh` |
 
 Task Observer: Eoghan Henn and contributors | CC BY 4.0

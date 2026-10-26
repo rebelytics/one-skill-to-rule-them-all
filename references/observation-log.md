@@ -49,10 +49,12 @@ skill-observations/
   cross-cutting-principles.md
   skill-families.md      # declared families: members, shared vs member-specific,
                          #   coherence model (created when the first family is named)
-  last-review-date.txt
+  last-review-date.txt   # the last review that reached an outcome (weekly-review.md, Step 8)
+  last-triage-attempt.txt  # a review that changed no status (created by the first one)
   forked-skills.txt      # vendored skills the user adopted on purpose, one line each
                          #   (weekly-review.md Step 2; created on the first fork)
-  reviews/               # one record per review run: reviews/YYYY-MM-DD/REVIEW.md
+  reviews/               # one record per review run: reviews/YYYY-MM-DD/REVIEW.md,
+                         #   a bounded slice under YYYY-MM-DD-slice/
                          #   (weekly-review.md Step 7; kept, never pruned by a step)
   checkpoints.log        # append-only acknowledgement markers (optional)
   MOVED.md               # only at an abandoned root: line 1 names the new root
@@ -165,6 +167,7 @@ promise about the rest.
 | `commands_verified` | One clause per executable command, and per predicate (a regex, a search pattern, a hook or check condition), the body quotes: `run`, with what it returned — for a predicate, whether it matched the positive case and the negative — or `NOT RUN` with why; the literal `none` where the body quotes neither. Blank on a body that quotes a command or predicate means it was never run. See "Commands inside an observation" below. |
 | `next_actor` | Optional, set in the edit that appends a decision to the body: who acts on it next — `review`, `maintainer`, or a named run such as a publishing step. The value is open: no script parses it, so name your own runs. The same edit prefixes `title:` with `DECIDED:` (core, How to Log), so a title-only scan reads the entry as settled rather than as an open question. |
 | `use_evidence` | Optional, append-only block list: one line per session in which the entry was NEEDED to decide the agent's behaviour, `- YYYY-MM-DD accepted\|declined\|used — short context`. `accepted` / `declined` is the user's answer in an interactive session (core, Surfacing Protocol); `used` is an unattended run that applied it without asking. Lines are appended by the command below and never removed; a `declined` line never closes the entry. The context is a plain scalar: no `: ` and no ` #` in it — the first turns the item into a mapping, the second cuts it. The review orders its queue by the count of these lines and flags an entry with none 30 days after its `date:` as unconfirmed (`weekly-review.md`, Step 3). |
+| `escalated` | Written by a review, append-only block list: one line per time the review asked the user about the entry, `- YYYY-MM-DD the one-line question` (a plain scalar: no `: `, no ` #`). A bounded slice skips an entry asked and unanswered; the second ask comes one review later, the third review parks it on the question (`weekly-review.md`, Approval policy, "An escalation is recorded on the entry"). |
 | `skill_qualifiers` | Optional map: skill name → the section or part of that skill meant. |
 | `migration_note` | Present only on files converted from a legacy log where the converter refused to guess; clear it once reviewed. |
 
@@ -420,7 +423,10 @@ claimed or created. The renumber: keep the number on the file that is cited
 other out of the listing by renaming it with a leading dot, which no `[0-9]*.md` glob sees; set its `id:` to `__ID__`;
 re-create it with `--body <the moved file>` (a resolved entry, which the
 body check refuses, is re-created without `--body` and filled in place);
-then delete the moved copy and note the old number in the new body. A uniqueness invariant is enforced
+then delete the moved copy and note the old number in the new body. One
+`rename<TAB><file><TAB>next` line through `scripts/set-fields.sh` does the
+same in one step, with no delete: the fresh id, filename and `id:` together,
+the old number noted. A uniqueness invariant is enforced
 where it can break, the write; the scan's DUPLICATE ID line stays as the
 read-time catch for a write that went around the helper.
 
@@ -687,7 +693,15 @@ session's state says nothing about what it is about to do.
 **Edit log files with the editing tool — never `sed -i`, `perl -pi`, or a
 redirection over the file.** No exception for a quick fix or a temporary
 negative test; the temptation peaks exactly on a file with uncommitted work
-and nothing to fall back to.
+and nothing to fall back to. **A change to several entries goes through
+`scripts/set-fields.sh <root> <plan>`, never a loop written for the
+occasion:** one plan line per change (`set<TAB><file><TAB><key><TAB><value>`,
+or `rename<TAB><file><TAB>next`); phase 1 writes nothing and refuses the
+whole plan unless every new text differs from its old one only on the
+named keys' lines, each named key occurs once, and `id:` still reads as the
+filename prefix; phase 2 writes through a temp file and `mv`, then re-reads
+each file against the checked text. A loop once wrote one entry's lines
+over another's file with every count intact; `--check` runs phase 1 alone.
 
 Rewriting a text file from the shell passes the replacement through the
 shell's quoting first, and what arrives is not always what was typed: an

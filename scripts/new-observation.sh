@@ -3,15 +3,15 @@
 # as one command that cannot be split.
 #
 # Usage:
-#   bash scripts/new-observation.sh [--body <file>] <slug> [workspace-root]
+#   bash scripts/new-observation.sh [--body <entry-file>] <slug> [workspace-root]
 #
 #   <slug>            kebab-case, no id prefix, no extension ("short-slug")
 #   [workspace-root]  the pinned absolute workspace path — the directory that
 #                     holds skill-observations/. Defaults to the environment
 #                     variable TASK_OBSERVER_WORKSPACE. One of the two is
 #                     required; the log is never resolved from the cwd.
-#   --body <file>     optional, before or after the slug: once the file is
-#                     created, <file> (frontmatter and body, written by the
+#   --body <entry-file> optional, before or after the slug: once the file is
+#                     created, <entry-file> (the COMPLETE entry, frontmatter and body, written by the
 #                     caller with a QUOTED heredoc) is copied into it with
 #                     the literal placeholders __ID__ and __DATE__ replaced
 #                     everywhere by the issued id and today's date
@@ -95,7 +95,7 @@ done
 [ -n "$root" ] || root="${TASK_OBSERVER_WORKSPACE:-}"
 
 if [ -z "$slug" ]; then
-  echo "usage: new-observation.sh [--body <file>] <slug> [workspace-root]" >&2; exit 1
+  echo "usage: new-observation.sh [--body <entry-file>] <slug> [workspace-root]" >&2; exit 1
 fi
 if [ -n "$body" ] && ! { [ -f "$body" ] && [ -r "$body" ]; }; then
   echo "--body file is missing or unreadable: '$body'" >&2; exit 1
@@ -250,7 +250,7 @@ if [ -n "$dup" ]; then
     printf 'RESURRECTED — %s is byte-identical to %s: a sync or mirror restored an archived entry; no id is issued while it stands. Remove the active copy (never renumber it) and record the sync client (references/environments.md, "Stable is not the same as always available")\n' "$d1" "$d2" >&2
     exit 1
   fi
-  printf 'DUPLICATE PREFIX — id %s is carried by both %s and %s; no id is issued while it stands. Renumber first: keep the number on the file something cites, else the earlier one (by date:); move the other out of the listing (rename it with a leading dot), set its id: to __ID__, re-create it with --body <the moved file>, then delete the moved copy (references/observation-log.md, "Assigning an id")\n' \
+  printf 'DUPLICATE PREFIX — id %s is carried by both %s and %s; no id is issued while it stands. Renumber first: keep the number on the file something cites, else the earlier one (by date:); move the other out of the listing (rename it with a leading dot), set its id: to __ID__, re-create it with --body <the moved file>, then delete the moved copy; or renumber it in one step with a set-fields.sh rename line (references/observation-log.md, "Assigning an id")\n' \
     "$dn" "${rest%%|*}" "${rest#*|}" >&2
   exit 1
 fi
@@ -305,13 +305,13 @@ fi
 # one is a LOST entry for as long as the caller takes to write the body.
 # The field list mirrors the core template (How to Log) in its order, the
 # optional and conditional fields included (commands_verified, next_actor,
-# use_evidence): a copy that claims to mirror a template drifts the moment
+# use_evidence, escalated): a copy that claims to mirror a template drifts the moment
 # the template gains a field, so the selftest asserts each field is here.
 # `title:` is left empty on purpose — the scan reports a header with an
 # empty title as UNFILLED, a write in progress or abandoned, distinct from
 # LOST.
 f="$d/${prefix}-${slug}.md"
-skel=$(printf '%s\nid: %s\ntitle: ""\nstatus: open\ntype:\nskill: []\nproposes_skill: []\ntarget_file: []\nsiblings_checked: ""\narea: ""\ndate: %s\nsession_context: ""\nparked_until:\nresolved:\nresolution:\nreference:\ncommands_verified:\nnext_actor:\nuse_evidence:\n---' --- "$next_id" "$today")   # the format opens with %s: a leading --- reads as an option
+skel=$(printf '%s\nid: %s\ntitle: ""\nstatus: open\ntype:\nskill: []\nproposes_skill: []\ntarget_file: []\nsiblings_checked: ""\narea: ""\ndate: %s\nsession_context: ""\nparked_until:\nresolved:\nresolution:\nreference:\ncommands_verified:\nnext_actor:\nuse_evidence:\nescalated:\n---' --- "$next_id" "$today")   # the format opens with %s: a leading --- reads as an option
 if ! (set -C; printf '%s\n' "$skel" > "$f") 2>/dev/null; then
   echo "CREATE FAILED — $f exists or is unwritable" >&2; exit 1
 fi

@@ -35,6 +35,7 @@ input to staged copies — never to live skills. Two modes:
   - Step 6 — re-scan, then mark ACTIONED
   - Step 7 — deliver and summarise
   - Step 8 — timestamp
+  - Bounded slice
 - Constraints
 - Delivering updated skills
 
@@ -197,7 +198,8 @@ installed from, a stored baseline, the file's own source and feedback line
 (or its frontmatter `metadata.source`, `author:` and `license:`), and the
 tool that generates it, if one does. Where the premise is genuinely
 remote (does the section still exist at upstream HEAD, is the PR still
-open), the review must not depend on reaching the network: present the
+open), the review must not depend on reaching the network (the opt-in
+version check at Step 2 is the one fetch it may start): present the
 option with that half named as unverified, and leave the remote check to
 the feedback pre-flight in `references/skill-authoring.md`, which runs
 once the user has chosen to contribute. Forked files need the check at
@@ -223,6 +225,12 @@ with the refusal's words, hand it to the user in the closing summary as a
 step with exact paths, and continue the rest of the apply phase. Run
 preparatory work (anchors, backups) in calls of its own, never in the
 call that carries such an action, so one refusal does not take it down.
+
+**Delegated whole (a subagent runs the review):** only where the brief says
+so and quotes the user's permission; the run takes the scheduled-autonomous
+rules below unless the brief also quotes the user's approval of a specific
+list (`environments.md`, "Sessions whose output channel is owned by a
+caller").
 
 **Scheduled autonomous (user absent):** apply non-escalated observations by
 default — safety comes from the staging-plus-review pattern (nothing is
@@ -300,6 +308,21 @@ configuration — and look. Escalate only when they are silent, disagree,
 or the decision is the user's by authority rather than by knowledge.
 "Confirm with the owner" in an observation is a lead to a record, not an
 escalation trigger. Under each escalated item, list the records checked.
+
+**An escalation is recorded on the entry, and silence never decides it.**
+An entry the user has been asked about and has not answered looks unseen
+from its header, and refills every "N oldest" slice. So: (1) the first ask
+appends `- YYYY-MM-DD <the one-line question>` to the entry's `escalated:`
+field; a bounded slice skips an entry asked and unanswered, and the record
+lists such entries once, under "Waiting for the user"; (2) one review later
+the question comes back as a binary choice with the recommendation stated
+— to make answering cheap, never as a default; (3) still unanswered, the
+entry is parked with `parked_until: "the user answers: <the one-line
+question>"`: it leaves the work queue, its substance stays undecided and
+the question stays on the parked list. Nothing is ever applied by silence.
+(4) Before any re-ask, search where answers land — decision records,
+review records, observation bodies — and close a question already
+answered, citing where.
 
 Escalate one decision per cluster (Step 3).
 
@@ -548,7 +571,8 @@ decide: keep the number on the **earlier**
 entry (by `date`, then by the lower `.id-floor` era), renumber the later
 one to a fresh id from the snippet, update its filename and its `id:`
 field together, and note the renumber in its body so a citation of the old
-number can still be traced. Then re-run the check until it prints nothing.
+number can still be traced (`scripts/set-fields.sh`, one `rename` line,
+does all three). Then re-run the check until it prints nothing.
 For each collision, and for the files above a lagging floor, record the
 writing sessions — each file's `session_context` and `date` — in the Step 7
 summary: the pair traces the bypass to an environment or write path, which
@@ -848,6 +872,18 @@ edit silently reverts what live gained since. The same-day second
 staging under Delivery is where this arises — that rule says where the
 second copy is written, this one says how the first is then classified.
 
+**Several rounds of one skill are classified newest first, and a later
+round's lineage settles the older ones.** Read the copies in keep-two
+order. Where a newer round is (a) now and its manifest entry records
+`seeded_from: live after <older anchor> installed`, every older round is
+(b) with no per-hunk read: live already carried it when the newer round
+was seeded. Without that note, a staged-only line counts toward (c) or
+(d) only after a substance search of live — a key phrase or identifier
+from the hunk, not the line itself — finds nothing, and the phrase
+searched goes into the verdict. A rewording by a later round reads as
+"staged-only" line by line, and a wrong (c) blocks the prune; a wrong
+(b) deletes uninstalled work, which is why the search is recorded.
+
 **(c) against (d) needs the other difference set.** The per-hunk test
 reads only what the staged copy has that live lacks; compute what live
 has that the staged copy lacks too, before naming the case — a non-empty
@@ -961,6 +997,18 @@ review, which the Constraints allow as the one exception to "no new
 skills in a review". Grow the (c) list when an update fails for
 permissions; grow the (b) list when a change you made has vanished — a
 rule that fires after the damage, the backstop for the attribution read.
+
+**A (b) skill never reaches Step 5, so Step 2 records its currency.** For
+each foreign-maintained skill with open observations, state its installed
+`version:` and install date from the local copy, and mark each of its
+observations "currency unverified — may already be fixed upstream"; offer
+the feedback pre-flight's HEAD re-read (`skill-authoring.md`) before such
+an entry is clustered, escalated or approved. An upstream that was not
+reached is "unknown", never "current". Where the activation block carries
+the opt-in line ("the review may check upstream versions"), Step 2 instead
+fetches the upstream's version for each such skill and compares it with
+the installed one — the one network use a review starts, and only on that
+line; an unreachable upstream still reads "unknown".
 
 **Run the validator over the live set while the inventory is in hand.**
 Step 1's gate compares staged against live and Step 5 validates what was
@@ -1103,7 +1151,10 @@ entries target the same member. Then, before anything is presented:
 - **Confidentiality pass over the log itself.** For every OPEN
   `open-source` observation, check the Issue and Improvement fields for
   client-identifying specifics no longer needed for context and strip
-  them. The log is the artefact most likely to be shared casually, and
+  them. For every entry, active and `archive/`, and every frontmatter
+  value (`resolution:` included), check for a quoted secret, whole or in
+  part — the scan names the files it suspects — and rewrite it to its
+  shape, recording the rewrite in `resolution:`. The log is the artefact most likely to be shared casually, and
   the authoring-time sweeps never see it.
 
 Interactive: save the full decision list — grouped by skill, as the
@@ -1534,6 +1585,17 @@ while [ "$i" -le 100 ]; do n="[today]"; [ "$i" -gt 1 ] && n="[today].$i"
 echo "$a"   # the claimed anchor: the seed's s= line takes it
 ```
 
+**The review claims the apply phase too, in the started marker.** Before
+the loop, read `skill-observations/review-started.txt`: a line `started
+<date> <time> <label> step5 <anchor>` from another label, whose anchor
+holds a file younger than the review interval (the claim-liveness read,
+Step 1 gate), is a review applying now — stop and report "apply phase
+claimed by <label>, started <t>", never a second apply over the same log.
+Otherwise, once the anchor is claimed, overwrite the marker
+(`printf 'started %s %s step5 %s\n' "$(date '+%F %H:%M')" "[SESSION LABEL]" "$a"`),
+so an interactive or commissioned review leaves a live claim as a
+scheduled one does; Step 8 writes `completed` over it.
+
 ```bash
 # Stage the FULL skill directory (SKILL.md + references/, scripts/, assets/),
 # not SKILL.md alone. From a read-only mount, mkdir + per-file cp + chmod is
@@ -1713,7 +1775,8 @@ own directories, and never runs a recursive delete on a directory it did
 not create; whether the pass is a content pass or a reformat —
 never both in one edit, and a snapshot of the staged directory taken
 before it (Delivery) — and an explicit rule that subagents do not change
-any observation's status and do not write observations: a finding worth
+any observation's status and do not write observations (unless the brief
+delegates the whole review, Approval policy): a finding worth
 logging goes in the subagent's final report and the parent writes it,
 because two writers watching one task from two vantages log one finding
 twice, and merging two entries about one fact is not the renumbering the
@@ -1954,6 +2017,10 @@ old → new]
 [one line each: #id — title — unparks when: [condition]; plus any entry
 whose condition has been met and was returned to the queue this review]
 
+### Waiting for the user
+[one line each: #id — the one-line question — asked [dates] (Approval
+policy, "An escalation is recorded on the entry"); or "none"]
+
 ### Arrived during this run
 [from the Step 6 re-scan: #id — title — folded into [skill] / left OPEN
 for the next review; or "none" — the line is never omitted]
@@ -1992,16 +2059,24 @@ reconciling the staged/presented count and writing the Step 8 timestamp;
 a step that blocks on an event that cannot occur turns the run's one
 deliverable into a hang.
 
-**Step 8 — timestamp.** Bound to the record: written only once Step 7's
-`reviews/[date]/REVIEW.md` exists and is non-empty, by one guarded command
+**Step 8 — timestamp.** Bound to the record and to an outcome: written
+only once Step 7's record exists and is non-empty, by one guarded command
 whose date is the one Step 7 saved the record under — never a fresh
-`date`, so a run crossing midnight does not fail its own guard:
+`date`, so a run crossing midnight does not fail its own guard — and only
+when the run reached at least one deliberate outcome: an entry actioned,
+declined, superseded, or parked with a `parked_until:` condition. A run
+that looked and changed no status writes `last-triage-attempt.txt`
+instead, and the date stays, so the next session offers the review again
+rather than in 7 days — the trade-off is stated in the record:
 
 ```bash
 d="[DATE]"   # the [date] Step 7 saved the record under
-w="[ABSOLUTE PATH]/skill-observations"; r="$w/reviews/$d/REVIEW.md"
+rec="reviews/$d"   # reviews/$d-slice for a bounded slice
+n="[OUTCOMES]"   # entries this run actioned, declined, superseded or parked with a condition (Step 6)
+w="[ABSOLUTE PATH]/skill-observations"; r="$w/$rec/REVIEW.md"
 [ -s "$r" ] || { echo "NO REVIEW RECORD — not timestamping"; exit 1; }
-printf '%s\n' "$d" > "$w/last-review-date.txt"
+if [ "$n" -gt 0 ]; then printf '%s\n' "$d" > "$w/last-review-date.txt"
+else printf '%s no outcome (%s)\n' "$d" "$rec" > "$w/last-triage-attempt.txt"; fi
 printf 'completed %s\n' "$d" > "$w/review-started.txt"
 ```
 
@@ -2019,12 +2094,31 @@ over the workspace, re-read every state file this run modified after the
 next sync cycle, not only the timestamp (`environments.md`, "Stable is not
 the same as always available").
 
+### Bounded slice
+
+A bounded slice is a review of the N oldest OPEN entries — the offer
+Session Start step 3 makes above ~15 open — and it runs as a review, not a
+glance. **Selection:** the N oldest by `date:`, then id, leaving out parked
+entries and those asked and unanswered (Approval policy, "An escalation is
+recorded on the entry"), which the record lists once under "Waiting for
+the user". **Run for the slice:** Steps 3, 5 and 6 over its entries, and
+the gate for the skills it stages. **Run for the whole log whatever the
+slice:** Step 1's integrity checks (duplicate id, contiguity, header
+conformance, the inbox drain) and Step 6's re-scan against the Step 1 list
+— a slice that skips them leaves the log unchecked for as long as slices
+are all that run. **Record:** `reviews/<date>-slice/REVIEW.md`, the Step 7
+template with a first line "Bounded slice: N of M open — ids …", and the
+steps not run named (Step 4, the promotion pass); entries outside the slice
+are never reported as reviewed. **Timestamp:** Step 8 with `rec` set to the
+slice's record, bound to an outcome like a full review.
+
 ## Constraints
 
 - Don't modify observation files beyond their `status`, `parked_until`,
   `resolved`, and `resolution` frontmatter fields — plus `reference:` in the
   one case the Approval policy names (a user-decided restructure of a
-  published skill, left `open` with its staged path recorded there), and
+  published skill, left `open` with its staged path recorded there),
+  the `escalated:` line of each ask (Approval policy), and
   the decision edit of SKILL.md, How to Log (`next_actor:` with the
   `DECIDED:` title prefix) — **with one exception: correcting a target
   that was recorded wrongly.** `skill:` and `proposes_skill:` are
@@ -2252,6 +2346,9 @@ discriminated anchor (`<date>-<slug>` or `<date>.2`) with its own
 manifest entry, and count rounds rather than days when the keep-two rule
 prunes. The anchor is claimed BEFORE the Step 5 seed, by its claim loop,
 never picked by inspection — the snippet's `s=` line takes the claimed path.
+A second case reads as live: a today's directory this session did not
+create, holding files newer than this session's start, is another writer
+at work — integrate with it or claim `[today].N`, never seed over it.
 
 **The previous staged state is part of the deliverable — snapshot
 before any second pass, and never let a reflow ride along with
@@ -2282,7 +2379,9 @@ directory already under `skill-updates/<date>/` that is not identical to
 live, so the manifest's first state describes the tree it indexes rather
 than the one delivery that happened to create it. For a delivery, the entry carries the skill, the date
 directory, the producer (which session or scheduled run staged it), the
-observation ids applied, a per-change summary
+observation ids applied, `seeded_from: live after <anchor> installed` when
+an earlier round of the skill was installed before this seed (the gate's
+lineage read), a per-change summary
 (observation id → section touched → one-line rationale) and the
 regression line "N past instances re-checked, 0 handled worse" (Step 5);
 where gate item (8) applies, the destination's check command and its

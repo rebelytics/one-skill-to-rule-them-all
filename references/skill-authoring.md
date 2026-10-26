@@ -133,7 +133,9 @@ session is fixed overhead and should be audited like one.
 
 **Declare your own core ceiling, and let it only fall.** A skill opts into
 the size ratchet by naming its own bound — `core_max_lines: N` in SKILL.md
-frontmatter, or a `.core-ceiling` file beside it — seeded at whatever the
+frontmatter, at the top level or one level under `metadata:` (the
+spec-conformant form, value quoted: `core_max_lines: "N"`; see Runtime
+prerequisites on why), or a `.core-ceiling` file beside it — seeded at whatever the
 core measures today: the point is not that every skill reaches some ideal
 size, it is that no skill silently grows past where it already is.
 `validate-skill-bundle.py` then fails when the core exceeds it, with the
@@ -462,7 +464,10 @@ already be fixed; a draft written in an earlier session is checked again
 before it is sent; (4) match the repository's house style for reports.
 The pre-flight is where this skill reaches the network, and only after
 the user has asked for a report to be drafted; nothing before that point
-fetches anything.
+fetches anything — except the review's upstream version check for a
+foreign-maintained skill (`weekly-review.md`, Step 2), which runs only
+where the activation block carries its opt-in line, "the review may check
+upstream versions".
 
 **Pre-send gate — run on the finished draft, after the pre-flight.** The
 pre-flight decides whether and where a report goes; nothing reads the
@@ -1196,12 +1201,22 @@ skill in-repo — commonly under `agent-skill/`, `.claude/skills/`,
 `skills/`, or named in the README — and hand-authoring beside it
 duplicates work, drifts from the maintainers' version and misses their
 updates. One search of the upstream repository (those paths, plus "skill"
-in the README and release notes) settles it — one of the two network uses
-this skill permits, and only once the user has asked for the skill. If an
+in the README and release notes) settles it — one of the network uses
+this skill permits (SKILL.md names them), and only once the user has asked for the skill. If an
 official skill exists, install it and put only the local delta into a
 companion, exactly as for any other upstream-maintained skill
 (weekly-review.md, Step 2); if it does not, author, and consider offering
-the result upstream. And before authoring any skill from scratch, look
+the result upstream. **A hand-installed plugin edition gets five checks:**
+tell the editions apart and grep the copy for install-time variables
+(`${CLAUDE_PLUGIN_ROOT}` and the like), which only the plugin installer
+fills; rewrite such a prefix inside the quoting it will run in —
+`"$HOME/…"`, never `~` inside quotes, which the shell does not expand;
+run each documented command copied verbatim from the installed SKILL.md,
+in a clean shell from another working directory, and check nothing was
+written there; record the source, its commit and the one local change in
+a provenance note; install only the skill asked for. Running an
+"equivalent" command tests your reading of it, not the text the next
+session runs. And before authoring any skill from scratch, look
 for an uninstalled draft under
 `[workspace folder]/skill-updates/*/<skill-name>/` (`find`, as in
 weekly-review.md Step 5): a staged copy that never went live has no live
@@ -1307,7 +1322,9 @@ left optional, a family drifts.
 prerequisites as *checkable facts*, so that something other than a human
 reader can evaluate them, in ONE string under `metadata` — the Agent
 Skills spec types `metadata` as string→string, and a top-level key of
-our own fails its validators as an unexpected key:
+our own fails its validators as an unexpected key (the validator reads
+`core_max_lines` in either place for that reason, and notes the key
+nested anywhere else as not read):
 
 ```yaml
 metadata:

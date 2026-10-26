@@ -90,7 +90,8 @@ SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 # TARGET is reported on every run, passing or failing, so the debt stays
 # visible rather than being rediscovered by a contributor with a line counter.
 # The ceiling is a property of the SKILL, not of this script. It is read from
-# the skill under test — `core_max_lines:` in SKILL.md frontmatter, or a
+# the skill under test — `core_max_lines:` in SKILL.md frontmatter (top
+# level, or one level under `metadata:`, the spec-conformant form), or a
 # `.core-ceiling` file beside it holding the number. A skill that declares
 # neither has not opted in: the count is reported and nothing is gated. This
 # script ships inside task-observer but is run against every skill in a
@@ -390,6 +391,42 @@ def check_frontmatter_shape(fm, fails, yaml_available):
               "not parsed. Install PyYAML for the stronger check.")
 
 
+def core_ceiling_value(fm):
+    """The raw `core_max_lines` value from a frontmatter block, or None.
+
+    Two places are read: the top level, and one level under `metadata:` —
+    the spec-conformant form, since the Agent Skills spec types `metadata`
+    as string→string and a top-level key of a skill's own fails its
+    validators. Top-level wins where both exist; a disagreement is noted
+    with both values. The key nested under any other parent is not read,
+    and says so, instead of the plain "not gated" a silent miss printed.
+    """
+    top = re.search(r"(?m)^%s:[ \t]*(\S+)[ \t]*$" % CORE_CEILING_KEY, fm)
+    meta = None
+    parent = None
+    nested_elsewhere = []
+    for line in fm.splitlines():
+        if re.match(r"^\S", line):
+            pm = re.match(r"^([A-Za-z_][\w-]*):", line)
+            parent = pm.group(1) if pm else None
+            continue
+        km = re.match(r"^[ \t]+%s:[ \t]*(\S+)[ \t]*$" % CORE_CEILING_KEY, line)
+        if km:
+            if parent == "metadata" and meta is None:
+                meta = km.group(1)
+            elif parent != "metadata":
+                nested_elsewhere.append(parent or "?")
+    for p in nested_elsewhere:
+        print(f"note: {CORE_CEILING_KEY} found nested under {p}: — not read "
+              f"(top level or under metadata: only)")
+    if top and meta is not None and top.group(1).strip("\"'") != meta.strip("\"'"):
+        print(f"note: {CORE_CEILING_KEY} is declared twice and they disagree — "
+              f"top level {top.group(1)!r}, under metadata: {meta!r}; the top-level value is used")
+    if top:
+        return top.group(1)
+    return meta
+
+
 def read_core_ceiling(skill_md):
     """The skill's own ceiling, or None if it has not declared one.
 
@@ -402,13 +439,13 @@ def read_core_ceiling(skill_md):
     text = skill_md.read_text(encoding="utf-8")
     m = re.match(r"(?s)^---\n(.*?)\n---\n", text)
     if m:
-        km = re.search(r"(?m)^%s:\s*(\S+)\s*$" % CORE_CEILING_KEY, m.group(1))
-        if km:
-            v = km.group(1).strip("\"'")   # a quoted number is still the number
+        raw = core_ceiling_value(m.group(1))
+        if raw is not None:
+            v = raw.strip("\"'")   # a quoted number is still the number (spec metadata values are strings)
             if v.isdigit():
                 return int(v)
             print(f"note: {CORE_CEILING_KEY} is not a whole number "
-                  f"({km.group(1)!r}) — core size not gated")
+                  f"({raw!r}) — core size not gated")
             return None
     f = skill_md.parent / CORE_CEILING_FILE
     if f.exists():
@@ -450,6 +487,33 @@ CORE_COUNT_FIXTURES = [
     ("a folded block in the BODY is not a description: nothing folded",
      "---\nname: x\n---\ndescription: >\n  not frontmatter\n", 0),
 ]
+
+
+# (name, frontmatter body, ceiling read, substring the printed notes must hold or None)
+CORE_CEILING_FIXTURES = [
+    ("top-level key is read", 'name: x\ncore_max_lines: 10\n', 10, None),
+    ("under metadata:, unquoted, is read", 'name: x\nmetadata:\n  author: a\n  core_max_lines: 10\n', 10, None),
+    ("under metadata:, quoted (spec values are strings), is read",
+     'name: x\nmetadata:\n  core_max_lines: "10"\n', 10, None),
+    ("nested under another parent: a note, not gated",
+     'name: x\nother:\n  core_max_lines: 10\n', None, "found nested under other: — not read"),
+    ("both present and disagreeing: top level used, both named",
+     'core_max_lines: 10\nmetadata:\n  core_max_lines: "12"\n', 10, "they disagree"),
+    ("both present and equal: no note", 'core_max_lines: 10\nmetadata:\n  core_max_lines: "10"\n', 10, ""),
+]
+
+
+def core_ceiling_case(fm):
+    """read_core_ceiling over a fixture SKILL.md; returns (ceiling, notes)."""
+    import contextlib
+    import io
+    with tempfile.TemporaryDirectory() as td:
+        p = pathlib.Path(td) / "SKILL.md"
+        p.write_text("---\n" + fm + "---\nbody\n", encoding="utf-8")
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            got = read_core_ceiling(p)
+        return got, buf.getvalue()
 
 
 def check_core_size(skill_md, fails):
@@ -1604,6 +1668,23 @@ SCAN_FIXTURES = [
      "NOTE: legacy staging root skill-observations/skill-updates/ exists (2 round directories)", 1, ""),
     ("a resolved entry prints without its title; a value's # comment is dropped", "resolved", True, 0,
      "2 | actioned | - | - | resolved 2026-01-01 — title withheld", 1, '"defect still present"'),
+    ("a log one project level deeper (depth 4) is listed, with no checkpoints.log read as last=none",
+     "siblings", True, 0, "/work/projB=3 last=none", 1, "node_modules"),
+    ("a sibling's entry count carries the date of its checkpoints.log's last line", "siblings", True, 0,
+     "/projA=1 last=2026-01-05", 1, "/c/d="),
+    ("depth 5 is the bound: a log there is listed", "siblings", True, 0, "/a/b/c=1 last=none", 1, ".git"),
+    ("a header key written twice is a NOTE naming the file and the key, active and archive", "dupkey", True, 0,
+     "keep one line, never batch-rewrite: 0002-b.md (resolved), archive/0009-z.md (status)", 1, ""),
+    ("a key-shaped run beside api_key: the file is named, never the match", "secret", True, 0,
+     "NOTE: 1 file(s) hold a key-shaped run beside key / token / secret / password (names only, never the match): 0002-b.md — read",
+     1, "sk9ABCdef"),
+    ("a commit hash, a sha256 and a long path beside key words are not secrets", "secret", True, 0,
+     "files: 3", 1, "0003-c.md —"),
+    ("the staging root beside skill-observations/ is named in one staged: line", "staged", True, 0,
+     "/skill-updates/PENDING.md (2 non-blank lines), 1 directories under it", 1, "SPLIT STAGING"),
+    ("no staging root: the staged: line says so", "healthy", True, 0, "staged: no skill-updates/ at ", 1, ""),
+    ("both staging roots: SPLIT STAGING replaces the legacy NOTE", "splitstage", True, 0,
+     "NOTE: SPLIT STAGING — staged work under both ", 1, "NOTE: legacy staging root"),
 ]
 
 
@@ -1635,9 +1716,23 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
             (so / "cross-cutting-principles.md").write_text("# P\n\n## Active Principles\n", encoding="utf-8")
             (so / "starter-principles-reviewed.txt").write_text(
                 ("1" if scenario == "oldmarker" else shipped_starter_version()) + "\n", encoding="utf-8")
-        if scenario == "oldstage":
+        if scenario in ("oldstage", "splitstage"):
             for rnd in ("2025-01-01", "2025-01-08"):
                 (so / "skill-updates" / rnd).mkdir(parents=True)
+        if scenario in ("staged", "splitstage"):
+            (root / "skill-updates" / "2025-02-01").mkdir(parents=True)
+            (root / "skill-updates" / "PENDING.md").write_text("# PENDING\n\n- an entry\n", encoding="utf-8")
+        if scenario == "siblings":   # logs beside the root, at depths 3 to 6 under its parent, and pruned trees
+            for rel, k in (("projA", 1), ("work/projB", 3), ("a/b/c", 1), ("a/b/c/d", 1),
+                           ("node_modules/pkg", 1), (".git/x", 1)):
+                sl = pathlib.Path(tmp) / rel / "skill-observations" / "observation-log"
+                sl.mkdir(parents=True)
+                for j in range(1, k + 1):
+                    (sl / f"{j:04d}-x.md").write_text(f"---\nid: {j}\n---\n", encoding="utf-8")
+            (pathlib.Path(tmp) / "projA" / "skill-observations" / "checkpoints.log").write_text(
+                "2026-01-05 09:00 [w] session-start scan: files=1 parsed=1 principles=absent\n", encoding="utf-8")
+        if scenario == "dupkey":
+            (log / "archive" / "0009-z.md").write_text('---\nid: 9\nstatus: actioned\nstatus: open\n---\n', encoding="utf-8")
         if scenario == "resurrect":
             (log / "archive" / "0002-b.md").write_text('---\nid: 2\ntitle: "restored copy"\nstatus: open\n---\n', encoding="utf-8")
             (log / "archive" / "0003-z.md").write_text('---\nid: 3\ntitle: "old"\nstatus: actioned\n---\n', encoding="utf-8")
@@ -1666,6 +1761,11 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
                                ("0003-c.md", '---\nid: 3\ntitle: "plain"\n---\n'),
                                ("0004-d.md", '---\nid: 5\ntitle: "wrong"\n---\n')],
                     "dupid": [("0002-b.md", '---\nid: 2\ntitle: "new"\n---\n')],
+                    "dupkey": [("0002-b.md", '---\nid: 2\ntitle: "twice"\nresolved:\nresolved: 2026-01-01\n---\n')],
+                    "secret": [("0002-b.md", '---\nid: 2\ntitle: "leak"\n---\napi_key: sk9ABCdef1234567890ghijklmnopqrs\n'),
+                               ("0003-c.md", '---\nid: 3\ntitle: "digests"\n---\ncommit 0123456789abcdef0123456789abcdef01234567 key\n'
+                                'sha256 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef password\n'
+                                'token file: /home/user/projects/client-work/notes/token-handling-notes.md\n')],
                     "resurrect": [("0002-b.md", '---\nid: 2\ntitle: "restored copy"\nstatus: open\n---\n'),
                                   ("0003-c.md", '---\nid: 3\ntitle: "new"\n---\n')],
                     "dupid-pad": [("0002-b.md", '---\nid: 2\ntitle: "padded"\n---\n'),
@@ -1780,12 +1880,22 @@ def scan_wrong_root_ok():
     line, no sidecar."""
     res = []
     for under, named in (("skill-observations/observation-log", "that is the log itself"),
-                         ("skill-observations", "that is skill-observations/ itself"),
                          ("skill-observations/observation-log/archive", "a first run")):
         rc, out, ck, side, err = scan_case("healthy", True, under=under)
         res.append(rc == 2 and out == "" and ck == 0 and side is None and named in err
                    and "No such file" not in err)
     return all(res), f"cases {res}"
+
+
+def scan_child_root_ok():
+    """A root named skill-observations/ that holds the log is resolved to its
+    parent: a NOTE line says so (and the sidecar carries it), the scan runs
+    normally, and the checkpoint line lands under the parent."""
+    rc, out, ck, side, err = scan_case("healthy", True, under="skill-observations")
+    want = "NOTE: root resolved: "
+    ok = (rc == 0 and ck == 1 and want in out and "(argument named skill-observations/)" in out
+          and "files: 2  parsed: 2" in out and side is not None and want in side)
+    return ok, f"exit {rc}, checkpoint {ck}, sidecar {side!r}, err {err!r}"
 
 
 def scan_tools_missing_ok():
@@ -2089,7 +2199,7 @@ NEWOBS_SCRIPT = pathlib.Path(__file__).resolve().parent / "new-observation.sh"
 SKELETON_FIELDS = ["id", "title", "status", "type", "skill", "proposes_skill", "target_file",
                    "siblings_checked", "area", "date", "session_context", "parked_until",
                    "resolved", "resolution", "reference", "commands_verified", "next_actor",
-                   "use_evidence"]
+                   "use_evidence", "escalated"]
 GOOD_BODY = ('---\nid: __ID__\ntitle: "t"\nstatus: open            # open | actioned\n'
              'type: open-source       # open-source | internal\nskill: [foo]\n'
              'siblings_checked: "none — no family"\ndate: __DATE__\n---\n\n'
@@ -2136,15 +2246,98 @@ NEWOBS_FIXTURES = [
 
 
 def sus_shared_ok():
-    """The suspect-YAML program is one text in two scripts: the lines between
-    the `# >>> sus` and `# <<< sus` markers are identical in the scan and in
-    the creation helper."""
+    """The suspect-YAML program is one text in three scripts: the lines
+    between the `# >>> sus` and `# <<< sus` markers are identical in the
+    scan, the creation helper and the batch field editor."""
     def part(path):
         text = path.read_text(encoding="utf-8")
         m = re.search(r"(?ms)^# >>> sus\b[^\n]*\n(.*?)^# <<< sus$", text)
         return m.group(1) if m else None
-    a, b = part(SCAN_SCRIPT), part(NEWOBS_SCRIPT)
-    return a is not None and a == b, f"scan {len(a or '')} chars, helper {len(b or '')} chars"
+    a, b, c = part(SCAN_SCRIPT), part(NEWOBS_SCRIPT), part(SETFIELDS_SCRIPT)
+    return a is not None and a == b == c, \
+        f"scan {len(a or '')} chars, helper {len(b or '')} chars, set-fields {len(c or '')} chars"
+
+
+# scripts/set-fields.sh, the checked path for changing several existing
+# entries: (name, scenario, plan lines (tab-joined), --check?, exit status,
+# substring of stdout+stderr, {file: lines expected to differ from before}
+# — None = every file byte-identical after the run).
+SETFIELDS_SCRIPT = pathlib.Path(__file__).resolve().parent / "set-fields.sh"
+_T = "\t"
+SETFIELDS_FIXTURES = [
+    ("a clean plan: each file differs from its old text on exactly the named lines", "plain",
+     [_T.join(["set", "0001-a.md", "status", "actioned"]), _T.join(["set", "0001-a.md", "resolved", "2026-01-02"]),
+      _T.join(["set", "0002-b.md", "resolution", '"done: staged"'])], False, 0,
+     "done — 2 file(s) written and re-read", {"0001-a.md": 2, "0002-b.md": 1, "0003-c.md": 0}),
+    ("one new text carrying another entry's id: (B over A) refuses the WHOLE plan, nothing written", "plain",
+     [_T.join(["set", "0003-c.md", "status", "actioned"]), _T.join(["set", "0001-a.md", "id", "2"])], False, 1,
+     "would not read as its filename prefix", None),
+    ("a named key that occurs twice in a header refuses the plan", "dupkey",
+     [_T.join(["set", "0001-a.md", "status", "actioned"]), _T.join(["set", "0002-b.md", "resolved", "2026-01-02"])],
+     False, 1, "header key(s) occur twice: resolved", None),
+    ("rename: a fresh id above the floor, filename and id: together, the old number in the body", "plain",
+     [_T.join(["rename", "0002-b.md", "next"])], False, 0, "renamed 0002-b.md -> 0006-b.md", "rename"),
+    ("--check runs phase 1 only and writes nothing", "plain",
+     [_T.join(["set", "0001-a.md", "status", "actioned"])], True, 0, "PLAN OK", None),
+    ("a value the scan's suspect rules flag is refused", "plain",
+     [_T.join(["set", "0001-a.md", "title", "Fix: unquoted"])], False, 1, "looks like invalid YAML", None),
+    ("a key absent from the header is refused, not appended", "plain",
+     [_T.join(["set", "0001-a.md", "nope", "x"])], False, 1, "key nope occurs 0 times", None),
+    ("a key holding a block value is refused", "block",
+     [_T.join(["set", "0001-a.md", "skill", "[a]"])], False, 1, "holds a block value", None),
+    ("a plan line that is not tab-separated is refused by line number", "plain",
+     ["set 0001-a.md status actioned"], False, 1, "plan line 1 is not", None),
+]
+
+
+def setfields_case(scenario, plan, check):
+    """Run set-fields.sh over a fixture log (three entries, .id-floor 5);
+    return (status, stdout+stderr, {name: text} before, {name: text} after,
+    floor text)."""
+    import os
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / "work space"
+        log = root / "skill-observations" / "observation-log"
+        (log / "archive").mkdir(parents=True)
+        (log / "archive" / ".id-floor").write_text("5\n", encoding="utf-8")
+        for i, s in ((1, "a"), (2, "b"), (3, "c")):
+            extra = ""
+            if scenario == "dupkey" and i == 2:
+                extra = "resolved: 2026-01-01\n"
+            if scenario == "block" and i == 1:
+                extra = "skill:\n  - a\n"
+            (log / f"{i:04d}-{s}.md").write_text(
+                f'---\nid: {i}\ntitle: "{s}"\nstatus: open\nresolved:\n{extra}resolution:\n---\n\nbody {i}\n', encoding="utf-8")
+        before = {p.name: p.read_text(encoding="utf-8") for p in log.glob("[0-9]*.md")}
+        (pathlib.Path(tmp) / "plan.tsv").write_text("\n".join(plan) + "\n", encoding="utf-8")
+        args = ["bash", str(SETFIELDS_SCRIPT)] + (["--check"] if check else []) + [str(root), str(pathlib.Path(tmp) / "plan.tsv")]
+        r = subprocess.run(args, cwd=tmp, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                           env={k: v for k, v in os.environ.items() if k != "TASK_OBSERVER_WORKSPACE"})
+        after = {p.name: p.read_text(encoding="utf-8") for p in log.glob("[0-9]*.md")}
+        floor = (log / "archive" / ".id-floor").read_text(encoding="utf-8").strip()
+        stray = [p.name for p in log.iterdir() if p.name.startswith(".")]
+        return r.returncode, r.stdout + r.stderr + ("".join(f" STRAY {s}" for s in stray)), before, after, floor
+
+
+def setfields_ok(scenario, plan, check, want_rc, want_out, want_diff):
+    rc, out, before, after, floor = setfields_case(scenario, plan, check)
+    ok = rc == want_rc and want_out in out and "STRAY" not in out
+    if want_diff is None:
+        ok = ok and before == after and floor == "5"
+    elif want_diff == "rename":
+        new = after.get("0006-b.md", "")
+        old_lines, new_lines = before["0002-b.md"].splitlines(), new.splitlines()
+        changed = [j for j, (a, b) in enumerate(zip(old_lines, new_lines)) if a != b]
+        ok = (ok and "0002-b.md" not in after and floor == "6" and "id: 6" in new_lines
+              and new_lines[-1].startswith("Renumbered from 2 to 6 on ") and len(new_lines) == len(old_lines) + 2
+              and [old_lines[j] for j in changed] == ["id: 2"])
+    else:
+        for name, n in want_diff.items():
+            a, b = before[name].splitlines(), after[name].splitlines()
+            ok = ok and len(a) == len(b) and sum(x != y for x, y in zip(a, b)) == n
+            ok = ok and [l for l in b if l.startswith("id:")] == [l for l in a if l.startswith("id:")]
+    return ok, f"exit {rc}, out {out.strip()[-200:]!r}, floor {floor!r}"
 
 
 def newobs_case(scenario, slug, body):
@@ -2389,6 +2582,11 @@ def selftest():
         ok = bool(NAME_RE.match(fallback_name(f"name: {value}\n"))) == kebab
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} fallback name: {value!r}")
+    for name, fm, want, note in CORE_CEILING_FIXTURES:
+        got, notes = core_ceiling_case(fm)
+        ok = got == want and (note is None or (note in notes if note else notes == ""))
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} core ceiling key: {name}" + ("" if ok else f" (got {got}, notes {notes!r})"))
     for name, text, fewer in CORE_COUNT_FIXTURES:
         got = len(text.splitlines()) - installed_line_count(text)
         ok = got == fewer
@@ -2503,6 +2701,7 @@ def selftest():
                          ("--entries-to leaving its file empty beside files: N > 0 is a broken run, exit 3", scan_entries_empty_ok),
                          ("the end line names VERSION, equal to the skill's version:", scan_version_ok),
                          ("a root with no observation log under it is refused by name, nothing written", scan_wrong_root_ok),
+                         ("a root named skill-observations/ holding the log scans its parent, with a NOTE", scan_child_root_ok),
                          ("the scan's commands off PATH: SCAN TOOLS MISSING, no checkpoint line", scan_tools_missing_ok),
                          ("forty populated entries print under 30,000 characters", scan_size_ok)):
             ok, detail = fn()
@@ -2581,11 +2780,22 @@ def selftest():
                   + ("" if ok else f" (exit {rc}, files {files}, floor {floor!r}, err {err.strip()!r})"))
         ok, detail = sus_shared_ok()
         bad += not ok; total += 1
-        print(f"{'ok  ' if ok else 'FAIL'} new-observation script: the suspect-YAML rules are the scan's, byte for byte"
+        print(f"{'ok  ' if ok else 'FAIL'} new-observation script: the suspect-YAML rules are the scan's and set-fields', byte for byte"
               + ("" if ok else f" ({detail})"))
     elif shutil.which("bash"):
         bad += 1; total += 1
         print(f"FAIL new-observation script: {NEWOBS_SCRIPT.name} missing beside this file")
+    if shutil.which("bash") and SETFIELDS_SCRIPT.is_file():
+        ok = subprocess.run(["bash", "-n", str(SETFIELDS_SCRIPT)]).returncode == 0
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} set-fields script: bash -n passes")
+        for name, scenario, plan, check, want_rc, want_out, want_diff in SETFIELDS_FIXTURES:
+            ok, detail = setfields_ok(scenario, plan, check, want_rc, want_out, want_diff)
+            bad += not ok; total += 1
+            print(f"{'ok  ' if ok else 'FAIL'} set-fields script: {name}" + ("" if ok else f" ({detail})"))
+    elif shutil.which("bash"):
+        bad += 1; total += 1
+        print(f"FAIL set-fields script: {SETFIELDS_SCRIPT.name} missing beside this file")
     if shutil.which("bash") and BINCHECK_SCRIPT.is_file():
         ok = subprocess.run(["bash", "-n", str(BINCHECK_SCRIPT)]).returncode == 0
         bad += not ok; total += 1

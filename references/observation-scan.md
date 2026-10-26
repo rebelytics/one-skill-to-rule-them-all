@@ -144,7 +144,11 @@ under it, naming the likely cause — the log's own directory passed as the
 root, a first run, a pre-3.0 `log.md` — and halts (exit 1, `SCAN TOOLS
 MISSING`) when a command it runs is off PATH, or when a count does not read
 as a number. None of the three writes the checkpoint line: a trace with
-empty counts once recorded a scan that read nothing.
+empty counts once recorded a scan that read nothing. One near-miss resolves
+instead of refusing: a root named `skill-observations/` that holds
+`observation-log/` scans its parent, with a `NOTE: root resolved:` line in
+the findings, so the pin one level too deep gets fixed rather than read as
+an empty log.
 
 ### Every instrument gets the same guard
 

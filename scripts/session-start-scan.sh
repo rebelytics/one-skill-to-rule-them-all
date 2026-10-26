@@ -39,12 +39,17 @@
 # a numeric prefix — a write that went around the id snippet's prefix
 # guard; RESURRECTED — when an active file is byte-identical to its
 # same-named archive/ copy, a restored archive entry, never renumbered); the
+# NOTE lines for a header key written twice and for a file holding a
+# key-shaped run beside key / token / secret / password (names only); the
 # counts line (files, parsed, suspect, archive-suspect, resurrected); a SPLIT STORE line when a
-# pre-3.0 log.md sits beside the directory; a NOTE: pointer line when
-# skill-observations/MOVED.md exists; a NOTE: legacy staging root line when
-# skill-observations/skill-updates/ (the pre-3.0 staging root) exists; a GAP
-# line when the previous scan in checkpoints.log is 7 or more days old; the logs found under the root's
-# parent; the active principles' headings; then one line per numbered entry,
+# pre-3.0 log.md sits beside the directory; a `staged:` line naming
+# [root]/skill-updates/ and its manifest, and a NOTE: SPLIT STAGING (both
+# roots) or NOTE: legacy staging root line when
+# skill-observations/skill-updates/ (the pre-3.0 staging root) exists; a NOTE: pointer line when
+# skill-observations/MOVED.md exists; a GAP
+# line when the previous scan in checkpoints.log is 7 or more days old; the logs found up to
+# five levels under the root's parent, each with its entry count and its
+# checkpoints.log's last date; the active principles' headings; then one line per numbered entry,
 # `id | status | skill | proposes_skill | title` (`-` for a field the header
 # lacks), parked entries after the others, an actioned, declined or
 # superseded entry as `id | status | skill | proposes_skill | resolved <date>
@@ -80,7 +85,8 @@
 #   2  refused: no workspace root, a root that is not an absolute path, a
 #      root with no skill-observations/observation-log/ under it (the line
 #      says which: a path inside the workspace, a first run, a pre-3.0
-#      log.md, a root that does not exist), an
+#      log.md, a root that does not exist; a root named skill-observations/
+#      that holds the log is resolved to its parent instead, with a NOTE), an
 #      --entries-to path that exists and is not empty, an unknown option, or
 #      any argument after the root (an option there is a usage error)
 #   3  --entries-to left its file empty while numbered files exist: a broken
@@ -146,7 +152,18 @@ d="$root/skill-observations/observation-log"
 
 # --- the root holds a log: refused by name, before any command runs ----------
 # A wrong root used to print six find errors, `files: 0`, exit 0 and a
-# checkpoint line: a clean empty backlog. Only builtins run here.
+# checkpoint line: a clean empty backlog. Only builtins run here. One
+# near-miss is resolved instead: a root named skill-observations/ that holds
+# observation-log/ (a pin one level too deep) scans its parent, and a NOTE
+# names the resolution so the pin gets fixed.
+resolved=
+case ${root%/} in
+  (*/skill-observations)
+    if [ ! -d "$d" ] && [ -d "${root%/}/observation-log" ]; then
+      root="${root%/}"; root="${root%/skill-observations}"; d="$root/skill-observations/observation-log"
+      resolved="NOTE: root resolved: $root (argument named skill-observations/) — the workspace root is the directory that contains skill-observations/; fix the pin"
+    fi ;;
+esac
 if [ ! -d "$d" ]; then
   r="${root%/}"
   case $r in
@@ -164,7 +181,7 @@ fi
 # On a runner without the usual commands every count came back empty and the
 # trace line was appended anyway. The halt line goes to the sidecar too.
 miss=
-for t in find awk sed wc tr date sort grep head cut dirname tee; do
+for t in find awk sed wc tr date sort grep head tail cut dirname tee; do
   command -v "$t" >/dev/null 2>&1 || miss="$miss $t"
 done
 if [ -n "$miss" ]; then
@@ -245,6 +262,7 @@ pr=absent; [ -f "$p" ] && pr=$(awk "$pa"' a && /^### / {n++} END {print (h ? n+0
 fx=0; findings=
 sidecar="$root/skill-observations/last-scan-findings.txt"
 finding() { printf '%s\n' "$1"; findings="$findings$1"$'\n'; fx=$((fx + 1)); }
+[ -n "$resolved" ] && finding "$resolved"
 [ "$pr" = unparsed ] && finding "NOTE: the principles file has no '## Active Principles' heading — 'could not parse', not 'no principles'; read it directly"
 
 # --- due: the step 1 duties the prose names, printed when still owed ----------
@@ -321,6 +339,31 @@ if [ -n "$dups" ]; then
   # a here-string, not a pipe: `finding` must update fx and findings in THIS shell
   while IFS= read -r line; do [ -n "$line" ] && finding "DUPLICATE ID — $line — two writes share one id; re-id the uncited file (else the later one) in the next review and never cite the number bare"; done <<< "$dups"
 fi
+# Duplicate header keys, active and archive/: a top-level key written twice
+# passes every count here, and parsers disagree on which copy they keep (a
+# batch edit once wrote one entry's lines over another's this way).
+# scripts/set-fields.sh refuses such a file; this names it at read time.
+dk=$( { LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {split("", k); f=FILENAME; sub(/.*\//, "", f); sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) nextfile; next}
+    fm && /^---[[:space:]]*$/ {nextfile}
+    fm && /^[A-Za-z_][A-Za-z0-9_]*:/ {x=$0; sub(/:.*/, "", x); if (k[x]++ == 1) print f " (" x ")"}' {} +
+  [ -d "$d/archive" ] && LC_ALL=C find "$d/archive" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {split("", k); f=FILENAME; sub(/.*\//, "archive/", f); sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) nextfile; next}
+    fm && /^---[[:space:]]*$/ {nextfile}
+    fm && /^[A-Za-z_][A-Za-z0-9_]*:/ {x=$0; sub(/:.*/, "", x); if (k[x]++ == 1) print f " (" x ")"}' {} +; } | LC_ALL=C sort | awk '{s = s (NR > 1 ? ", " : "") $0} END {print s}')
+[ -n "$dk" ] && finding "NOTE: a header key occurs twice — parsers disagree on which copy they keep; read the body, keep one line, never batch-rewrite: $dk"
+# Secret-shaped values, active and archive/, header and body: a line naming
+# key / token / secret / password that also holds a run of 24 or more letters
+# and digits, both present (a 40- or 64-hex digest is skipped). File names
+# only, never the match: printing it would copy the secret again. A floor.
+run=; for ((i = 0; i < 24; i++)); do run="$run[A-Za-z0-9]"; done
+sec='{l = tolower($0); if (l !~ /key|token|secret|password/) next; s = $0
+    while (match(s, /'"$run"'[A-Za-z0-9]*/)) {t = substr(s, RSTART, RLENGTH); s = substr(s, RSTART + RLENGTH)
+      if (t ~ /^[0-9a-fA-F]+$/ && (length(t) == 40 || length(t) == 64)) continue
+      if (t ~ /[0-9]/ && t ~ /[A-Za-z]/) {print FILENAME; nextfile}}}'
+sk=$( { LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk "$sec" {} + | sed 's|.*/||'
+  [ -d "$d/archive" ] && LC_ALL=C find "$d/archive" -maxdepth 1 -name '[0-9]*.md' -exec awk "$sec" {} + | sed 's|.*/|archive/|'; } | LC_ALL=C sort -u)
+if [ -n "$sk" ]; then
+  finding "NOTE: $(printf '%s\n' "$sk" | grep -c .) file(s) hold a key-shaped run beside key / token / secret / password (names only, never the match): $(printf '%s\n' "$sk" | tr '\n' ' ')— read each and rewrite the value to its shape (SKILL.md, How to Log, confidentiality)"
+fi
 # Headers that did not parse, by name: no opening, or no closing `---`. The
 # names ride on the finding line itself, so the repeat and the sidecar carry them.
 if [ "$parsed" -lt "$n" ]; then
@@ -341,8 +384,18 @@ if [ -e "$lg" ]; then
 fi
 # The pre-3.0 staging root: an upgrade never moves it, and rounds staged
 # there are invisible to a review that reads [workspace]/skill-updates/.
+# The staging root step 6 reads sits BESIDE skill-observations/, never inside
+# it: one line says what is there, read from the root once, so a session
+# never resolves it one level off.
 ls_old="$root/skill-observations/skill-updates"
-if [ -d "$ls_old" ]; then
+su="$root/skill-updates"
+su_n=0; [ -d "$su" ] && su_n=$(find "$su" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+if [ -f "$su/PENDING.md" ]; then printf 'staged: manifest at %s/PENDING.md (%s non-blank lines), %s directories under it\n' "$su" "$(grep -c . "$su/PENDING.md" | tr -d ' ')" "$su_n"
+elif [ -d "$su" ]; then printf 'staged: no manifest at %s/PENDING.md, %s directories under it\n' "$su" "$su_n"
+else printf 'staged: no skill-updates/ at %s/\n' "$root"; fi
+if [ -d "$ls_old" ] && [ -d "$su" ]; then
+  finding "NOTE: SPLIT STAGING — staged work under both $su/ and skill-observations/skill-updates/ ($(find "$ls_old" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ') round directories); step 6 reads only the first: move the legacy rounds and their PENDING entries into it by hand, then remove the legacy root"
+elif [ -d "$ls_old" ]; then
   finding "NOTE: legacy staging root skill-observations/skill-updates/ exists ($(find "$ls_old" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ') round directories) — 3.0+ pins [workspace]/skill-updates/; move its rounds and their PENDING entries by hand, then remove it"
 fi
 
@@ -378,9 +431,16 @@ gap=$( [ -f "$ck" ] && LC_ALL=C awk -v today="$(date +%F)" '
 printf '%s [%s] session-start scan: files=%s parsed=%s principles=%s\n' "$(date '+%F %H:%M')" "${PWD##*/}" "$n" "$parsed" "$pr" \
   >> "$root/skill-observations/checkpoints.log"
 
-# --- sibling logs: every observation log up to three levels under the parent -
-# A report, never a reason to consolidate from here.
-find "$(dirname "$root")" -maxdepth 3 -type d -path '*/skill-observations/observation-log' 2>/dev/null | LC_ALL=C sort | while IFS= read -r o; do printf '%s=%s\n' "${o%/skill-observations/observation-log}" "$(find "$o" -maxdepth 1 -name '[0-9]*.md' | wc -l | tr -d ' ')"; done | awk '{s = s "  " $0} END {print "logs under the parent (report; never consolidate from here):" s}'
+# --- sibling logs: every observation log up to five levels under the parent --
+# A report, never a reason to consolidate from here. Five levels reach a log
+# one project folder below a projects folder; .git, node_modules and
+# skill-updates trees are pruned, so a large parent stays cheap. Each log
+# carries its entry count and the date of its checkpoints.log's last line,
+# so a shard still being written reads differently from an abandoned one.
+find "$(dirname "$root")" -maxdepth 5 \( -name .git -o -name node_modules -o -name skill-updates \) -prune -o -type d -path '*/skill-observations/observation-log' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r o; do
+  w="${o%/observation-log}/checkpoints.log"; lc=none
+  [ -f "$w" ] && lc=$(tail -n 1 "$w" | cut -c 1-10) && case $lc in ([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;; (*) lc=none ;; esac
+  printf '%s=%s last=%s\n' "${o%/skill-observations/observation-log}" "$(find "$o" -maxdepth 1 -name '[0-9]*.md' | wc -l | tr -d ' ')" "$lc"; done | awk '{s = s "  " $0} END {print "logs under the parent (report; never consolidate from here):" s}'
 
 # --- content: printed with the headers below ---------------------------------
 # The active principles' headings.
