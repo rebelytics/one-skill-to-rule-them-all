@@ -415,9 +415,9 @@ script cannot be invoked.
 claim it lists the numeric prefixes of `observation-log/` and `archive/`
 (compared as numbers, so `0007-` and `7-` are one id) and, when two files
 share one, exits non-zero naming both (`DUPLICATE PREFIX`) with nothing
-claimed or created. The renumber: keep the number on the earlier file (by
-`date:`); move the later one out of the listing by renaming it with a
-leading dot, which no `[0-9]*.md` glob sees; set its `id:` to `__ID__`;
+claimed or created. The renumber: keep the number on the file that is cited
+(weekly-review.md, Step 1), else on the earlier one (by `date:`); move the
+other out of the listing by renaming it with a leading dot, which no `[0-9]*.md` glob sees; set its `id:` to `__ID__`;
 re-create it with `--body <the moved file>` (a resolved entry, which the
 body check refuses, is re-created without `--body` and filled in place);
 then delete the moved copy and note the old number in the new body. A uniqueness invariant is enforced
@@ -531,8 +531,10 @@ entry, not the highest entry, and neither it nor any plain listing of
 `observation-log/` reads `archive/` or `.id-floor`, which are two of the
 three inputs and the reason the command exists. A collision that happens
 anyway is harmless — distinct files, nothing lost — and is fixed on
-discovery: derive a correct id with the snippet, `mv` the newer file to
-that prefix, and edit its `id:` field to match; no other entry is touched.
+discovery: the file nobody cites moves, and date decides only a tie
+(weekly-review.md, Step 1); derive its id with the snippet, never the
+helper (the helper creates a file at that prefix), `mv` it to that
+prefix, and edit its `id:` field to match; no other entry is touched.
 
 **The id printed by the session-start scan is never an input to a write.**
 Awareness is the wrong source for a maximum; the script (core) is the

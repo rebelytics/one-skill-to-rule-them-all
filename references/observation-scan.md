@@ -45,7 +45,12 @@ frontmatter can drop it. The content print is one `awk` over `*.md`
 inside `( cd "$d" && … )`, never `for f in $(find …)` or `$(ls … | xargs
 …)` — both word-split a spaced path (`observation-log.md`, "Snippets take a
 spaced path"), while a glob in the directory hands `awk` bare names that nothing
-splits; one process for the whole set, not one per file.
+splits; one process for the whole set, not one per file. It prints one
+line per entry — the id and the four fields Step 2 holds, parked entries
+last — and writes the whole headers to `skill-observations/last-scan-headers.txt`:
+at a few hundred entries a full-header print outgrew what sessions read whole.
+A resolved entry prints with its title withheld: a present-tense title of a
+fixed defect, read at session start, was once repeated to the user as live.
 
 **Guard the read, not just the write.** A query that returns nothing is
 reporting on two possibilities at once — the data is absent, or the
@@ -133,6 +138,14 @@ a `title` naming the slug, `status: declined`, `resolved:` today,
 "none — lost entry"`) so the archival sweep closes it. Never delete it:
 the id stays issued, and the floor already sits above it.
 
+**A wrong root and a missing tool are refusals, never an empty log.** The
+scan refuses (exit 2) a root with no `skill-observations/observation-log/`
+under it, naming the likely cause — the log's own directory passed as the
+root, a first run, a pre-3.0 `log.md` — and halts (exit 1, `SCAN TOOLS
+MISSING`) when a command it runs is off PATH, or when a count does not read
+as a number. None of the three writes the checkpoint line: a trace with
+empty counts once recorded a scan that read nothing.
+
 ### Every instrument gets the same guard
 
 **Every instrument gets the same guard: an empty or zero result is a
@@ -147,6 +160,14 @@ its first silent failure — pair each number-or-list producing command
 with a second count derived by a different means from a literal path, and
 halt on the disagreement; a guard enumerated per snippet is unguarded for
 the next snippet by construction.
+
+**A layer that rewrites commands is part of the instrument.** A hook or
+proxy that rewrites, condenses or filters shell commands before they run
+alters the "independent" count too, so both numbers agree on the same
+wrong answer. Probe such a layer once per session with the shapes it
+rewrites — assign a variable on one line, then `ls` it and `grep -c ""` a
+known file on the next — not with builtins alone. On a failed probe, run
+every count from a script file or through the layer's raw mode.
 
 **A guard that separates "empty" from "non-empty" cannot catch a
 partial read, and partial reads are the common failure of text-shaped
@@ -401,7 +422,7 @@ reason the checkpoint rule is a write: a step whose value lies in happening
 at a specific moment needs its own entry in the tool record. (Where the
 workspace prices every write — the exception under "How to Log" — fold
 this line into the session's first write instead.) Read the scan's output
-whole. Its finding lines (NOTE, LOST ENTRIES, UNFILLED, GAP) and counts
+whole. Its finding lines (DUE, NOTE, LOST ENTRIES, UNFILLED, GAP) and counts
 come first and the entry headers last, with one `end of scan` line closing
 it that repeats the counts and the number of finding lines; `tail`, `head`
 or a `grep` hides exactly the lines that matter while the checkpoint line

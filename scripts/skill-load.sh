@@ -5,6 +5,8 @@
 #
 # Usage:
 #   bash scripts/skill-load.sh <workspace-root> <skill-name>
+#   bash scripts/skill-load.sh <workspace-root> <skill-name> --correct "<reason>"
+#   bash scripts/skill-load.sh <workspace-root> <skill-name> --query-only
 #
 #   <workspace-root>  the pinned absolute workspace path — the directory that
 #                     holds skill-observations/. Never resolved from the cwd;
@@ -28,6 +30,18 @@
 # line to skill-observations/checkpoints.log:
 #   YYYY-MM-DD HH:MM loaded <skill-name> — N open observations
 #
+# --query-only: the same lookup and the same stdout, and nothing appended —
+# for a lookup no Skill call rides with (the restatement check before
+# logging, the lookup before briefing a delegate), where a `loaded` line
+# would record a load that never happened.
+#
+# --correct: the Skill call in that batch was refused or errored, so the
+# `loaded` line above it is false. Run in the NEXT call, it appends
+#   YYYY-MM-DD HH:MM NOT loaded <skill-name> — <reason>
+# runs no lookup and prints nothing. It writes the line even with no
+# `loaded` line before it (a refusal is a fact); with no
+# skill-observations/ yet it prints one NOTE line and writes nothing.
+#
 # Exit status:
 #   0  the lookup ran (N may be 0) — or no log exists yet under an existing
 #      root (a first run: the load batch precedes Session Start step 1,
@@ -41,7 +55,8 @@
 #      is the one result nobody questions
 #   2  refused: missing arguments, a relative root, a root that does not
 #      exist, a pre-3.0 log.md with no observation-log/ beside it, or a
-#      skill name with characters outside [A-Za-z0-9:._/-]
+#      skill name with characters outside [A-Za-z0-9:._/-], an unknown
+#      option, or --correct with no reason, or an argument after --query-only
 #
 # Why a script: a rule about what a tool batch must CONTAIN cannot be
 # enforced by prose inside the thing the batch loads — the agent reads the
@@ -63,10 +78,18 @@ set -u
 
 root="${1:-}"
 name="${2:-}"
+mode="${3:-}"
+reason="${4:-}"
 
 if [ -z "$root" ] || [ -z "$name" ]; then
-  echo "usage: bash skill-load.sh <workspace-root> <skill-name>" >&2; exit 2
+  echo "usage: bash skill-load.sh <workspace-root> <skill-name> [--correct \"<reason>\" | --query-only]" >&2; exit 2
 fi
+case "$mode" in
+  ("") ;;
+  (--correct) [ -n "$reason" ] || { echo "--correct needs a reason: the refusal or error text" >&2; exit 2; } ;;
+  (--query-only) [ -z "$reason" ] || { echo "--query-only takes no argument: got '$reason'" >&2; exit 2; } ;;
+  (*) echo "unknown option '$mode' — the options are --correct \"<reason>\" and --query-only" >&2; exit 2 ;;
+esac
 case "$root" in
   (/*|[A-Za-z]:[/\\]*) ;;
   (*) echo "workspace root must be an ABSOLUTE path, never relative to the cwd: got '$root'" >&2; exit 2 ;;
@@ -77,6 +100,17 @@ esac
 
 # Every expansion of $root and $d stays double-quoted: the pinned path
 # routinely contains a space.
+if [ "$mode" = "--correct" ]; then
+  [ -d "$root" ] || { echo "workspace root does not exist: '$root' — check the pinned path" >&2; exit 2; }
+  if [ ! -d "$root/skill-observations" ]; then
+    echo "NOTE: $name: no skill-observations/ yet under '$root' — nothing to correct"; exit 0
+  fi
+  # One line, whatever the refusal text held.
+  reason=$(printf '%s' "$reason" | tr '\r\n' '  ')
+  printf '%s NOT loaded %s — %s\n' "$(date '+%F %H:%M')" "$name" "$reason" \
+    >> "$root/skill-observations/checkpoints.log"
+  exit 0
+fi
 d="$root/skill-observations/observation-log"
 if [ ! -d "$d" ]; then
   # A missing log under a missing root is a wrong pin; under a pre-3.0
@@ -135,6 +169,7 @@ fi
 
 printf '%s: %s open observations\n' "$name" "$count"
 [ -n "$matches" ] && printf '%s\n' "$matches"
+[ "$mode" = "--query-only" ] && exit 0
 
 printf '%s loaded %s — %s open observations\n' "$(date '+%F %H:%M')" "$name" "$count" \
   >> "$root/skill-observations/checkpoints.log"

@@ -148,7 +148,8 @@ skill that never loads cannot announce that it was relevant.
 Before the first tool call of any session — and before writing or
 proposing a plan, not merely before executing one — invoke the
 task-observer skill AND execute its Session Start Protocol (storage
-check, frontmatter scan, review trigger). Loading the skill and running
+check and workspace creation, the starter-set reconciliation when due,
+frontmatter scan, review trigger). Loading the skill and running
 the protocol are separate steps; a session that loads the file and stops
 has activated nothing. Any turn that will involve a tool call counts; do
 not classify the session as "too simple" from its opening message.
@@ -159,7 +160,9 @@ after it, where it reads as a suggestion. If the skill does not resolve on
 this turn, say which probe told you so (the skill listing, or the skill
 directory on disk), re-check the listing on every later turn that makes a
 tool call, and run the protocol the first time it resolves — a "not
-installed" verdict holds for one turn.
+installed" verdict holds for one turn. Listed on disk but refused by the
+Skill tool ("Unknown skill"): read its SKILL.md directly and run the
+protocol; the lookup call rides with that read, never with the refused call.
 
 Select skills on the DECISION the request is about, not on the artefact it
 arrived as. Name what the user is deciding, then match the installed skill
@@ -211,7 +214,12 @@ substitute for the skill that owns it.
 Where scripts run, the lookup and its checkpoint line are one command:
   bash "<skill directory>/scripts/skill-load.sh" "[ABSOLUTE PATH]" <skill-name>
 The Skill invocation and that call are ONE batch — emit them together,
-one call per skill loaded, never the call in a later batch. On a first
+one call per skill loaded, never the call in a later batch. A skill whose
+frontmatter sets `disable-model-invocation: true` cannot be loaded by the
+Skill tool: emit neither call for it. A Skill call that is refused or
+errors gets, in the next call, the same command with
+`--correct "<refusal text>"` appended, which records `NOT loaded` under
+the false `loaded` line and prints nothing. On a first
 run the log does not exist yet (step 1 creates it): the call says so and
 exits 0 with no checkpoint line; re-run it once per skill loaded in that
 batch after the Workspace creation command.
@@ -251,8 +259,12 @@ another session (not a subagent), pass it a working folder inside the
 project, or the workspace root, so the block is in context from its first
 turn; a folder named only in the brief does not load it.
 Before briefing a delegate under an agent definition or instructions
-file, run the lookup for that file's name; its open entries shape the
-brief.
+file, run the lookup for that file's name with `--query-only` (no load
+rides with it, so no `loaded` line); its open entries shape the brief.
+A controller that dispatches a specialist outside its own harness puts
+one line in the task context — `task-observer: the controller observes;
+report observations in your handoff` — because the specialist cannot see
+its caller.
 
 A run of this block that cannot write here or get an approval answered —
 a child run with no protocol-running caller, a job with a narrow tool
@@ -364,7 +376,12 @@ route ("Git as an optional staging medium" below; `observation-log.md`,
 "When the workspace is under version control", for the two-install
 case), not through a live-synced directory. The user decides; the
 questions are asked before the pin is written, not after the first
-missed session.
+missed session. A synced or mirrored tree also has a second writer the
+session cannot see: a pull can replace a file written since its listing,
+and a mirror that does not propagate deletes turns `mv` into a copy, so an
+archived entry comes back. Where the user keeps one, record the sync client
+in the activation record and treat a write there as provisional until one
+sync cycle has passed.
 
 **A session started without a project folder has no stable project
 identity.** In a desktop app that runs such a session in a per-session
@@ -1350,7 +1367,8 @@ other content holding backslashes with the editing tool, and run a
 snippet that carries `\\` from a file written with the editing tool
 (`bash <file>`). Very long inline commands have also been reported cut on
 the same transport, so keep inline commands short and put long content in
-files.
+files. A hook or proxy that rewrites commands on any host is the same
+fault: `observation-scan.md`, "Every instrument gets the same guard".
 
 **A byte order mark from Windows PowerShell.** PowerShell 5.1 writes UTF-8
 with a BOM (`Set-Content -Encoding UTF8`, `Out-File -Encoding utf8`).
@@ -1719,8 +1737,8 @@ This skill consists of `SKILL.md`, the reference files it lists
 (`weekly-review.md`, `skill-authoring.md`, `environments.md`,
 `observation-log.md`, `observation-scan.md`, `observation-families.md`,
 `signals.md`, `migration.md`,
-`starter-principles.md`) and `scripts/migrate-log.py`,
-`scripts/new-observation.sh`, `scripts/session-start-scan.sh`,
+`starter-principles.md`) and `scripts/bin-check.sh`, `scripts/diff-staged.sh`,
+`scripts/migrate-log.py`, `scripts/new-observation.sh`, `scripts/session-start-scan.sh`,
 `scripts/skill-load.sh` and `scripts/validate-skill-bundle.py`. If any is
 missing, SKILL.md "Reference files" applies (the rule lives there because
 this file can be the missing one). `references/ceilings.txt` travels with

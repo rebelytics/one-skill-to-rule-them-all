@@ -1,6 +1,6 @@
 ---
 name: "task-observer"
-core_max_lines: 715
+core_max_lines: 723
 version: "3.9.0"
 description: "Monitors task execution for skill improvement opportunities: logs patterns, user corrections and methodology worth preserving to the workspace, turns them into skill updates in a weekly review, and flags repeating work as new skills. Use during ANY multi-step task, agentic workflow, or work session. Also triggers in post-task feedback discussions and when the user mentions skill observations, the observation log, or skill taxonomy. Also known as \"One Skill to Rule Them All\" — trigger on this phrase too. IMPORTANT: invoke this skill before the FIRST tool call of any session and before writing or proposing a plan — any turn that will involve a tool call counts. This sentence is the session-start trigger and the only activation layer that survives an unreachable config file; pair it with a CLAUDE.md instruction or a session-start hook (references/environments.md). A subagent dispatched by a session already running it does not run it: it writes nothing and puts its findings in its report."
 license: CC-BY-4.0
@@ -145,17 +145,20 @@ items under How to Log are ticked the same way in the turn that writes.
    `references/starter-principles.md`. Load that file and follow its
    **Reconciliation** section: match by substance, offer once in one line,
    import only what the adopter picks, then — once answered — write the
-   shipped version into the marker file; never pre-populate silently. Name the loaded skill's
+   shipped version into the marker file; never pre-populate silently. The
+   step 2 scan prints a `DUE:` line for either duty still owed. Name the loaded skill's
    frontmatter `version:` in the start-up lines — read from the file, never
    fetched — and list the skill's own directory with its `references/` and
    `scripts/`: a file the core names that is absent is reported in the same
    lines ("Reference files"), not at its first load.
 - [ ] **2. Scan.** Read only the frontmatter of each file in `observation-log/`
-   — the header block between the first two `---` lines, never the bodies
-   — and build awareness from `status`, `skill`, `proposes_skill` and
-   `title`, and the active principles' headings, which the scan prints
-   (`principles=` in the checkpoint line). Hold them in awareness, don't
-   surface unprompted.
+   — never the bodies — and build awareness from `status`, `skill`,
+   `proposes_skill` and `title` (the scan prints them, one line per entry;
+   the full headers are in `skill-observations/last-scan-headers.txt` for a
+   step that needs another field) and the active principles' headings
+   (`principles=` in the checkpoint line). Hold them; don't surface unprompted.
+   A resolved entry prints `title withheld`: what it named is probably fixed,
+   so check the tool it names before asserting anything about it.
 
    **This scan does not satisfy the per-skill check** (the grep at each
    skill load, activation block); when that grep feels redundant, load
@@ -236,8 +239,9 @@ items under How to Log are ticked the same way in the turn that writes.
    is a fact about where you looked, not about the world.
    If `skill-updates/` holds anything, reconcile it before announcing it —
    no session observes an install, so the one that reads the ledger owns
-   its cleanup. `diff -rq` each staged
-   copy against live and classify it (a bare "differs" is not a verdict),
+   its cleanup. Compare each staged copy with live
+   (`scripts/diff-staged.sh <staged> <live>`: ERROR is not reconciled, never
+   clean; DIFFERS is classified, since a bare "differs" is not a verdict),
    and name every directory no manifest entry covers. The cases are in
    `references/weekly-review.md` ("Staged-work reconciliation gate") — load
    it before judging any entry. Then say "N staged updates awaiting review".
@@ -289,8 +293,10 @@ name, reuse a fitting existing candidate — independently logged proposals
 for one skill rarely share a name.
 
 **Check for a restatement before writing.** Before creating the file, list
-the open observations that name the same target skill (the scan at session
-start already holds their titles; otherwise `find observation-log -name
+the open observations that name the same target skill at write
+time — never from the session-start scan, which a sibling session's write
+makes stale within minutes (`skill-load.sh` with
+`--query-only`, which writes no `loaded` line, or `find observation-log -name
 '*.md' -exec grep -l -E "^(skill|target_file):.*<bare-name>" {} +`) and read those titles. If the
 finding is the same one restated — the same rule, the same failure shape, a
 different example — extend the existing entry instead: append the new
@@ -458,8 +464,10 @@ always write `status: open` and a non-empty `siblings_checked:` at creation
 time** — an observation without a `status` field is treated as OPEN by
 reviews, never as nonexistent, and one without `siblings_checked:` counts
 as logged without a sibling check. The helper refuses a `--body` whose
-header breaks either, or whose `type:` is outside the two values, and
-creates no file.
+header breaks either, whose `type:` is outside the two values, or that the
+scan would flag as suspect YAML, and creates no file; a body written by
+hand into the skeleton is checked by re-running the scan before the write
+is reported done.
 
 ```markdown
 ---

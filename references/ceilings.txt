@@ -9,14 +9,14 @@
 # validator predates the marker, so that validator passes the bundle too.
 # A ceiling more than 3 lines above its file's count is lowered to the count.
 # The core's ceiling is core_max_lines in SKILL.md; its raises are recorded here as comments:
-# SKILL.md core_max_lines 715 the session-start checklist, pointers to the split reference files, the bridged scan and script check, the duplicate-prefix refusal
-environments.md 1892 activation checks, the bridged-session channel test, the script digest check at session start
+# SKILL.md core_max_lines 723 the session-start checklist, pointers to the split reference files, the bridged scan and script check, the duplicate-prefix refusal, the staged-copy compare helper, the scan's DUE and withheld-title lines, the helper's YAML-shape refusal, the read-only lookup, the write-time restatement listing and the fan-out note
+environments.md 1910 activation checks, the bridged-session channel test, the script digest check at session start, the refused-load correction and the read-only lookup, the review-scheduler and overdue-review rules, the first firing's landed write, the specialist's handoff line, a synced tree as a second writer
 # split_pending: environments.md the next split by episode
 migration.md 262 the split store: a log.md beside the observation directory
-observation-log.md 879 the layout, the frontmatter fields, the id helper's notes including the duplicate-prefix refusal, archival
-observation-scan.md 449 the session-start scan, its guards, refusals and the checkpoint pairing
-observation-families.md 188 skill families, the sibling check and the carrier pattern
+observation-log.md 881 the layout, the frontmatter fields, the id helper's notes including the duplicate-prefix refusal and which file a renumber moves, archival, reading a tracked ticket before parking
+observation-scan.md 470 the session-start scan, its guards, refusals and the checkpoint pairing, command-rewriting layers, the one-line entry print, the wrong-root and missing-tool refusals
+observation-families.md 195 skill families, the sibling check and the carrier pattern, the carrier's binding to the applied half
 signals.md 234
-skill-authoring.md 1450 the trigger-as-episode definition, the pointer cross-check, the split threshold and the split_pending marker
+skill-authoring.md 1452 the trigger-as-episode definition, the pointer cross-check, the split threshold and the split_pending marker, the live-set check, the copy list pointer, checkout manifests in the packaging sweep
 starter-principles.md 504 the reply marker, cited bodies read before use, the unmeasured-baseline entry
-weekly-review.md 2279 the round diff and its hunk labels, the merge-review measurement, approval policy for unlabelled decisions, project-level skills in the inventory
+weekly-review.md 2348 the round diff and its hunk labels, the merge-review measurement, approval policy for unlabelled decisions, project-level skills in the inventory, state-file path checks, the compare helper and its error state, scheduled-skill escalation, retrieve before escalating, the destination's own checks and the copy list, cited-file renumbering, synced-family wording, checkout and export installs, per-edit fork routing, resurrected archive copies, the verbatim spec in a brief, install confirmation, the timed prune list, the anchor claim loop

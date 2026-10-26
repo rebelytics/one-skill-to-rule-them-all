@@ -140,9 +140,9 @@ Given the roots:
 - **Stage each affected skill ONCE, and publish the anchor workspace
   everywhere.** One participant is the **anchor workspace**: its
   `skill-updates/` holds the staged copy, and it supplies
-  `[workspace folder]` for the Step 5 seed — which then picks its
-  **anchor directory** (`[today]/[skill-name]`, or a discriminated one
-  under the same-day rule) exactly as in a single-log run. The two
+  `[workspace folder]` for the Step 5 seed — which then claims its
+  **anchor directory** (Step 5's claim loop, `[today]` or `[today].N`)
+  exactly as in a single-log run. The two
   senses are separate axes and are always named in full: *anchor
   workspace* = which log's `skill-updates/` tree, *anchor directory* =
   which dated directory inside it. Append the manifest entry in the
@@ -419,7 +419,10 @@ the `loaded <skill>` lines in `checkpoints.log` (written by
 `scripts/skill-load.sh`) against the Skill invocations. Two mismatches are
 detectable failures, each a Log integrity finding: a `loaded` line with no
 Skill invocation in the same batch, and an invocation with no `loaded`
-line from its batch. Without transcripts, compare each session's `loaded`
+line from its batch. A `loaded` line followed by its `NOT loaded` line
+(`--correct`) is not a finding; a refused or failed Skill call in the
+transcript with no such line after it is. Without transcripts, compare
+each session's `loaded`
 lines against the skills that session reports loading, and flag a skill
 with no line. A batch split recorded in the start-up lines as a deferred
 probe tool (`references/environments.md`, "A deferred probe tool moves the
@@ -531,7 +534,17 @@ zero-padding strip is the same one the id snippet uses, so `0091` and `91`
 are recognised as the same number.
 
 Any output is a duplicate id across the active set and the archive. Fix it
-now, before the work queue is built: keep the number on the **earlier**
+now, before the work queue is built. An active file byte-identical to its
+same-named `archive/` copy (`cmp -s`) is not a collision but a sync or
+mirror restoring an archived entry: report it as "resurrected archive copy:
+remove the active one" and never renumber it (the scan prints it as
+RESURRECTED and leaves it out of the entries). First search the surfaces Step 3
+searches — commit messages, code comments, the skills the log serves, the
+log itself — for the duplicated number: the file nobody cites moves; if
+both are cited, the number stays on the file whose citations cannot be
+edited (a commit message), and the mapping old → new goes into the moved
+file's body and the Step 7 summary. Only when neither is cited does date
+decide: keep the number on the **earlier**
 entry (by `date`, then by the lower `.id-floor` era), renumber the later
 one to a fresh id from the snippet, update its filename and its `id:`
 field together, and note the renumber in its body so a citation of the old
@@ -663,8 +676,9 @@ matching a date-shaped name: discriminated anchors (`<date>-<slug>`,
 only what someone entered. Then, for each entry in
 `skill-updates/PENDING.md` AND each skill directory under
 `skill-updates/<date>/` — always both, never the manifest alone: an
-absent manifest reads exactly like an empty one — run `diff -rq` of the
-staged copy against the live skill and classify FOUR ways, because live
+absent manifest reads exactly like an empty one — run
+`scripts/diff-staged.sh "$staged" "$live"` (the compare below, packaged)
+and classify FOUR ways, because live
 legitimately moves on, so a bare "differs" is not a verdict. First the
 seed check, because equality proves nothing by itself: a round that was
 seeded and never edited is byte-identical to live for as long as live
@@ -692,13 +706,25 @@ entry stays, and the copy is never (a), whatever the live diff says.
   done — but the summary carries them under "actioned, awaiting install",
   and a staged copy that reaches its SECOND review un-installed is
   escalated as a decision (install it, or discard it and re-open its
-  observations) rather than carried forward a third time.
+  observations) rather than carried forward a third time. An entry with
+  `runs_on:` or `needed_by:` (Delivery, "Staging manifest") is listed
+  first in the "N staged updates awaiting review" line and at the top of
+  the Step 7 summary, with its cadence and date, and is escalated at the
+  first review that finds it un-installed: every scheduled run until the
+  install uses the version this review found defective.
 - **(d) each side carries content the other lacks** → diverged; the
   action is a MERGE — live as the base, the staged-only content folded
   back in — never a wholesale substitution of either side. After the
   merge, assert that every heading from BOTH inputs is present in the
   result and none is duplicated; the merged copy then takes (c)'s
   bookkeeping (surface it, list its observations, count its reviews).
+
+**A compare that did not run is not a fifth state, it is no state.** An
+`ERROR` line from `diff-staged.sh` — a missing path, a file where a
+directory belongs, a failed normalisation — is reported "not reconciled:
+<error>", the entry stays, and it is never folded into "nothing staged" or
+"all installed"; the Session Start line counts it ("N staged updates
+awaiting review, M not reconciled").
 
 **A claim's liveness is the newest mtime under its anchor, never a
 hand-kept field.** An in-progress claim — a seeded round, a "being applied
@@ -753,11 +779,17 @@ closing `---` compared byte for byte; every other file is compared
 literally:
 
 ```bash
-python3 "<skill directory>/scripts/validate-skill-bundle.py" --compare-frontmatter "$live/SKILL.md" "$staged/SKILL.md" && diff -rq -x SKILL.md "$live" "$staged"   # exit 0 and silent = (a)
+python3 "<skill directory>/scripts/validate-skill-bundle.py" --compare-frontmatter "$live/SKILL.md" "$staged/SKILL.md" && diff -rq -x SKILL.md -x .git -x .hg -x .svn -x .claude-plugin "$live" "$staged"   # exit 0 and silent = (a)
 ```
 
 It names each differing key and the first differing body line, so a real
-change is reported with its location. Where no Python runs, the fallback
+change is reported with its location. The `-x` list: a skill installed
+as a repository checkout carries the repository's VCS metadata and plugin
+manifests, which a staged copy never does, so a checkout install reads as (a).
+`scripts/diff-staged.sh <staged>
+<live>` is this command packaged (VCS metadata, build artefacts and a
+checkout's `.claude-plugin/` excluded, the text fallback below where no Python runs), with one verdict
+line and its exit: `IDENTICAL` 0, `DIFFERS <n> path(s): …` 1, `ERROR` 2. Where no Python runs, the fallback
 is a text normaliser — frontmatter only, `name:`, `description:` and
 `version:` only: surrounding double quotes stripped with `\"` and `\\`
 resolved, surrounding single quotes stripped with `''` resolved:
@@ -765,7 +797,7 @@ resolved, surrounding single quotes stripped with `''` resolved:
 ```bash
 fm=$'1,/^---$/{/^(name|description|version):[[:space:]]*".*"[[:space:]]*$/{s/:[[:space:]]*"/: /;s/"[[:space:]]*$//;s/\\\\"/"/g;s/\\\\\\\\/\\\\/g;};/^(name|description|version):[[:space:]]*\'.*\'[[:space:]]*$/{s/:[[:space:]]*\'/: /;s/\'[[:space:]]*$//;s/\'\'/\'/g;};}'
 norm() { sed -E "$fm" "$1" > "$2" && [ -s "$2" ]; }
-a=$(mktemp) && b=$(mktemp) && norm "$live/SKILL.md" "$a" && norm "$staged/SKILL.md" "$b" && diff "$a" "$b" && diff -rq -x SKILL.md "$live" "$staged"   # bash; exit 0 and silent = (a)
+a=$(mktemp) && b=$(mktemp) && norm "$live/SKILL.md" "$a" && norm "$staged/SKILL.md" "$b" && diff "$a" "$b" && diff -rq -x SKILL.md -x .git -x .hg -x .svn -x .claude-plugin "$live" "$staged"   # bash; exit 0 and silent = (a)
 ```
 
 A failed normalisation is a gate error, never a match: `sed` that cannot
@@ -830,7 +862,7 @@ that grew, which says nothing about what it lost.
 Reconcile in BOTH directions every time: lingering-done (installed but
 still listed) and missing-done (staged but never installed) fail
 differently, and only the diff sees both. Completion of a manual batch is
-a claim, not a state; the check is one `diff -rq` per skill and runs in
+a claim, not a state; the check is one `diff-staged.sh` call per skill and runs in
 seconds over a 20-skill batch. The Session Start Protocol (step 6) runs
 the same gate whenever it announces staged updates.
 
@@ -1470,8 +1502,8 @@ revision spends the reviewer's attention again from the beginning.
 
 **Enumerate every staged copy of the skill before seeding, whether or
 not it exists live.** `find "[workspace folder]/skill-updates" -maxdepth 2
--name "[skill-name]" -type d` (`find`, never a bare glob) and `diff -rq`
-every hit against live — not only today's anchor. The presence check
+-name "[skill-name]" -type d` (`find`, never a bare glob) and compare
+every hit against live (`scripts/diff-staged.sh`) — not only today's anchor. The presence check
 below is defined against a staged copy of the *live* file, so it is
 structurally blind to a draft that never went live, and that is the work
 most at risk of being lost: a skill authored "from scratch" while an
@@ -1480,10 +1512,27 @@ lacks. A hit in state (c) of the
 reconciliation gate is the base for this staging, as the gate says; a
 hit in state (d) is merged onto live first, and the merge is the base.
 
-Choose the anchor first: if `[today]/[skill-name]` already exists, apply the
-same-day rule under Delivery — integrate another writer's pending copy, or give
-a second round after an install a discriminated anchor — and put that path into
-`s=` below; the guard line refuses to seed over an existing anchor.
+Choose the anchor first, by claiming it. Where `[today]/[skill-name]` holds
+another writer's pending copy, integrate it there (the same-day rule under
+Delivery); otherwise claim a new anchor with an operation that fails when the
+name is taken — `mkdir`, never `mkdir -p` — trying `[today]`, then
+`[today].2`, `[today].3` …, and put the claimed path into `s=` below. The
+name comes only from the loop, never from a listing or the manifest: two
+rounds that each pick the first free name by inspection both take it. One
+claim per round, whatever it stages; a round that stages no skill leaves its
+`_target-files/` or a one-line pointer in the anchor, so the gate's liveness
+read finds a file under it. The guard line still refuses to seed over an
+existing skill directory.
+
+```bash
+u="[workspace folder]/skill-updates"; a=; i=1
+while [ "$i" -le 100 ]; do n="[today]"; [ "$i" -gt 1 ] && n="[today].$i"
+  if mkdir "$u/$n" 2>/dev/null; then a="$u/$n"; break; fi
+  [ -e "$u/$n" ] || { echo "cannot create $u/$n: no skill-updates/ or a read-only mount"; exit 1; }
+  i=$((i + 1)); done
+[ -n "$a" ] || { echo "no anchor claimed after 100 tries"; exit 1; }
+echo "$a"   # the claimed anchor: the seed's s= line takes it
+```
 
 ```bash
 # Stage the FULL skill directory (SKILL.md + references/, scripts/, assets/),
@@ -1493,13 +1542,14 @@ a second round after an install a discriminated anchor — and put that path int
 # editing rule 6):
 live="<absolute path to the live skill directory, no trailing slash>"
 live=$(cd "$live" && pwd -P) || exit 1   # a symlinked skills entry: find descends nothing, cp -R copies the link
-s="[workspace folder]/skill-updates/[today]/[skill-name]"
+s="<the claimed anchor>/[skill-name]"   # or the same-day anchor whose pending copy you integrate
 [ -e "$s" ] && { echo "anchor exists — apply the same-day rule (Delivery) before seeding"; exit 1; }
-# live may be a clone; the staged copy never carries its VCS metadata
-find "$live" \( -name .git -o -name .hg -o -name .svn \) -prune -o -type d -print | while IFS= read -r d; do mkdir -p "$s/${d#$live}"; done
-find "$live" \( -name .git -o -name .hg -o -name .svn \) -prune -o -type f -print | while IFS= read -r f; do cp    "$f" "$s/${f#$live}"; done
+# live may be a clone or a repository checkout; the staged copy never carries its VCS metadata,
+# and a checkout install carries the repo's plugin manifests; a skill bundle must not
+find "$live" \( -name .git -o -name .hg -o -name .svn -o -name .claude-plugin \) -prune -o -type d -print | while IFS= read -r d; do mkdir -p "$s/${d#$live}"; done
+find "$live" \( -name .git -o -name .hg -o -name .svn -o -name .claude-plugin \) -prune -o -type f -print | while IFS= read -r f; do cp    "$f" "$s/${f#$live}"; done
 chmod -R u+w "$s"
-diff -rq -x .git -x .hg -x .svn "$live" "$s"      # must be identical before any edit
+diff -rq -x .git -x .hg -x .svn -x .claude-plugin "$live" "$s"      # must be identical before any edit
 mkdir -p "$s/../.seed"; (cd "$s" && find . -type f -exec sha256sum {} + | LC_ALL=C sort) > "$s/../.seed/[skill-name].sha256"   # shasum -a 256 on macOS; the gate's seed check reads it
 [ ! -L "$s" ] && [ "$(stat -c %i "$live/SKILL.md" 2>/dev/null || stat -f %i "$live/SKILL.md")" != "$(stat -c %i "$s/SKILL.md" 2>/dev/null || stat -f %i "$s/SKILL.md")" ] || { echo "staged path is live under another name — not a copy"; exit 1; }
 # then make EVERY edit against the staged path
@@ -1964,7 +2014,10 @@ summary and any notification report it as "unconfirmed — verified at the
 next reachable call or by the next session's start". Verify it with one
 read of both files on the next call that reaches the workspace; where the
 run ends first, Session Start step 3's read of the two files is that
-verification.
+verification. Where the activation record names a sync client or mirror
+over the workspace, re-read every state file this run modified after the
+next sync cycle, not only the timestamp (`environments.md`, "Stable is not
+the same as always available").
 
 ## Constraints
 
@@ -2062,7 +2115,9 @@ published tree — justifications stated as failure shapes, examples across
 verticals.
 `scripts/validate-skill-bundle.py`
 asserts all seven and packs a well-formed bundle — run it where Python is
-available. It also enforces each skill's own declared core ceiling
+available, with `--live "[skill directory]"` naming the installed copy:
+every live file must then be in the staged set, so a copy staged as
+SKILL.md alone fails. It also enforces each skill's own declared core ceiling
 (`references/skill-authoring.md`, Lean Content); a ceiling failure is
 fixed by trimming or lowering, never by hand-packing a bundle to skirt
 the validator. Where the bundle ships a public extract of a private file
@@ -2195,8 +2250,8 @@ the `diff -rq` gate would pass trivially, and the new round would inherit
 a manifest entry that claims it is installed. Give the second round a
 discriminated anchor (`<date>-<slug>` or `<date>.2`) with its own
 manifest entry, and count rounds rather than days when the keep-two rule
-prunes. The anchor is chosen BEFORE the Step 5 seed — the snippet's `s=`
-line takes the discriminated path.
+prunes. The anchor is claimed BEFORE the Step 5 seed, by its claim loop,
+never picked by inspection — the snippet's `s=` line takes the claimed path.
 
 **The previous staged state is part of the deliverable — snapshot
 before any second pass, and never let a reflow ride along with
@@ -2229,7 +2284,21 @@ than the one delivery that happened to create it. For a delivery, the entry carr
 directory, the producer (which session or scheduled run staged it), the
 observation ids applied, a per-change summary
 (observation id → section touched → one-line rationale) and the
-regression line "N past instances re-checked, 0 handled worse" (Step 5). The install
+regression line "N past instances re-checked, 0 handled worse" (Step 5);
+where gate item (8) applies, the destination's check command and its
+result, or `not run here`; and the copy list: before the install
+instructions are written, apply `references/skill-authoring.md` editing
+rule 4 — search every known skill root for the skill's name, diff each
+copy against staged, classify it identical / older subset (safe to
+overwrite) / carrying content absent from staged (stop, merge first) — and
+list each copy with its class; an instruction that names a remembered
+target list is not derived. Where live is a repository checkout, the
+install replaces the skill's files only; the checkout's root files
+(`.claude-plugin/`, VCS metadata) stay.
+Two optional fields mark staged work whose wait costs something:
+`runs_on: <scheduled task name, cadence>` where Step 0's scheduler query
+shows a task that invokes the skill, and `needed_by: <date> (<id>)`, the
+earliest dated loss any applied observation forecasts. The install
 artefact is always the `.skill` bundle, so the entry never distinguishes
 a single-file from a multi-file skill. For a published skill it also
 carries the community-item classification from Step 5 (include now /

@@ -21,10 +21,13 @@
 #                     The body's header is checked BEFORE anything is
 #                     touched: `status:` must read `open`, `type:` must be
 #                     `open-source` or `internal`, and `siblings_checked:`
-#                     must be non-empty — a header breaking any of these is
-#                     refused by name (BODY REFUSED) and no file, claim or
-#                     floor write happens. These are the three mandatory
-#                     fields a writer measurably forgets, and a rule with no
+#                     must be non-empty, and no header line may trip the
+#                     scan's suspect-YAML rules (an unquoted `: ` and the
+#                     rest) — a header breaking any of these is refused by
+#                     name (BODY REFUSED) and no file, claim or floor write
+#                     happens. The three fields are the ones a writer
+#                     measurably forgets, the YAML shape the one the next
+#                     session's scan would catch too late; a rule with no
 #                     gate behind it is a convention; the gate is here
 #                     because this is the only write path.
 #
@@ -54,7 +57,9 @@
 # never overwritten) → id = max(active prefixes, archive prefixes,
 # .id-floor) + 1, the listing guarded against find's count before the floor
 # enters → DUPLICATE PREFIX refusal (two files across active and archive
-# already sharing a number: no id is issued until one is renumbered) → number claim (a noclobber marker per id in archive/.id-claims/,
+# already sharing a number: no id is issued until one is renumbered; an
+# active file byte-identical to its archive/ copy is refused as RESURRECTED,
+# remove the active copy) → number claim (a noclobber marker per id in archive/.id-claims/,
 # so two writers running at once never share one) → PREFIX collision guard
 # across active and archive (two slugs sharing one number is the failure; a
 # path check cannot see it) → noclobber create of the skeleton → floor
@@ -95,6 +100,39 @@ fi
 if [ -n "$body" ] && ! { [ -f "$body" ] && [ -r "$body" ]; }; then
   echo "--body file is missing or unreadable: '$body'" >&2; exit 1
 fi
+# --- the suspect-YAML rules of session-start-scan.sh, as one program `sus` ---
+# Kept in one form for both scripts: the selftest asserts the text between
+# the two markers is identical in each. Each rule prints the file, its
+# number and the line it fired on (rules: session-start-scan.sh, "suspect").
+# >>> sus: shared with session-start-scan.sh, byte for byte (the selftest compares them)
+key='^[a-z_]+:[ ]+([&!][^[:space:]]*[[:space:]]+)*'   # a key, its spaces, any &anchor or !tag
+hx='[[:xdigit:]]'   # one hex digit
+# cut_short N: N hex digits cut short — k hex digits (k < N), then a non-hex
+# character, as one alternation: cut_short 2 is `[^h]|h[^h]`, h being $hx.
+cut_short() {
+  local k i pre alt=
+  for ((k = 0; k < $1; k++)); do
+    pre=
+    for ((i = 0; i < k; i++)); do pre="$pre$hx"; done
+    alt="$alt${alt:+|}$pre[^[:xdigit:]]"
+  done
+  printf '%s' "$alt"
+}
+# The escapes a double-quoted YAML scalar defines: one character from the set,
+# or \x, \u, \U followed by exactly 2, 4 and 8 hex digits.
+esc_ok='\\[0abtnvfre \t\r"\/\\N_LP]|\\x'"$hx$hx"'|\\u'"$hx$hx$hx$hx"'|\\U'"$hx$hx$hx$hx$hx$hx$hx$hx"
+# What follows a backslash in an undefined escape: a character outside the
+# set, or \x, \u, \U with too few hex digits.
+esc_bad='[^0abtnvfre \t\r"\/\\N_LPxuU]|x('"$(cut_short 2)"')|u('"$(cut_short 4)"')|U('"$(cut_short 8)"')'
+sus='FNR==1 {sub(/^\357\273\277/, ""); fm = (/^---[[:space:]]*$/ ? 1 : 0); if (!fm) nextfile; next}
+  fm && /^---[[:space:]]*$/ {fm=0; nextfile}
+  fm && /'"$key"'[^"\047[{|>#&![:space:]].*: / {print FILENAME "\t3\t" $0; nextfile}
+  fm && /'"$key"'("([^"\\]|\\.)*"[[:space:]]*[^[:space:]#]|\047([^\047]|\047\047)*\047([[:space:]]+[^[:space:]#]|[^[:space:]#\047]))/ {print FILENAME "\t4\t" $0; nextfile}
+  fm && /'"$key"'[`@%]/ {print FILENAME "\t5\t" $0; nextfile}
+  fm && /'"$key"'"([^"\\]|('"$esc_ok"'))*\\('"$esc_bad"')/ {print FILENAME "\t6\t" $0; nextfile}
+  fm && /^[a-z_]+:[ ]+\[/ {v=$0; sub(/^[a-z_]+:[ ]+/,"",v); gsub(/"([^"\\]|\\.)*"/,"",v); gsub(/\047[^\047]*\047/,"",v); sub(/[[:space:]]#.*/,"",v); if (v ~ /:/) {print FILENAME "\t7\t" $0; nextfile}}'
+# <<< sus
+
 # --- body schema: refuse a header the log's rules forbid, before any write ---
 # Read as data, like the copy below. A value is taken bare, with a trailing
 # `# comment` (the core template carries one on status: and type:) and
@@ -114,6 +152,13 @@ if [ -n "$body" ]; then
       if (!ht || (ty != "open-source" && ty != "internal")) print "type: must be open-source or internal" (ht ? " (read \047" ty "\047)" : " (missing)")
       if (!hc || sc == "" || sc == "\"\"" || sc == "\047\047") print "siblings_checked: must be non-empty" (hc ? "" : " (missing)")
     }' "$body")
+  # The scan's suspect rules, run here before the write: a header the next
+  # session's scan would flag as invalid YAML is refused by name instead.
+  sh_why=$(LC_ALL=C awk "$sus" "$body" | awk -F '\t' '{k=$3; sub(/:.*/, "", k)
+    r = ($2 == 3 ? "holds an unquoted \047: \047" : $2 == 4 ? "has text after its closing quote" : $2 == 5 ? "opens with a backtick, @ or %" : $2 == 6 ? "holds an escape YAML does not define" : "is a [ ] list with a colon outside quotes")
+    print k ": " r " — fix or quote the value (line: " $3 ")"}')
+  [ -n "$sh_why" ] && why="$why${why:+
+}$sh_why"
   if [ -n "$why" ]; then
     printf 'BODY REFUSED — no file created; fix the header of %s:\n%s\n' "$body" "$why" >&2; exit 1
   fi
@@ -190,15 +235,22 @@ done
 # The uniqueness invariant is enforced here, on the write path, where it can
 # break; the scan's DUPLICATE ID line only reports it when read. Numbers are
 # compared as numbers, so 0007- and 7- are one id. The renumber keeps the
-# earlier file's number and re-creates the later one through this helper,
-# which this refusal would block while both are listed: so the later file is
+# cited (else the earlier) file's number and re-creates the other through
+# this helper, which this refusal would block while both are listed: so it is
 # moved out of the listing first (a leading dot, which no `[0-9]*.md` glob
 # sees), re-created from it with --body, and the moved copy deleted.
 dup=$(for p in "$d"/[0-9]*.md "$d"/archive/[0-9]*.md; do [ -e "$p" ] && printf '%s\n' "${p#"$d"/}"; done \
   | LC_ALL=C awk '{b=$0; sub(/^archive\//, "", b); n=substr(b, 1, match(b, /[^0-9]/) - 1) + 0; if (n in s) {print n "|" s[n] "|" $0; exit}; s[n]=$0}')
 if [ -n "$dup" ]; then
   dn=${dup%%|*}; rest=${dup#*|}
-  printf 'DUPLICATE PREFIX — id %s is carried by both %s and %s; no id is issued while it stands. Renumber first: keep the number on the earlier file (by date:), move the later one out of the listing (rename it with a leading dot), set its id: to __ID__, re-create it with --body <the moved file>, then delete the moved copy (references/observation-log.md, "Assigning an id")\n' \
+  # An active file byte-identical to its same-named archive/ copy is a
+  # restored archive entry (a sync or mirror), not a collision: never renumber.
+  d1=${rest%%|*}; d2=${rest#*|}
+  if [ "archive/$d1" = "$d2" ] && command -v cmp >/dev/null 2>&1 && cmp -s "$d/$d1" "$d/$d2"; then
+    printf 'RESURRECTED — %s is byte-identical to %s: a sync or mirror restored an archived entry; no id is issued while it stands. Remove the active copy (never renumber it) and record the sync client (references/environments.md, "Stable is not the same as always available")\n' "$d1" "$d2" >&2
+    exit 1
+  fi
+  printf 'DUPLICATE PREFIX — id %s is carried by both %s and %s; no id is issued while it stands. Renumber first: keep the number on the file something cites, else the earlier one (by date:); move the other out of the listing (rename it with a leading dot), set its id: to __ID__, re-create it with --body <the moved file>, then delete the moved copy (references/observation-log.md, "Assigning an id")\n' \
     "$dn" "${rest%%|*}" "${rest#*|}" >&2
   exit 1
 fi

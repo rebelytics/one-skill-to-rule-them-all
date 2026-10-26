@@ -64,7 +64,7 @@ group has no coherence model — there is no shared text to keep in sync):
 
 | Coherence model | Meaning | Fixing drift means |
 |---|---|---|
-| `synced-duplicates` | each member is self-contained (e.g. published standalone) and shared sections are kept in sync | edit every member |
+| `synced-duplicates` | each member is self-contained (e.g. published standalone) and shared sections are kept in sync | edit every member, same text |
 | `shared-core` | one skill holds the common material; the others load it as a companion | edit the core once, check the pointers |
 
 ```markdown
@@ -178,7 +178,14 @@ queue. Split the record along the work's seams instead:
    portions: only the outstanding skills in its `skill:` list, a body
    stating it carries the unapplied remainder of the original (cite the
    original's id), and the substance the outstanding portions need —
-   never just a pointer, since the original is about to archive.
+   never just a pointer, since the original is about to archive — and
+   what binds this portion to the applied one: a test that reads the
+   other half's file, a sentence in the applied half the outstanding half
+   will make false (a workaround, a caveat, a known-limit note), a staged
+   copy holding the same line — or `no binding found, searched <what>`.
+   Grep the finding's id AND the identifiers the outstanding half changes
+   across the project and the staging tree; the id alone misses a test or
+   a matrix cell.
 4. **Reviews treat carriers as first-class.** A carrier enters the work
    queue like any other open observation; nothing about its provenance
    defers or demotes it.

@@ -830,10 +830,11 @@ record how to obtain it.
    (take the change's side), so classification matters more than the
    count.
 5. Stage every update to
-   `[workspace folder]/skill-updates/[date]/[skill-name]/` (a second round on
-   the same day takes a discriminated anchor — weekly-review.md, Delivery) — the FULL
+   `[workspace folder]/skill-updates/[date]/[skill-name]/` (each round claims
+   its anchor, a same-day second round a discriminated one — weekly-review.md, Step 5) — the FULL
    skill directory (SKILL.md plus references/, scripts/, assets/ where
-   present), never SKILL.md alone — and present it for review and
+   present), never SKILL.md alone (the validator's `--live <live dir>`
+   fails a staged set missing a live file) — and present it for review and
    installation; nothing goes live until the user installs it, and once
    the user starts reviewing the copy it is frozen — defects found are
    reported, not applied, until the review ends (weekly-review.md, Step 5
@@ -925,8 +926,9 @@ record how to obtain it.
    the gate as the last step before presenting.)
    Packaging hygiene: before zipping, sweep the staged tree for build
    artefacts (`__pycache__/`, `*.pyc`, `.DS_Store`, `.~lock.*`) left by
-   in-session checks and version-control directories (`.git/`, `.hg/`,
-   `.svn/`) a seed from a clone carries in, and read the archive listing
+   in-session checks, version-control directories (`.git/`, `.hg/`,
+   `.svn/`) a seed from a clone carries in, and the plugin manifests
+   (`.claude-plugin/`) a repository checkout install carries, and read the archive listing
    back after zipping —
    the listing catches two defect classes, leaked artefacts AND wrong
    path separators, and it gets read only for the one you name, so check
