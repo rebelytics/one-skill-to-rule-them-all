@@ -1114,6 +1114,58 @@ def check_reference_shape(skill_dir, core, fails):
                 f"remedy is a split by episode, not a raise")
 
 
+# A `## Bundle manifest` section (in SKILL.md or a reference) is a hand-kept
+# inventory of the directories it names, so it is checked against them: every
+# file under scripts/ and references/ is named there (as `scripts/x`,
+# `references/x` or the bare file name), and every file it names exists. A
+# skill without the section has not opted in and nothing is checked.
+MANIFEST_FILE_RE = re.compile(r"`([A-Za-z0-9_./-]+\.(?:md|sh|py|txt|json))`")
+# (name, manifest section, bundle files, (unlisted, missing) manifest_misses must return)
+MANIFEST_FIXTURES = [
+    ("every file listed, every entry present",
+     "`SKILL.md`, `a.md`, `scripts/x.sh` and `references/ceilings.txt`.\n",
+     ["SKILL.md", "references/a.md", "references/ceilings.txt", "scripts/x.sh"], ([], [])),
+    ("a shipped script the list lacks",
+     "`a.md` and `scripts/x.sh`.\n",
+     ["references/a.md", "scripts/x.sh", "scripts/y.py"], (["scripts/y.py"], [])),
+    ("a listed file that does not ship",
+     "`a.md`, `b.md` and `scripts/x.sh`.\n",
+     ["references/a.md", "scripts/x.sh"], ([], ["b.md"])),
+]
+
+
+def manifest_misses(section, files):
+    """(unlisted, missing) for a manifest section and the bundle's relative paths."""
+    named = set(MANIFEST_FILE_RE.findall(section))
+    have = set(files)
+    unlisted = [f for f in sorted(have) if f.split("/")[0] in ("scripts", "references")
+                and f not in named and f.rsplit("/", 1)[-1] not in named]
+    missing = [n for n in sorted(named) if not ({n} if "/" in n else
+               {n, "references/" + n, "scripts/" + n}) & have]
+    return unlisted, missing
+
+
+def check_bundle_manifest(skill_dir, fails):
+    docs = [skill_dir / "SKILL.md"] + sorted((skill_dir / "references").glob("*.md"))
+    for doc in docs:
+        text = doc.read_text(encoding="utf-8") if doc.is_file() else ""
+        m = re.search(r"(?ms)^## Bundle manifest[ \t]*\n(.*?)(?=^## |\Z)", text)
+        if not m:
+            continue
+        files = [str(p.relative_to(skill_dir)) for p in skill_dir.rglob("*")
+                 if p.is_file() and not any(x.startswith(".") or x in BUILD_JUNK
+                                            for x in p.relative_to(skill_dir).parts)
+                 and p.suffix != ".pyc"]
+        unlisted, missing = manifest_misses(m.group(1), files)
+        where = doc.relative_to(skill_dir)
+        for f in unlisted:
+            fails.append(f"bundle manifest ({where}): {f} ships but is not listed — add it")
+        for f in missing:
+            fails.append(f"bundle manifest ({where}): lists {f}, which does not exist — "
+                         f"restore it or drop it from the list")
+        return
+
+
 def check_plugin_manifest(skill_dir, fails):
     """A skill bundle must NOT contain a plugin manifest.
 
@@ -1317,6 +1369,7 @@ def check_dir(skill_dir, fails):
     check_core_size(skill_md, fails)
     check_reference_indexes(skill_dir, fails)
     check_plugin_manifest(skill_dir, fails)
+    check_bundle_manifest(skill_dir, fails)
     check_orphans(skill_dir)
     for p in skill_dir.rglob("*"):
         parts = p.relative_to(skill_dir).parts
@@ -2020,6 +2073,8 @@ LOAD_FIXTURES = [
      "reviewer: 1 open observations\n0006-f.md", 1),
     ("no log yet: one NOTE line, exit 0, nothing written", "foo", True, 0,
      "NOTE: foo: no observation log yet at ", 0, "nolog"),
+    ("a second skill name: refused, nothing written", "foo", True, 2, "", 0, "", ("bar",)),
+    ("a list in one argument: refused, nothing written", "foo, bar", True, 2, "", 0),
 ]
 
 
@@ -2047,6 +2102,30 @@ def load_case(skill, absolute, scenario="", opts=()):
                            text=True, encoding="utf-8", errors="replace")
         written = len(ck.read_text(encoding="utf-8").splitlines()) if ck.is_file() else 0
         return r.returncode, r.stdout, written
+
+
+def tools_missing_ok(script, slug_first):
+    """With the script's commands off PATH it names them and stops: exit 1,
+    a TOOLS MISSING line, no checkpoint line, no file. `slug_first`: the
+    helper's argument order (slug, root) rather than skill-load's (root, name)."""
+    import os
+    import shutil
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / "work space"
+        log = root / "skill-observations" / "observation-log"
+        (log / "archive").mkdir(parents=True)
+        ck = root / "skill-observations" / "checkpoints.log"
+        ck.write_text("", encoding="utf-8")
+        args = ["x-y", str(root)] if slug_first else [str(root), "foo"]
+        env = {k: v for k, v in os.environ.items() if k != "TASK_OBSERVER_WORKSPACE"}
+        env["PATH"] = "/nonexistent"
+        r = subprocess.run([shutil.which("bash") or "/bin/bash", str(script), *args], cwd=tmp, env=env,
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+        made = sorted(p.name for p in log.rglob("*") if p.is_file())
+        written = ck.read_text(encoding="utf-8")
+        ok = r.returncode == 1 and "TOOLS MISSING —" in r.stdout + r.stderr and not made and not written
+        return ok, f"exit {r.returncode}, files {made}, checkpoint {written!r}, out {(r.stdout + r.stderr)!r}"
 
 
 def load_query_ok():
@@ -2647,6 +2726,11 @@ def selftest():
         ok = got == want
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} load triggers line: {name}" + ("" if ok else f" (got {got})"))
+    for name, section, files, want in MANIFEST_FIXTURES:
+        got = manifest_misses(section, files)
+        ok = got == (want[0], want[1])
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} bundle manifest: {name}" + ("" if ok else f" (got {got})"))
     for name, text, want in ORPHAN_FIXTURES:
         got = index_orphans(text)
         ok = got == want
@@ -2762,6 +2846,10 @@ def selftest():
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} skill-load script: --query-only prints the same lookup and appends nothing"
               + ("" if ok else f" ({detail})"))
+        ok, detail = tools_missing_ok(LOAD_SCRIPT, False)
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} skill-load script: commands off PATH, LOOKUP TOOLS MISSING, nothing written"
+              + ("" if ok else f" ({detail})"))
         for name, first, reason, want_rc, want_lines in LOAD_CORRECT_FIXTURES:
             rc, out, lines = load_correct_case(first, reason)
             ok = rc == want_rc and lines == want_lines and (rc != 0 or out == "")
@@ -2804,6 +2892,10 @@ def selftest():
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} new-observation script: {name}"
                   + ("" if ok else f" (exit {rc}, files {files}, floor {floor!r}, err {err.strip()!r})"))
+        ok, detail = tools_missing_ok(NEWOBS_SCRIPT, True)
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} new-observation script: commands off PATH, TOOLS MISSING, no file"
+              + ("" if ok else f" ({detail})"))
         ok, detail = sus_shared_ok()
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} new-observation script: the suspect-YAML rules are the scan's and set-fields', byte for byte"

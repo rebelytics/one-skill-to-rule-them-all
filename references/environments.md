@@ -1464,7 +1464,13 @@ be an unreleased version that nothing refreshes on install. With no
 matching copy, transfer the scripts to the device — a
 permission-classifier denial of that transfer gets at most one identical
 retry, told to the user (SKILL.md, How to Log) — or run the inline id
-snippet through the device shell. Never a hand-derived id.
+snippet through the device shell. Never a hand-derived id. SKILL.md step
+6's compare follows the same split: `diff-staged.sh` needs both trees in one
+shell (from `.bin/` through `bin-check.sh` where the scripts are not on the
+device); with staged copies on the device and live in the container, run
+`(cd <dir> && find . -type f -exec sha256sum {} + | LC_ALL=C sort)` in each
+shell and diff the two listings — a differing `SKILL.md` then gets the
+frontmatter compare (`weekly-review.md`, "Staged-work reconciliation gate").
 
 | Capability | Claude Cowork | Claude Code | Web chat / no filesystem |
 |---|---|---|---|

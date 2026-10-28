@@ -1230,7 +1230,13 @@ bundle in the same round, not as a follow-up: append the scrubbed entry,
 bump the `Starter set version:` line at the top of the starter file
 (every adopter's reconciliation offer is gated on that number, so an
 unbumped version ships the new entry to nobody), and run the
-confidentiality scan over the starter file in the pre-delivery gate.
+confidentiality scan over the starter file in the pre-delivery gate. Every
+review there, principle edit or not, writes the starter file's version to
+`skill-observations/starter-principles-reviewed.txt` when the marker is
+absent or older: that principles file is the set's source, and the
+reconciliation would compare the set with its own origin. Elsewhere a scan
+`DUE:` line for the reconciliation is offered in the review, once (a
+scheduled run carries it as one summary line), never in another task's reply.
 
 **Where the user does not maintain this skill, offer the promoted
 principle back to the starter set — once.** When the review adds a

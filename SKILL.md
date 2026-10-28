@@ -1,6 +1,6 @@
 ---
 name: "task-observer"
-core_max_lines: 749
+core_max_lines: 754
 version: "3.9.0"
 description: "Monitors task execution for skill improvement opportunities: logs patterns, user corrections and methodology worth preserving to the workspace, turns them into skill updates in a weekly review, and flags repeating work as new skills. Use during ANY multi-step task, agentic workflow, or work session. Also triggers in post-task feedback discussions and when the user mentions skill observations, the observation log, or skill taxonomy. Also known as \"One Skill to Rule Them All\" — trigger on this phrase too. IMPORTANT: invoke this skill before the FIRST tool call of any session and before writing or proposing a plan — any turn that will involve a tool call counts. This sentence is the session-start trigger and the only activation layer that survives an unreachable config file; pair it with a CLAUDE.md instruction or a session-start hook (references/environments.md). A subagent dispatched by a session already running it does not run it: it writes nothing and puts its findings in its report."
 license: CC-BY-4.0
@@ -145,7 +145,9 @@ items under How to Log are ticked the same way in the turn that writes.
    and convert first) — never create them by hand. Then the **starter-set reconciliation**, due
    whenever `skill-observations/starter-principles-reviewed.txt` is absent
    or holds a starter-set version older than the one in
-   `references/starter-principles.md`. Load that file and follow its
+   `references/starter-principles.md`. Offer it only in a review or a session
+   the user opened for skill work, never appended to another task's reply
+   (it waits for the next review); then load that file and follow its
    **Reconciliation** section: match by substance, offer once in one line,
    import only what the adopter picks, then — once answered — write the
    shipped version into the marker file; never pre-populate silently. The
@@ -164,7 +166,8 @@ items under How to Log are ticked the same way in the turn that writes.
    so check the tool it names before asserting anything about it.
 
    **This scan does not satisfy the per-skill check** (the grep at each
-   skill load, activation block); when that grep feels redundant, load
+   skill load, activation block: `scripts/skill-load.sh`, one call per Skill
+   invocation, in that invocation's batch); when that grep feels redundant, load
    `references/observation-scan.md` ("Why the session-start scan does not
    satisfy the per-skill check").
 
@@ -252,7 +255,9 @@ items under How to Log are ticked the same way in the turn that writes.
    no session observes an install, so the one that reads the ledger owns
    its cleanup. Compare each staged copy with live
    (`scripts/diff-staged.sh <staged> <live>`: ERROR is not reconciled, never
-   clean; DIFFERS is classified, since a bare "differs" is not a verdict),
+   clean; DIFFERS is classified, since a bare "differs" is not a verdict;
+   bridged, the two-shell digest listing: `references/environments.md`,
+   "Environment mappings"),
    and name every directory no manifest entry covers. The cases are in
    `references/weekly-review.md` ("Staged-work reconciliation gate") — load
    it before judging any entry. Then say "N staged updates awaiting review".

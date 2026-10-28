@@ -11,7 +11,7 @@
 #   <workspace-root>  the pinned absolute workspace path — the directory that
 #                     holds skill-observations/. Never resolved from the cwd;
 #                     the path may contain spaces.
-#   <skill-name>      the skill whose Skill invocation rides in THIS batch, as
+#   <skill-name>      ONE skill: the one whose Skill invocation rides in THIS batch, as
 #                     the listing shows it (`plugin:name` allowed), OR the
 #                     file name of an agent definition or instructions file
 #                     a delegate is about to be briefed under (`reviewer.md`;
@@ -52,17 +52,24 @@
 #   1  LOOKUP BROKEN — entries exist but no header parsed, or the lookup
 #      stage itself exited with an error; nothing is written to
 #      checkpoints.log, because "0 open" from a command that read nothing
-#      is the one result nobody questions
+#      is the one result nobody questions; or LOOKUP TOOLS MISSING — a
+#      command the script runs is not on PATH, named before anything runs
 #   2  refused: missing arguments, a relative root, a root that does not
 #      exist, a pre-3.0 log.md with no observation-log/ beside it, or a
 #      skill name with characters outside [A-Za-z0-9:._/-], an unknown
-#      option, or --correct with no reason, or an argument after --query-only
+#      option, or --correct with no reason, or an argument after --query-only,
+#      or more than one skill name (a second name, or a list in one
+#      argument): one call per Skill invocation, in that invocation's batch
 #
 # Why a script: a rule about what a tool batch must CONTAIN cannot be
 # enforced by prose inside the thing the batch loads — the agent reads the
 # prose only after the batch is committed. One call carrying both the lookup
 # and the checkpoint line, emitted beside the Skill invocation, leaves a
-# record a review can match against the invocation afterwards.
+# record a review can match against the invocation afterwards. The script
+# takes one name and refuses a second, so a list of skills about to be
+# loaded cannot be recorded in one call; a shell loop of single-name calls
+# looks the same from inside, so the one-call-per-invocation rule still
+# rests on the caller.
 #
 # Why no grep | xargs: file names are handed from find to awk with
 # `-exec … {} +`, never through a pipe, so a spaced path cannot split. (The
@@ -84,8 +91,12 @@ reason="${4:-}"
 if [ -z "$root" ] || [ -z "$name" ]; then
   echo "usage: bash skill-load.sh <workspace-root> <skill-name> [--correct \"<reason>\" | --query-only]" >&2; exit 2
 fi
+if [ $# -gt 4 ]; then
+  echo "one skill name per call: got $# arguments — run one call per Skill invocation, in that invocation's batch" >&2; exit 2
+fi
 case "$mode" in
   ("") ;;
+  ([!-]*) echo "one skill name per call: got a second name '$mode' — run one call per Skill invocation, in that invocation's batch; a lookup no Skill call rides with takes --query-only" >&2; exit 2 ;;
   (--correct) [ -n "$reason" ] || { echo "--correct needs a reason: the refusal or error text" >&2; exit 2; } ;;
   (--query-only) [ -z "$reason" ] || { echo "--query-only takes no argument: got '$reason'" >&2; exit 2; } ;;
   (*) echo "unknown option '$mode' — the options are --correct \"<reason>\" and --query-only" >&2; exit 2 ;;
@@ -95,8 +106,18 @@ case "$root" in
   (*) echo "workspace root must be an ABSOLUTE path, never relative to the cwd: got '$root'" >&2; exit 2 ;;
 esac
 case "$name" in
+  (*[,\ ]*) echo "one skill name per call: '$name' is a list — run one call per Skill invocation, in that invocation's batch" >&2; exit 2 ;;
   (*[!A-Za-z0-9:._/-]*) echo "skill name may hold only [A-Za-z0-9:._/-]: got '$name'" >&2; exit 2 ;;
 esac
+
+# --- the tools: a missing command is named once, before anything runs -------
+miss=
+for t in find awk sed grep wc tr date; do
+  command -v "$t" >/dev/null 2>&1 || miss="$miss $t"
+done
+if [ -n "$miss" ]; then
+  printf 'LOOKUP TOOLS MISSING —%s not on PATH; nothing looked up, nothing written to checkpoints.log\n' "$miss"; exit 1
+fi
 
 # Every expansion of $root and $d stays double-quoted: the pinned path
 # routinely contains a space.

@@ -33,7 +33,8 @@
 #
 # Prints the created file's absolute path on stdout (one line) and exits 0.
 # Any guard firing prints its message on stderr and exits 1 with NO file
-# created. The file is never empty: the create writes a frontmatter
+# created — TOOLS MISSING, a command the script runs absent from PATH,
+# first of all. The file is never empty: the create writes a frontmatter
 # skeleton — `id:` (the number, unpadded), `date:` today, `status: open`,
 # every other field present and empty — so a scan that meets it mid-write
 # reads a header with its id, not a LOST entry, and the id is on disk
@@ -96,6 +97,14 @@ done
 
 if [ -z "$slug" ]; then
   echo "usage: new-observation.sh [--body <entry-file>] <slug> [workspace-root]" >&2; exit 1
+fi
+# --- the tools: a missing command is named once, before anything runs -------
+miss=
+for t in find awk sed grep wc tr date sort tail mv mkdir cat sleep; do
+  command -v "$t" >/dev/null 2>&1 || miss="$miss $t"
+done
+if [ -n "$miss" ]; then
+  printf 'TOOLS MISSING —%s not on PATH; no id issued, no file created\n' "$miss" >&2; exit 1
 fi
 if [ -n "$body" ] && ! { [ -f "$body" ] && [ -r "$body" ]; }; then
   echo "--body file is missing or unreadable: '$body'" >&2; exit 1

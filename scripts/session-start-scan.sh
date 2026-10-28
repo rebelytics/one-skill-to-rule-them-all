@@ -31,7 +31,8 @@
 # starter-principles-reviewed.txt is absent or names an older set than
 # references/starter-principles.md beside this script; where that file is
 # unreadable — a .bin/ copy in a bridged session — an absent marker is still
-# DUE and an older one is not compared, so no line prints for it;
+# DUE and an older one is not compared, so no line prints for it; the line
+# names where the offer may be made, since it is read mid-task;
 # UNFILLED: a header whose title: is empty — the skeleton new-observation.sh
 # writes at create time, a write in progress or abandoned; NOTE: id: … when
 # a header's id does not read as its filename prefix; DUPLICATE ID — NNNN:
@@ -279,11 +280,11 @@ mk="$root/skill-observations/starter-principles-reviewed.txt"
 sp="$(dirname "$0")/../references/starter-principles.md"
 ship=; [ -r "$sp" ] && ship=$(sed -n 's/^Starter set version:[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$sp" | head -n 1)
 if [ ! -e "$mk" ]; then
-  finding "DUE: starter-set reconciliation — skill-observations/starter-principles-reviewed.txt is absent; load references/starter-principles.md (Reconciliation) and offer once"
+  finding "DUE: starter-set reconciliation — skill-observations/starter-principles-reviewed.txt is absent; offer once, in a review or a session opened for skill work, never in another task's reply (references/starter-principles.md, Reconciliation)"
 elif [ -n "$ship" ]; then
   mv_v=$(sed '1!d; s/[^0-9]//g' "$mk")
   if [ -z "$mv_v" ] || [ "$((10#$mv_v))" -lt "$ship" ]; then
-    finding "DUE: starter-set reconciliation — marker v${mv_v:-?} < shipped set v$ship; load references/starter-principles.md (Reconciliation) and offer once"
+    finding "DUE: starter-set reconciliation — marker v${mv_v:-?} < shipped set v$ship; offer once, in a review or a session opened for skill work, never in another task's reply (references/starter-principles.md, Reconciliation)"
   fi
 fi
 
