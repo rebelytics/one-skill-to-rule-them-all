@@ -1056,7 +1056,10 @@ entries target the same member. Then, before anything is presented:
   becomes a `target_file:` bucket whose output is a patch for that file,
   routed by its owner (Delivery) — and note the move in the body ("routed
   from X to Y: X never performs the append"). A fix installed where it
-  cannot fire closes the entry and leaves the defect standing.
+  cannot fire closes the entry and leaves the defect standing. A re-route
+  re-opens the presence check below: run it against the new target and
+  record its result in `resolution:` before anything is staged — a check
+  passed against the old target says nothing about the new one.
 
 - **Presence check, here, against the real target — and against the
   Issue, not only the suggestion.** Step 5 greps the staged copy for
