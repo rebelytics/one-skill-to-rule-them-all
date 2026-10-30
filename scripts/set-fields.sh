@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # set-fields.sh — change named frontmatter fields in several existing
 # observation entries, or renumber one, as one checked command: the path for
-# a change that touches more than one entry.
+# a change that touches more than one entry, and for every change to
+# `status: actioned`, a single entry included.
 #
 # Usage:
 #   bash scripts/set-fields.sh [--check] <workspace-root> <plan-file>
@@ -32,7 +33,15 @@
 # is edited with the editing tool); the new text differs from the old ONLY on
 # the named keys' lines — every other line in place, byte for byte — plus the
 # renumber line a rename appends; and no new header line trips the scan's
-# suspect-YAML rules. Any failure refuses the WHOLE plan by name (exit 1):
+# suspect-YAML rules. A plan that sets `status: actioned` is refused unless
+# the new `resolution:` gives every `skill:` member a disposition
+# (`<member>: applied|added|excluded|carried …`, bare name), and, when it
+# closes the entry as partially applied ("partially applied" or "carried")
+# and the body numbers its points, one per point: `(N) landed at
+# <file>:<line>`, `(N) carried by #<id>` or `(N) not a point`. Each point
+# check appends a trace line to checkpoints.log (not with --check), so its
+# first runs can be counted: refusals, true gaps, false alarms. Any failure
+# refuses the WHOLE plan by name (exit 1):
 # a batch that is half applied is the state this script exists to prevent.
 #
 # Phase 2 re-reads every file and stops before any write if one changed since
@@ -108,6 +117,56 @@ sus='FNR==1 {sub(/^\357\273\277/, ""); fm = (/^---[[:space:]]*$/ ? 1 : 0); if (!
   fm && /'"$key"'"([^"\\]|('"$esc_ok"'))*\\('"$esc_bad"')/ {print FILENAME "\t6\t" $0; nextfile}
   fm && /^[a-z_]+:[ ]+\[/ {v=$0; sub(/^[a-z_]+:[ ]+/,"",v); gsub(/"([^"\\]|\\.)*"/,"",v); gsub(/\047[^\047]*\047/,"",v); sub(/[[:space:]]#.*/,"",v); if (v ~ /:/) {print FILENAME "\t7\t" $0; nextfile}}'
 # <<< sus
+
+# --- dispositions: an actioned entry names one for every skill: member --------
+# Prints `<file> TAB <members>` for a header whose status is actioned while
+# resolution: gives a listed member no disposition — `<member>: applied`,
+# `added`, `excluded` or `carried`, the member in its bare form (after the
+# last colon of a plugin-qualified name). Kept in one form for this script
+# and the scan: the selftest asserts the text between the markers is identical.
+# >>> disp: shared with session-start-scan.sh, byte for byte (the selftest compares them)
+disp='function has(r, m,  s, i, c, rest) {s = r
+    while ((i = index(s, m ":")) > 0) {c = (i > 1) ? substr(s, i - 1, 1) : ""
+      rest = substr(s, i + length(m) + 1); sub(/^[[:space:]]+/, "", rest)
+      if (c !~ /[A-Za-z0-9_.-]/ && rest ~ /^(applied|added|excluded|carried)/) return 1
+      s = substr(s, i + length(m) + 1)}
+    return 0}
+  function add(x) {sub(/[[:space:]]+#.*$/, "", x); gsub(/["\047\r]/, "", x); gsub(/^[[:space:]]+|[[:space:]]+$/, "", x); sub(/.*:/, "", x); if (x != "") sk[++ns] = x}
+  FNR==1 {split("", sk); ns = 0; res = ""; st = ""; key = ""; sub(/^\357\273\277/, ""); fm = /^---[[:space:]]*$/; if (!fm) nextfile; next}
+  fm && /^---[[:space:]]*$/ {fm = 0; miss = ""
+    if (st == "actioned") for (j = 1; j <= ns; j++) if (!has(res, sk[j])) miss = miss (miss == "" ? "" : " ") sk[j]
+    if (miss != "") print FILENAME "\t" miss
+    nextfile}
+  fm && /^[A-Za-z_][A-Za-z0-9_]*:/ {key = $0; sub(/:.*/, "", key); v = $0; sub(/^[A-Za-z_][A-Za-z0-9_]*:[[:space:]]*/, "", v); sub(/\r$/, "", v)
+    if (key == "status") {st = v; sub(/[[:space:]]+#.*$/, "", st); gsub(/["\047[:space:]]/, "", st)}
+    if (key == "resolution") res = v
+    if (key == "skill") {sub(/[[:space:]]+#.*$/, "", v); gsub(/\[|\]/, "", v); nn = split(v, a, ","); for (j = 1; j <= nn; j++) add(a[j])}
+    next}
+  fm && key == "skill" && /^[[:space:]]+-[[:space:]]/ {v = $0; sub(/^[[:space:]]+-[[:space:]]*/, "", v); add(v); next}
+  fm && key == "resolution" && /^[[:space:]]+[^[:space:]#]/ {res = res " " $0}'
+# <<< disp
+# Numbered points, this script only: for an actioned entry closed as
+# partially applied (its resolution says "partially applied" or "carried"),
+# whose Issue and Suggested improvement number their points — 1. 2. at a
+# line start, or (1) (2) — prints `<points> <missing>`: each point k needs
+# `(k) landed at <file>:<line>`, `(k) carried by #<id>` or `(k) not a point`
+# in resolution:. Nothing prints when the check does not apply.
+pts='FNR==1 {fm = 1; next}
+  fm && /^---[[:space:]]*$/ {fm = 0; body = 1; next}
+  fm && /^resolution:/ {res = $0; rk = 1; next}
+  fm && /^[A-Za-z_][A-Za-z0-9_]*:/ {rk = 0; next}
+  fm && rk && /^[[:space:]]+[^[:space:]#]/ {res = res " " $0; next}
+  fm || !body || stop {next}
+  /^(\*\*Issue|#+[[:space:]]*Issue)/ {sec = 1; seen = 1}
+  /^(\*\*Principle|#+[[:space:]]*Principle)/ {stop = 1; next}
+  {l = $0
+    if (match(l, /^[[:space:]]*[0-9]+\.[[:space:]]/)) {x = substr(l, RSTART, RLENGTH); gsub(/[^0-9]/, "", x); pa[x + 0] = 1; if (sec) ps[x + 0] = 1}
+    while (match(l, /\([0-9]+\)/)) {x = substr(l, RSTART + 1, RLENGTH - 2); pa[x + 0] = 1; if (sec) ps[x + 0] = 1; l = substr(l, RSTART + RLENGTH)}}
+  END {if (tolower(res) !~ /partially applied|carried/) exit
+    for (n = 0; (seen ? ((n + 1) in ps) : ((n + 1) in pa)); n++) ;
+    if (n < 2) exit
+    miss = ""; for (k = 1; k <= n; k++) if (res !~ ("\\(" k "\\)[[:space:]]*(landed at [^[:space:];,]+:[0-9]+|carried by #[0-9]+|not a point)")) miss = miss (miss == "" ? "" : ",") k
+    print n " " (miss == "" ? "-" : miss)}'
 
 t=$(mktemp -d 2>/dev/null) || { echo "cannot create a scratch directory (mktemp -d)" >&2; exit 1; }
 trap 'rm -rf "$t"' EXIT   # the scratch directory this run created, nothing else
@@ -214,11 +273,26 @@ while IFS= read -r f; do
   [ -n "$newdup" ] && { no "$f: the new header would carry a key twice: $newdup"; continue; }
   sh=$(LC_ALL=C awk "$sus" "$t/new.$i" | cut -f 3)
   [ -n "$sh" ] && { no "$f: a new header line looks like invalid YAML (the scan's suspect rules) — quote the value: $sh"; continue; }
+  # a change to actioned: a disposition per skill: member, and per numbered
+  # point on a partial close (its first runs are measured: the trace lines)
+  if grep -q '^status	' "$t/kv.$i"; then
+    dm=$(LC_ALL=C awk "$disp" "$t/new.$i" | cut -f 2)
+    [ -n "$dm" ] && { no "$f: status actioned, but resolution: gives no disposition for skill: member(s) $dm — write '<member>: applied|excluded|carried — <where or why>' for each"; continue; }
+    st_new=$(LC_ALL=C awk '/^---[[:space:]]*$/ {if (++c == 2) exit; next} c == 1 && /^status:/ {v = $2; gsub(/["\047]/, "", v); print v; exit}' "$t/new.$i")
+    pc=; [ "$st_new" = actioned ] && pc=$(LC_ALL=C awk "$pts" "$t/new.$i")
+    if [ -n "$pc" ]; then
+      pm=${pc#* }
+      printf '%s [%s] set-fields point check: %s points=%s missing=%s %s\n' "$(date '+%F %H:%M')" "${PWD##*/}" "$f" "${pc%% *}" "$pm" "$([ "$pm" = - ] && echo passed || echo refused)" >> "$t/trace"
+      [ "$pm" = - ] || { no "$f: closed as partially applied, but resolution: accounts for no numbered point(s) $pm of ${pc%% *} — write '(N) landed at <file>:<line>', '(N) carried by #<id>' or '(N) not a point' for each"; continue; }
+    fi
+  fi
   printf '%s\t%s\t%s\n' "$i" "$f" "$target" >> "$t/todo"
 done < "$t/files"
 
+# the point check's trace lines go to checkpoints.log on every run but --check
+[ -z "$check" ] && [ -s "$t/trace" ] && cat "$t/trace" >> "$root/skill-observations/checkpoints.log"
 if [ -n "$refuse" ]; then
-  printf 'PLAN REFUSED — nothing written:\n%s' "$refuse" >&2; exit 1
+  printf 'PLAN REFUSED — nothing written to the log:\n%s' "$refuse" >&2; exit 1
 fi
 n_files=$(grep -c . "$t/todo")
 n_ops=$(grep -c . "$t/ops")

@@ -1966,8 +1966,8 @@ catch are the ones created *during* the run.
 
 Then, in each applied observation's frontmatter set
 `status: actioned`, `resolved: YYYY-MM-DD` (today), and
-`resolution: "Staged for [skill-name] at skill-updates/<anchor>/[skill-name] (weekly review)"`
-— editing only those fields, in that one file. An entry whose quoted
+`resolution: "[skill-name]: applied, staged at skill-updates/<anchor>/[skill-name] (weekly review)"`
+— one disposition per `skill:` member, through `scripts/set-fields.sh`. An entry whose quoted
 command or predicate the Step 5 run disproved carries the correction in
 the same field: `… (weekly review); applied form differs from the
 suggestion: <form>`. An entry Step 5 classed

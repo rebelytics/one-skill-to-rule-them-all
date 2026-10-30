@@ -40,7 +40,8 @@
 # a numeric prefix — a write that went around the id snippet's prefix
 # guard; RESURRECTED — when an active file is byte-identical to its
 # same-named archive/ copy, a restored archive entry, never renumbered); the
-# NOTE lines for a header key written twice and for a file holding a
+# NOTE lines for a header key written twice, for an actioned entry whose
+# resolution: gives a skill: member no disposition, and for a file holding a
 # key-shaped run beside key / token / secret / password (names only); the
 # counts line (files, parsed, suspect, archive-suspect, resurrected); a SPLIT STORE line when a
 # pre-3.0 log.md sits beside the directory; a `staged:` line naming
@@ -260,6 +261,30 @@ sus='FNR==1 {sub(/^\357\273\277/, ""); fm = (/^---[[:space:]]*$/ ? 1 : 0); if (!
   fm && /'"$key"'"([^"\\]|('"$esc_ok"'))*\\('"$esc_bad"')/ {print FILENAME "\t6\t" $0; nextfile}
   fm && /^[a-z_]+:[ ]+\[/ {v=$0; sub(/^[a-z_]+:[ ]+/,"",v); gsub(/"([^"\\]|\\.)*"/,"",v); gsub(/\047[^\047]*\047/,"",v); sub(/[[:space:]]#.*/,"",v); if (v ~ /:/) {print FILENAME "\t7\t" $0; nextfile}}'
 # <<< sus
+# The dispositions program, shared with set-fields.sh (which refuses the
+# change it reports): an actioned entry whose resolution: gives a listed
+# skill: member no disposition prints `<file> TAB <members>`.
+# >>> disp: shared with session-start-scan.sh, byte for byte (the selftest compares them)
+disp='function has(r, m,  s, i, c, rest) {s = r
+    while ((i = index(s, m ":")) > 0) {c = (i > 1) ? substr(s, i - 1, 1) : ""
+      rest = substr(s, i + length(m) + 1); sub(/^[[:space:]]+/, "", rest)
+      if (c !~ /[A-Za-z0-9_.-]/ && rest ~ /^(applied|added|excluded|carried)/) return 1
+      s = substr(s, i + length(m) + 1)}
+    return 0}
+  function add(x) {sub(/[[:space:]]+#.*$/, "", x); gsub(/["\047\r]/, "", x); gsub(/^[[:space:]]+|[[:space:]]+$/, "", x); sub(/.*:/, "", x); if (x != "") sk[++ns] = x}
+  FNR==1 {split("", sk); ns = 0; res = ""; st = ""; key = ""; sub(/^\357\273\277/, ""); fm = /^---[[:space:]]*$/; if (!fm) nextfile; next}
+  fm && /^---[[:space:]]*$/ {fm = 0; miss = ""
+    if (st == "actioned") for (j = 1; j <= ns; j++) if (!has(res, sk[j])) miss = miss (miss == "" ? "" : " ") sk[j]
+    if (miss != "") print FILENAME "\t" miss
+    nextfile}
+  fm && /^[A-Za-z_][A-Za-z0-9_]*:/ {key = $0; sub(/:.*/, "", key); v = $0; sub(/^[A-Za-z_][A-Za-z0-9_]*:[[:space:]]*/, "", v); sub(/\r$/, "", v)
+    if (key == "status") {st = v; sub(/[[:space:]]+#.*$/, "", st); gsub(/["\047[:space:]]/, "", st)}
+    if (key == "resolution") res = v
+    if (key == "skill") {sub(/[[:space:]]+#.*$/, "", v); gsub(/\[|\]/, "", v); nn = split(v, a, ","); for (j = 1; j <= nn; j++) add(a[j])}
+    next}
+  fm && key == "skill" && /^[[:space:]]+-[[:space:]]/ {v = $0; sub(/^[[:space:]]+-[[:space:]]*/, "", v); add(v); next}
+  fm && key == "resolution" && /^[[:space:]]+[^[:space:]#]/ {res = res " " $0}'
+# <<< disp
 suspect=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk "$sus" {} + | wc -l | tr -d ' ')
 a_sus=0; [ -d "$d/archive" ] && a_sus=$(LC_ALL=C find "$d/archive" -maxdepth 1 -name '*.md' -exec awk "$sus" {} + | wc -l | tr -d ' ')   # archive/ may not exist yet
 
@@ -363,6 +388,11 @@ dk=$( { LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {spli
     fm && /^---[[:space:]]*$/ {nextfile}
     fm && /^[A-Za-z_][A-Za-z0-9_]*:/ {x=$0; sub(/:.*/, "", x); if (k[x]++ == 1) print f " (" x ")"}' {} +; } | LC_ALL=C sort | awk '{s = s (NR > 1 ? ", " : "") $0} END {print s}')
 [ -n "$dk" ] && finding "NOTE: a header key occurs twice — parsers disagree on which copy they keep; read the body, keep one line, never batch-rewrite: $dk"
+# Actioned entries, active only, whose resolution: gives a listed skill:
+# member no disposition: a family fix marked done while a member was never
+# edited for it reads as complete everywhere else.
+nd=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk "$disp" {} + | sed 's|^.*/||' | LC_ALL=C sort | awk -F '\t' '{s = s (NR > 1 ? ", " : "") $1 " (" $2 ")"} END {print s}')
+[ -n "$nd" ] && finding "NOTE: actioned without a disposition for every skill: member — resolution: names each as '<member>: applied|excluded|carried'; complete it, or re-open the entry, through scripts/set-fields.sh: $nd"
 # Secret-shaped values, active and archive/, header and body: a line naming
 # key / token / secret / password that also holds a run of 24 or more letters
 # and digits, both present (a 40- or 64-hex digest is skipped). File names

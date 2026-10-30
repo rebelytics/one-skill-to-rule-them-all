@@ -564,12 +564,12 @@ describe its shape (length, source, which part differed) and point
 `reference:` at where the evidence lives.
 
 **Changing an existing observation:** re-read that one file, edit only the
-frontmatter fields you are changing (`status`, `parked_until`, `resolved`,
-`resolution`), never batch-rewrite the directory. Archival is a plain `mv`.
-To change several entries, or renumber one, `bash scripts/set-fields.sh
-"[ABSOLUTE PATH]" <plan>` is the path: it refuses the whole plan unless
-every file changes only on the named lines (`references/observation-log.md`,
-"Editing an existing observation").
+frontmatter fields you are changing, never batch-rewrite the directory.
+Archival is a plain `mv`. A change to `actioned`, to several entries, or a
+renumber goes through `bash scripts/set-fields.sh "[ABSOLUTE PATH]" <plan>`:
+it refuses the whole plan unless every file changes only on the named
+lines, and `actioned` unless `resolution:` gives each `skill:` member a
+disposition (`references/observation-log.md`, "Editing an existing observation").
 A `use_evidence:` line is appended inside the header, before its closing
 `---`, by one insert command, never a rewrite of the file (the command:
 `references/observation-log.md`, "Frontmatter fields"). A decision appended
@@ -749,6 +749,6 @@ agent not following the skill's rules, acknowledge and correct it instead.
 | A scan or query came back empty? | Two possibilities, only one is a finding: guard every retrieval meant to prevent duplicate work with an independent existence check, and treat empty output over known content as a broken command |
 | Small fix or substantial? | Additive → apply directly; restructuring/new skill → `references/skill-authoring.md` |
 | Same rule broken twice? | The fix is a structural barrier (hook, lint, default) — never a third rewording |
-| Changing an observation (status/archival)? | Re-read that one file, edit only its frontmatter, or `mv` it to `observation-log/archive/` — no shared-file rewrite; several entries or a renumber: `scripts/set-fields.sh` |
+| Changing an observation (status/archival)? | Re-read that one file, edit only its frontmatter, or `mv` it to `observation-log/archive/` — no shared-file rewrite; to `actioned`, several entries or a renumber: `scripts/set-fields.sh` |
 
 Task Observer: Eoghan Henn and contributors | CC BY 4.0

@@ -2032,6 +2032,29 @@ def scan_bytes_ok():
         return ok, f"exit {r.returncode}/{h.returncode}, end line {last[-160:]!r}, {len(above) + 1} bytes above"
 
 
+def scan_disp_ok():
+    """An actioned entry whose resolution: gives a skill: member no
+    disposition is named on a NOTE line with the member; a fully
+    dispositioned one and an open one are not."""
+    import os
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / "work space"
+        log = root / "skill-observations" / "observation-log"
+        (log / "archive").mkdir(parents=True)
+        for i, st, sk, res in ((1, "actioned", "[a, b]", '"a: applied in x.md"'),
+                               (2, "actioned", "\n  - a\n  - c", '"a: added; c: excluded, no such step"'),
+                               (3, "open", "[a, b]", "")):
+            (log / f"{i:04d}-e.md").write_text(f'---\nid: {i}\ntitle: "t"\nstatus: {st}\nskill: {sk}\n'
+                                               f'resolution: {res}\n---\nbody\n', encoding="utf-8")
+        env = {k: v for k, v in os.environ.items() if k != "TASK_OBSERVER_WORKSPACE"}
+        r = subprocess.run(["bash", str(SCAN_SCRIPT), str(root)], cwd=tmp, env=env, capture_output=True,
+                           text=True, encoding="utf-8", errors="replace")
+        lines = [l for l in r.stdout.splitlines() if "without a disposition for every skill: member" in l]
+        ok = r.returncode == 0 and len(lines) == 2 and all(l.endswith(": 0001-e.md (b)") for l in lines)
+        return ok, f"exit {r.returncode}, lines {lines!r}"
+
+
 def scan_entries_refused_ok():
     """--entries-to onto an existing non-empty file is refused before anything
     runs: exit 2, no checkpoint line, the file untouched."""
@@ -2388,6 +2411,16 @@ NEWOBS_FIXTURES = [
 ]
 
 
+def disp_shared_ok():
+    """The dispositions program is one text in the scan and the batch field
+    editor: the lines between `# >>> disp` and `# <<< disp` are identical."""
+    def part(path):
+        m = re.search(r"(?ms)^# >>> disp\b[^\n]*\n(.*?)^# <<< disp$", path.read_text(encoding="utf-8"))
+        return m.group(1) if m else None
+    a, b = part(SCAN_SCRIPT), part(SETFIELDS_SCRIPT)
+    return a is not None and a == b, f"scan {len(a or '')} chars, set-fields {len(b or '')} chars"
+
+
 def sus_shared_ok():
     """The suspect-YAML program is one text in three scripts: the lines
     between the `# >>> sus` and `# <<< sus` markers are identical in the
@@ -2430,6 +2463,27 @@ SETFIELDS_FIXTURES = [
      [_T.join(["set", "0001-a.md", "skill", "[a]"])], False, 1, "holds a block value", None),
     ("a plan line that is not tab-separated is refused by line number", "plain",
      ["set 0001-a.md status actioned"], False, 1, "plan line 1 is not", None),
+    ("actioned with a skill: member given no disposition: refused naming it", "family",
+     [_T.join(["set", "0001-a.md", "status", "actioned"]),
+      _T.join(["set", "0001-a.md", "resolution", '"a: applied in x.md"'])], False, 1,
+     "no disposition for skill: member(s) b", None),
+    ("actioned with every member dispositioned (a qualified name by its bare form): written", "family",
+     [_T.join(["set", "0001-a.md", "status", "actioned"]),
+      _T.join(["set", "0001-a.md", "resolution", '"a: applied in x.md:4; p:b: excluded, never reads it"'])], False, 0,
+     "done — 1 file(s) written", {"0001-a.md": 2}),
+    ("a partial close missing a numbered point: refused, and the run traced in checkpoints.log", "family",
+     [_T.join(["set", "0001-a.md", "status", "actioned"]),
+      _T.join(["set", "0001-a.md", "resolution", '"a: applied; p:b: carried by #9; (1) landed at x.md:3; (2) not a point"'])],
+     False, 1, "set-fields point check: 0001-a.md points=3 missing=3 refused", None),
+    ("a partial close accounting for every numbered point: written, traced as passed", "family",
+     [_T.join(["set", "0001-a.md", "status", "actioned"]),
+      _T.join(["set", "0001-a.md", "resolution",
+               '"a: applied; p:b: carried by #9; (1) landed at x.md:3; (2) not a point; (3) carried by #9"'])],
+     False, 0, "points=3 missing=- passed", {"0001-a.md": 2}),
+    ("--check runs the point check but writes no trace line", "family",
+     [_T.join(["set", "0001-a.md", "status", "actioned"]),
+      _T.join(["set", "0001-a.md", "resolution", '"a: applied; p:b: carried by #9; (1) landed at x.md:3"'])],
+     True, 1, "accounts for no numbered point(s) 2,3 of 3", None),
 ]
 
 
@@ -2450,8 +2504,12 @@ def setfields_case(scenario, plan, check):
                 extra = "resolved: 2026-01-01\n"
             if scenario == "block" and i == 1:
                 extra = "skill:\n  - a\n"
+            body = f"body {i}"
+            if scenario == "family" and i == 1:   # two members, three numbered points, one after Principle
+                extra = 'skill: [a, "p:b"]\n'
+                body = "**Issue:** (1) one\n(2) two\n\n**Suggested improvement:**\n3. three\n\n**Principle:** (4) not a point"
             (log / f"{i:04d}-{s}.md").write_text(
-                f'---\nid: {i}\ntitle: "{s}"\nstatus: open\nresolved:\n{extra}resolution:\n---\n\nbody {i}\n', encoding="utf-8")
+                f'---\nid: {i}\ntitle: "{s}"\nstatus: open\nresolved:\n{extra}resolution:\n---\n\n{body}\n', encoding="utf-8")
         before = {p.name: p.read_text(encoding="utf-8") for p in log.glob("[0-9]*.md")}
         (pathlib.Path(tmp) / "plan.tsv").write_text("\n".join(plan) + "\n", encoding="utf-8")
         args = ["bash", str(SETFIELDS_SCRIPT)] + (["--check"] if check else []) + [str(root), str(pathlib.Path(tmp) / "plan.tsv")]
@@ -2460,12 +2518,15 @@ def setfields_case(scenario, plan, check):
         after = {p.name: p.read_text(encoding="utf-8") for p in log.glob("[0-9]*.md")}
         floor = (log / "archive" / ".id-floor").read_text(encoding="utf-8").strip()
         stray = [p.name for p in log.iterdir() if p.name.startswith(".")]
-        return r.returncode, r.stdout + r.stderr + ("".join(f" STRAY {s}" for s in stray)), before, after, floor
+        ck = root / "skill-observations" / "checkpoints.log"
+        trace = " TRACE " + ck.read_text(encoding="utf-8") if ck.is_file() else ""
+        return r.returncode, r.stdout + r.stderr + ("".join(f" STRAY {s}" for s in stray)) + trace, before, after, floor
 
 
 def setfields_ok(scenario, plan, check, want_rc, want_out, want_diff):
     rc, out, before, after, floor = setfields_case(scenario, plan, check)
     ok = rc == want_rc and want_out in out and "STRAY" not in out
+    ok = ok and not (check and "TRACE" in out)
     if want_diff is None:
         ok = ok and before == after and floor == "5"
     elif want_diff == "rename":
@@ -2855,7 +2916,8 @@ def selftest():
                          ("a root named skill-observations/ holding the log scans its parent, with a NOTE", scan_child_root_ok),
                          ("the scan's commands off PATH: SCAN TOOLS MISSING, no checkpoint line", scan_tools_missing_ok),
                          ("forty populated entries print under 30,000 characters", scan_size_ok),
-                         ("the end line names the bytes above it; a halted run still prints", scan_bytes_ok)):
+                         ("the end line names the bytes above it; a halted run still prints", scan_bytes_ok),
+                         ("an actioned entry lacking a skill: member's disposition is named", scan_disp_ok)):
             ok, detail = fn()
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} scan script: {name}" + ("" if ok else f" ({detail})"))
@@ -2937,6 +2999,10 @@ def selftest():
         ok, detail = tools_missing_ok(NEWOBS_SCRIPT, True)
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} new-observation script: commands off PATH, TOOLS MISSING, no file"
+              + ("" if ok else f" ({detail})"))
+        ok, detail = disp_shared_ok()
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} set-fields script: the dispositions program is the scan's, byte for byte"
               + ("" if ok else f" ({detail})"))
         ok, detail = sus_shared_ok()
         bad += not ok; total += 1
