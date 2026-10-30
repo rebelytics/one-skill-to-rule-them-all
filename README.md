@@ -170,6 +170,9 @@ task-observer is indexed in these community lists and skill directories:
 - [TypingMind](https://www.typingmind.com/skills/rebelytics-task-observer)
 - [karanb192 / awesome-claude-skills](https://github.com/karanb192/awesome-claude-skills)
 - [iamneilroberts / claude-skills](https://github.com/iamneilroberts/claude-skills)
+- [Archestack — Best of Vibe Coding](https://archestack.com/best-of-vibe-coding/projects/one-skill-to-rule-them-all/)
+- [AI TRY — Harness teardown](https://aitryed.com/en/teardowns/harness/task-observer/)
+- [VITON13 — Agent skills](https://school.viton13.com/skills/task-observer)
 
 ## Recommended by
 
@@ -220,6 +223,14 @@ I would like to thank the following creators, platforms, publications, companies
 - Bill Prin: [https://x.com/Bill_Prin/status/2103189962640552198](https://x.com/Bill_Prin/status/2103189962640552198)
 - Jake Austin: [https://www.snapchat.com/@itsjakeaustin3/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYaGlrcndlbmJsAaDY8w3vAaDY8nNPAAAAAw](https://www.snapchat.com/@itsjakeaustin3/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYaGlrcndlbmJsAaDY8w3vAaDY8nNPAAAAAw)
 - とも (tomo_ai_tech): [https://note.com/tomo_ai_tech/n/n0d5a87ebb8c0](https://note.com/tomo_ai_tech/n/n0d5a87ebb8c0)
+- Turan Yasin Salcı (DijiKoçum): [https://www.dijikocum.com/rehber/claude-code-eklentileri/](https://www.dijikocum.com/rehber/claude-code-eklentileri/)
+- Süleyman Kılınç: [https://suleymankilinc.com/blog/teaching-my-ai-assistant-from-its-own-mistakes](https://suleymankilinc.com/blog/teaching-my-ai-assistant-from-its-own-mistakes)
+- Iago García Bärtsch: [https://skills.garciabaertsch.com](https://skills.garciabaertsch.com)
+- Luís Rodrigues: [https://luisrodrigues.ai/guides/claude-code-add-ons](https://luisrodrigues.ai/guides/claude-code-add-ons)
+- Luca Amann: [https://amanndev.com/marchas#task-observer](https://amanndev.com/marchas#task-observer)
+- Tech from Korea (전데요옹): [https://techfromkorea.com/read/claude-tools/](https://techfromkorea.com/read/claude-tools/)
+- John Paolo Ruelo (jeyps.dev): [https://jeyps.dev/blog/task-observer-the-skill-that-improves-your-other-skills](https://jeyps.dev/blog/task-observer-the-skill-that-improves-your-other-skills)
+- SkillCritic: [https://skillcritic.com/skills/rebelytics/one-skill-to-rule-them-all/](https://skillcritic.com/skills/rebelytics/one-skill-to-rule-them-all/)
 
 If I forgot to list your recommendation here, please let me know or submit it via a PR in the same format as the others.
 
