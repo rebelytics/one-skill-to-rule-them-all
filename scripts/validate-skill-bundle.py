@@ -879,7 +879,9 @@ POINTER_SLACK = 2
 # sentence carries (`**Load trigger:** …`, `**Load triggers:** …`): matching
 # the plain form only made a file that declared its episodes in prose fail
 # the gate until a second, mechanical line was added beside the first.
-LOAD_TRIGGERS_RE = re.compile(r"(?m)^(?:\*\*)?Load triggers?:(?:\*\*)?[ \t]*(.*?)[ \t]*$")
+# The plain line wins over a bold one wherever both appear: a bold sentence
+# above the plain list is prose, and reading the first match counted it.
+LOAD_TRIGGERS_RE = re.compile(r"(?m)^(\*\*)?Load triggers?:(?:\*\*)?[ \t]*(.*?)[ \t]*$")
 
 # (name, reference-file text, entries declared_load_triggers must return)
 LOAD_TRIGGER_FIXTURES = [
@@ -889,6 +891,10 @@ LOAD_TRIGGER_FIXTURES = [
     ("a duplicate entry counts once, case apart", "# A\n\nLoad triggers: One; one; two\n\n## S\n", ["One", "two"]),
     ("a line after the first ## heading is not a declaration", "# A\n\n## S\n\nLoad triggers: one\n", None),
     ("no line at all", "# A\n\n## S\n", None),
+    ("a bold prose sentence above the plain line: the plain line wins",
+     "# A\n\n**Load trigger:** read before the first draft.\n\n"
+     "Load triggers: one; two; three; four; five\n\n## S\n",
+     ["one", "two", "three", "four", "five"]),
 ]
 # An optional YYYY-MM-DD before the reason is the older dated form: read and
 # ignored, so an install that predates the undated form keeps validating.
@@ -960,11 +966,12 @@ def core_pointer_sections(core):
 def declared_load_triggers(text):
     """The distinct entries of the header's `Load triggers:` line, or None."""
     head = re.split(r"(?m)^## ", text, maxsplit=1)[0]
-    m = LOAD_TRIGGERS_RE.search(head)
-    if not m:
+    found = list(LOAD_TRIGGERS_RE.finditer(head))
+    if not found:
         return None
+    m = next((f for f in found if not f.group(1)), found[0])
     seen = []
-    for t in m.group(1).split(";"):
+    for t in m.group(2).split(";"):
         t = " ".join(t.split())
         if t and t.lower() not in (s.lower() for s in seen):
             seen.append(t)
