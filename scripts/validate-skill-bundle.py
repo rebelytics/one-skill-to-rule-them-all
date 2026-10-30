@@ -32,8 +32,8 @@ Usage
   --live        the installed skill directory the staged copy was made from:
                 every regular file in it must be in the staged set (VCS
                 metadata, build artefacts and a checkout's .claude-plugin/
-                excepted), so a copy staged as SKILL.md alone fails. Not a
-                directory = skipped, one note.
+                excepted at any depth), so a copy staged as SKILL.md alone
+                fails. Not a directory = skipped, one note.
 
   Options and the one skill directory may come in any order; each of
   --live, --bundle, --pack and --repo takes the next argument. An option
@@ -140,8 +140,9 @@ BUILD_JUNK = {"__pycache__", ".DS_Store"}
 # that should not be (a clone packed its whole history and passed).
 VCS_DIRS = {".git", ".hg", ".svn"}
 # A skill installed as a repository checkout carries the repository's plugin
-# manifests at its root; a skill bundle must not, so the live-set check does
-# not ask the staged copy for them.
+# manifests, at its root and in any plugin directory below it; a skill bundle
+# must not, so the live-set check does not ask the staged copy for them at any
+# depth (as the compare snippet's `diff -x` and scripts/diff-staged.sh do).
 CHECKOUT_ONLY = {".claude-plugin"}
 # Edit residue: strings that only ever enter a file through a failed
 # replacement, an unresolved template slot or an unfinished merge. The gate
@@ -1078,9 +1079,11 @@ def check_reference_shape(skill_dir, core, fails):
                 f"its own part — a raise is not the remedy for a file this many "
                 f"episodes pull in")
         elif lines > ceiling:
+            # Reached with n > N only while a split is pending: say so, not `<= N`.
+            count_vs_n = f"> {N}, split pending" if n > N else f"<= {N}"
             fails.append(
                 f"references/{name} {lines} lines > ceiling {ceiling}, with {n} load "
-                f"trigger(s) (<= {N}): trim it back to {ceiling} lines or fewer, or raise the "
+                f"trigger(s) ({count_vs_n}): trim it back to {ceiling} lines or fewer, or raise the "
                 f"ceiling in references/{REF_CEILINGS_FILE} to {lines} with a short "
                 f"one-line reason beside the number (`{name} {lines} why`)")
         elif ceiling - lines > tol:
@@ -1184,8 +1187,8 @@ def check_live_set(skill_dir, live_dir, fails):
     for q in sorted(live.rglob("*")):
         rel = q.relative_to(live)
         if not q.is_file() or q.is_symlink() or q.suffix == ".pyc" or \
-                any(part in VCS_DIRS or part in BUILD_JUNK for part in rel.parts) or \
-                rel.parts[0] in CHECKOUT_ONLY:
+                any(part in VCS_DIRS or part in BUILD_JUNK or part in CHECKOUT_ONLY
+                    for part in rel.parts):
             continue
         if not (staged / rel).is_file():
             fails.append(f"live file absent from staged set: {rel.as_posix()} — a staged copy "
@@ -1576,6 +1579,11 @@ LIVE_SET_FIXTURES = [
     ("--live: a checkout's .claude-plugin/ manifests in live are not required",
      [_LS_CORE, _LS_B, _LS_A], [_LS_CORE, _LS_B, _LS_A, (".claude-plugin/plugin.json", "{}\n"),
                                 (".claude-plugin/marketplace.json", "{}\n")], None, []),
+    ("--live: a nested plugin's .claude-plugin/ manifest in live is not required",
+     [_LS_CORE, _LS_B, _LS_A], [_LS_CORE, _LS_B, _LS_A,
+                                ("plugins/x/.claude-plugin/plugin.json", "{}\n")], None, []),
+    ("--live: a nested .git/ in live is not required",
+     [_LS_CORE, _LS_B, _LS_A], [_LS_CORE, _LS_B, _LS_A, ("plugins/x/.git/HEAD", "x\n")], None, []),
     ("--live: a live path that is not a directory is skipped, no failure",
      [_LS_CORE, _LS_B, _LS_A], None, None, []),
     ("orphan: a reference cited only from another reference is not warned",
@@ -2438,6 +2446,9 @@ REF_SHAPE_FIXTURES = [
     ("over ceiling, > N triggers, split pending: trim or raise, never split",
      105, SPLIT_TRIGGER_THRESHOLD + 1, "a.md 100\nsplit_pending: a.md split decided, lands next round\n",
      "trim it back", "split it by episode"),
+    ("over ceiling, > N triggers, split pending: the message states the count above N",
+     105, SPLIT_TRIGGER_THRESHOLD + 1, "a.md 100\nsplit_pending: a.md\n",
+     f"(> {SPLIT_TRIGGER_THRESHOLD}, split pending)", "(<= "),
     ("a raise on a file with > N triggers passes while its split is pending",
      105, SPLIT_TRIGGER_THRESHOLD + 1,
      "a.md 105 more room\nsplit_pending: a.md split decided, lands next round\n", None, None),
