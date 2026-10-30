@@ -965,7 +965,7 @@ The categories:
 | Category | Detection | Action |
 |---|---|---|
 | (a) User-owned, no upstream | in the user's skills directory; not a git checkout; not refreshed from anywhere; written by the user, not by a tool — or a fork recorded in `forked-skills.txt` | normal staging flow |
-| (b) Writable but volatile, or foreign-maintained | path contains a plugin cache or version-pinned directory; or the skill is refreshed from an upstream by clone/copy or `git pull`; or **the file's own content declares a maintainer other than the user** — an attribution block naming another author, a canonical repository the user does not commit to, a `source:`/`upstream:` frontmatter field, or third-party `author:`/`license:`/`version:` frontmatter with no fork recorded in `forked-skills.txt` — wherever it is installed and however it got there, a hand-copied and hand-updated file included; or **the file is written by a tool that will rewrite it** (a scaffolder, a CLI's `init`/`agent`/`sync` command, a spec or template generator), which leaves no maintainer mark at all | never edit in place — the next update silently discards it, and no permission error ever fires; for a declared upstream, the route is the upstream report |
+| (b) Writable but volatile, or foreign-maintained | path contains a plugin cache or version-pinned directory; or the skill is refreshed from an upstream by clone/copy or `git pull`; or **the file's own content declares a maintainer other than the user** — an attribution block naming another author, a canonical repository the user does not commit to, a `source:`/`upstream:` frontmatter field, or third-party `author:`/`license:`/`version:` frontmatter with no fork recorded in `forked-skills.txt` — wherever it is installed and however it got there, a hand-copied and hand-updated file included; or **the file is written by a tool that will rewrite it** (a scaffolder, a CLI's `init`/`agent`/`sync` command, a spec or template generator), which leaves no maintainer mark at all; or **a skills manager or a pack installer owns it** (the three install checks below) | never edit in place — the next update silently discards it, and no permission error ever fires; for a declared upstream, the route is the upstream report |
 | (c) No on-disk file, or read-only | built-in / harness-provided skills (e.g. docx, pdf, xlsx, pptx, skill-creator); a mount that rejects writes | cannot be edited |
 
 Observations targeting (b) or (c) are NOT skipped — the destination must
@@ -985,7 +985,24 @@ and is stated in its first lines; install location says nothing about
 who maintains the file, so read the block before the path. A generated
 file is the exception that states nothing: its writer is a tool, not an
 author, so before putting a skill in (a) ask what writes the file, not
-only what refreshes its directory. Where the user has adopted a vendored
+only what refreshes its directory.
+
+**An installer can own a skill whose content declares no maintainer.**
+Before classifying a target as (a), run three install checks: does its
+directory resolve through a symlink into a skills manager's shared
+folder (resolve the listed path with `realpath` and compare); does it
+appear in a known skills-manager lock file (such as
+`~/.agents/.skill-lock.json`); does a template of the same name ship in
+an installer package the user has installed (a pack whose update re-runs
+its init in force mode rewrites its skills and the rules file that
+triggers them)? Any hit, with no fork recorded in `forked-skills.txt`,
+makes the target (b), foreign-maintained: route the change to
+`{skill}-extras`, and draft the upstream report separately, after reading
+the latest published version (the feedback pre-flight's HEAD re-read,
+`skill-authoring.md`). Name the places checked: a miss on all three is a
+fact about them, not proof that the user wrote the skill.
+
+Where the user has adopted a vendored
 copy on purpose, record it once, one line per skill in
 `skill-observations/forked-skills.txt` (name, date, reason): later
 reviews read the decision instead of re-deriving it from the path, and a
