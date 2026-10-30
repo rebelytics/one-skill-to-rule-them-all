@@ -380,6 +380,11 @@ in `commands_verified:`. An entry that names no check proposes a
 sentence; a check named now makes the second-violation escalation (core)
 a promotion of something already written and tested.
 
+**A file:line citation carries the revision it was read at:
+`path:line @ <short sha>` (or the tag), whenever the checkout is not the
+tip of the default branch.** A line number is a claim about one revision;
+a reader on another re-reads it at that revision or maps it forward.
+
 ## Assigning an id
 
 Rules: core, How to Log. The snippet lives in the core; the notes below

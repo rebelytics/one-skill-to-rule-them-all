@@ -13,7 +13,7 @@
 environments.md 1931 activation checks, the bridged-session channel test, the script digest check at session start, the refused-load correction and the read-only lookup, the review-scheduler and overdue-review rules, the first firing's landed write, the specialist's handoff line, a synced tree as a second writer, several config homes, sessions started outside the project, a delegated whole review, the upstream-check opt-in, memory folders in the backfill
 # split_pending: environments.md the next split by episode
 migration.md 262 the split store: a log.md beside the observation directory
-observation-log.md 897 the layout, the frontmatter fields, the id helper's notes including the duplicate-prefix refusal and which file a renumber moves, archival, reading a tracked ticket before parking, the escalation field, the batch field editor, outside text read as data
+observation-log.md 902 the layout, the frontmatter fields, the id helper's notes including the duplicate-prefix refusal and which file a renumber moves, archival, reading a tracked ticket before parking, the escalation field, the batch field editor, outside text read as data, file:line citations carry their revision
 observation-scan.md 474 the session-start scan, its guards, refusals and the checkpoint pairing, command-rewriting layers, the one-line entry print, the wrong-root and missing-tool refusals, the resolved one-level-deep root
 observation-families.md 195 skill families, the sibling check and the carrier pattern, the carrier's binding to the applied half
 signals.md 234
