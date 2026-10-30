@@ -2598,6 +2598,82 @@ def setfields_ok(scenario, plan, check, want_rc, want_out, want_diff):
     return ok, f"exit {rc}, out {out.strip()[-200:]!r}, floor {floor!r}"
 
 
+# scripts/extend-observation.sh, the path for appending an instance to an
+# existing entry: (name, scenario, args before the id and root, id, exit
+# status, stderr substring, check over ({name: text} before, after, stdout)).
+# The fixture log: 0001 open, 0002 actioned, 0003 parked, 0005 with a block
+# session_context, archive/0004 actioned; scenario "dup" adds archive/0001.
+EXTOBS_SCRIPT = pathlib.Path(__file__).resolve().parent / "extend-observation.sh"
+_EXT_BODY = 'Second instance: `$(date)` stays "verbatim".\n'
+
+
+def _ext_appended(b, a, name, sc):
+    old, new = b[name].splitlines(), a.get(name, "").splitlines()
+    changed = [j for j in range(len(old)) if j < len(new) and old[j] != new[j]]
+    return (len(changed) == 1 and new[changed[0]] == f"session_context: {sc}"
+            and a[name].endswith("\n\n" + _EXT_BODY) and len(new) == len(old) + 2)
+
+
+EXTOBS_FIXTURES = [
+    ("an open entry: the instance appended, session_context joined and quoted, nothing else changed", "plain",
+     ["--session", 'review "two"'], "1", 0, "",
+     lambda b, a, out: _ext_appended(b, a, "0001-a.md", '"first: one; review \\"two\\""')
+     and out.strip().endswith("/0001-a.md") and sorted(a) == sorted(b)),
+    ("an id no file carries: NO SUCH ENTRY, no file created", "plain", ["--session", "s"], "9", 1,
+     "NO SUCH ENTRY — id 9", lambda b, a, out: a == b),
+    ("an archived entry: ENTRY CLOSED with its resolution printed, nothing written", "plain",
+     ["--session", "s"], "0004", 1, 'archived, status actioned; nothing written. Its resolution: "landed in x.md"',
+     lambda b, a, out: a == b),
+    ("an actioned entry still in the active log: ENTRY CLOSED", "plain", ["--session", "s"], "2", 1,
+     "ENTRY CLOSED — 0002-b.md is status actioned", lambda b, a, out: a == b),
+    ("--reopen on an archived entry: moved back, status open, resolved emptied, the re-open line first", "plain",
+     ["--reopen", "--session", "s"], "4", 0, "",
+     lambda b, a, out: "archive/0004-d.md" not in a and "status: open\n" in a.get("0004-d.md", "")
+     and "\nresolved:\n" in a["0004-d.md"] and "\nRe-opened on " in a["0004-d.md"]
+     and a["0004-d.md"].endswith(_EXT_BODY) and 'resolution: "landed in x.md"' in a["0004-d.md"]),
+    ("a parked entry: appended, status left parked, with a NOTE", "plain", ["--session", "s"], "3", 0,
+     "is parked", lambda b, a, out: _ext_appended(b, a, "0003-c.md", '"s"') and "status: parked\n" in a["0003-c.md"]),
+    ("a block session_context: refused, nothing written", "plain", ["--session", "s"], "5", 1,
+     "holds a block value", lambda b, a, out: a == b),
+    ("two files carry the id: DUPLICATE ID, nothing written", "dup", ["--session", "s"], "1", 1,
+     "DUPLICATE ID — id 1 is carried by 0001-a.md and archive/0001-z.md", lambda b, a, out: a == b),
+    ("a missing body file: refused, nothing written", "nobody", ["--session", "s"], "1", 1,
+     "missing, unreadable or blank", lambda b, a, out: a == b),
+]
+
+
+def extobs_case(scenario, opts, ident):
+    """Run extend-observation.sh over the fixture log; return (status,
+    stdout, stderr, {name: text} before, after) — archived names carry
+    their archive/ prefix."""
+    import os
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / "work space"
+        log = root / "skill-observations" / "observation-log"
+        (log / "archive").mkdir(parents=True)
+        for rel, i, st, extra in (("0001-a.md", 1, "open", 'session_context: "first: one"\nresolved:\n'),
+                                  ("0002-b.md", 2, "actioned", 'session_context: ""\nresolved: 2026-01-01\n'),
+                                  ("0003-c.md", 3, "parked", "session_context:\nresolved:\n"),
+                                  ("archive/0004-d.md", 4, "actioned", "session_context: bare\nresolved: 2026-01-01\n"),
+                                  ("0005-e.md", 5, "open", "session_context:\n  - one\nresolved:\n")):
+            res = 'resolution: "landed in x.md"\n' if st == "actioned" else "resolution:\n"
+            (log / rel).write_text(f'---\nid: {i}\ntitle: "t{i}"\nstatus: {st}\n{extra}{res}---\n\nbody {i}\n',
+                                   encoding="utf-8")
+        if scenario == "dup":
+            (log / "archive" / "0001-z.md").write_text("---\nid: 1\nstatus: actioned\n---\n", encoding="utf-8")
+        snap = lambda: {str(p.relative_to(log)): p.read_text(encoding="utf-8")
+                        for p in list(log.glob("*.md")) + list(log.glob("archive/*.md")) + list(log.glob(".*"))}
+        before = snap()
+        args = ["bash", str(EXTOBS_SCRIPT)] + opts
+        if scenario != "nobody":
+            (pathlib.Path(tmp) / "inst.md").write_text(_EXT_BODY, encoding="utf-8")
+        args += ["--body-file", str(pathlib.Path(tmp) / "inst.md"), ident, str(root)]
+        r = subprocess.run(args, cwd=tmp, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                           env={k: v for k, v in os.environ.items() if k != "TASK_OBSERVER_WORKSPACE"})
+        return r.returncode, r.stdout, r.stderr, before, snap()
+
+
 def newobs_case(scenario, slug, body):
     """Run the helper over a fixture workspace; return (status, stdout,
     stderr, numbered files in the log, floor content or None, created text)."""
@@ -3076,6 +3152,19 @@ def selftest():
     elif shutil.which("bash"):
         bad += 1; total += 1
         print(f"FAIL set-fields script: {SETFIELDS_SCRIPT.name} missing beside this file")
+    if shutil.which("bash") and EXTOBS_SCRIPT.is_file():
+        ok = subprocess.run(["bash", "-n", str(EXTOBS_SCRIPT)]).returncode == 0
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} extend-observation script: bash -n passes")
+        for name, scenario, opts, ident, want_rc, want_err, check in EXTOBS_FIXTURES:
+            rc, out, err, before, after = extobs_case(scenario, opts, ident)
+            ok = rc == want_rc and want_err in err and check(before, after, out)
+            bad += not ok; total += 1
+            print(f"{'ok  ' if ok else 'FAIL'} extend-observation script: {name}"
+                  + ("" if ok else f" (exit {rc}, err {err.strip()!r}, files {sorted(after)})"))
+    elif shutil.which("bash"):
+        bad += 1; total += 1
+        print(f"FAIL extend-observation script: {EXTOBS_SCRIPT.name} missing beside this file")
     if shutil.which("bash") and BINCHECK_SCRIPT.is_file():
         ok = subprocess.run(["bash", "-n", str(BINCHECK_SCRIPT)]).returncode == 0
         bad += not ok; total += 1

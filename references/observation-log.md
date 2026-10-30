@@ -668,6 +668,8 @@ resolved.
 
 Core rule (How to Log); re-read first — a parallel review may have
 resolved it — and never rewrite a file you don't own.
+Append an instance with `scripts/extend-observation.sh`, never a redirect onto
+a remembered path: it finds the entry by id and refuses an archived or resolved one.
 
 **An appended instance is a test input for the entry's predicate.** The
 restatement path (core, "Check for a restatement before writing") is the
