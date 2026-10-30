@@ -138,9 +138,9 @@ spec-conformant form, value quoted: `core_max_lines: "N"`; see Runtime
 prerequisites on why), or a `.core-ceiling` file beside it — seeded at whatever the
 core measures today: the point is not that every skill reaches some ideal
 size, it is that no skill silently grows past where it already is.
-`validate-skill-bundle.py` then fails when the core exceeds it, with the
-instruction to move content to a reference file rather than raise the
-number. **The ceiling follows trims down:** the validator also fails when
+`validate-skill-bundle.py` then fails when the core exceeds it: trim,
+move episodic content to a reference file, or raise the number with a
+stated reason (below). **The ceiling follows trims down:** the validator also fails when
 the declared ceiling sits more than 3 lines above the core's count, and
 the fix is to lower `core_max_lines` (or `.core-ceiling`) to the current
 count in the same commit as the trim — a check that only blocks growth

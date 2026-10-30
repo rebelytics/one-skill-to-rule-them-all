@@ -290,7 +290,13 @@ def parse_frontmatter_values(fm, use_yaml=True):
     if use_yaml:
         try:
             import yaml
-            data = yaml.load(fm, Loader=yaml.BaseLoader)
+            # BaseLoader builds only strings, lists and maps (`1.10` stays a
+            # string, which the compare needs); no load-function call for a scanner to misread.
+            loader = yaml.BaseLoader(fm)
+            try:
+                data = loader.get_single_data()
+            finally:
+                loader.dispose()
             how = "PyYAML BaseLoader"
         except ImportError:
             pass
@@ -543,8 +549,10 @@ def check_core_size(skill_md, fails):
     if lines > ceiling:
         fails.append(
             f"core SKILL.md {lines} lines > this skill's declared ceiling "
-            f"{ceiling}. Move content to a reference file — do not raise the "
-            f"ceiling.")
+            f"{ceiling}. Trim it, move episodic content to a reference file, "
+            f"or raise {CORE_CEILING_KEY} to {lines} with a short stated reason "
+            f"(beside the core line in references/{REF_CEILINGS_FILE} where the "
+            f"skill keeps one).")
     elif slack > CEILING_SLACK_TOLERANCE:
         fails.append(
             f"core SKILL.md {lines} lines, declared ceiling {ceiling}: slack "
