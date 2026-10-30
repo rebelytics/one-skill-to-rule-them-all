@@ -2352,6 +2352,32 @@ def migrate_case(skill_line, ov):
         return r.returncode, files[0].read_text(encoding="utf-8") if files else None
 
 
+def migrate_count_ok():
+    """The conformance count agrees with the written files, field by field,
+    on a converted set where one record's siblings_checked is empty: the
+    count reads render_header(), the block render() writes."""
+    import json
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        t = pathlib.Path(tmp)
+        (t / "skills" / "companion-a").mkdir(parents=True)
+        (t / "log.md").write_text("".join(f"### Observation {i}: T{i}\n**Date:** 2026-01-01\n**Status:** OPEN\n"
+                                          f"**Skill:** companion-a\n\n**Issue:** x\n\n---\n\n" for i in (88, 89)),
+                                  encoding="utf-8")
+        (t / "ov.json").write_text(json.dumps({"88": {"siblings_checked": "none", "_reason": "t"}}), encoding="utf-8")
+        r = subprocess.run([sys.executable, str(MIGRATE_SCRIPT), "--convert", str(t / "log.md"), "--out", str(t / "out"),
+                            "--known-skills", str(t / "skills"), "--overrides", str(t / "ov.json")],
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+        heads = [p.read_text(encoding="utf-8").split("\n---", 1)[0] for p in sorted((t / "out").glob("00*.md"))]
+        got = {}
+        for field in ("status", "siblings_checked"):
+            m = re.search(rf"^  {field}\s+(\d+)/(\d+)", r.stdout, re.M)
+            got[field] = (int(m.group(1)), int(m.group(2))) if m else None
+        want = {f: (sum(f"\n{f}:" in h for h in heads), len(heads)) for f in got}
+        ok = r.returncode == 0 and len(heads) == 2 and got == want and want["siblings_checked"] == (1, 2)
+        return ok, f"exit {r.returncode}, counted {got}, files {want}"
+
+
 # scripts/new-observation.sh, the only write path where a script can run.
 # Each case runs it against a throwaway workspace (with a space in its path)
 # and pins one boundary: (name, scenario, slug, body text or None, exit
@@ -3042,6 +3068,10 @@ def selftest():
                 and (has is None or has in (text or "")) and (lacks is None or lacks not in (text or ""))
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} migrate-log: {name}" + ("" if ok else f" (exit {rc})"))
+        ok, detail = migrate_count_ok()
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} migrate-log: the conformance count equals the written files (one siblings_checked empty)"
+              + ("" if ok else f" ({detail})"))
     else:
         bad += 1; total += 1
         print(f"FAIL migrate-log: {MIGRATE_SCRIPT.name} missing beside this file")

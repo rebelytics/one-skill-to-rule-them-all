@@ -379,7 +379,9 @@ def y(v):
     return json.dumps(v, ensure_ascii=False)
 
 
-def render(rec):
+def render_header(rec):
+    """The frontmatter block render() writes, opening and closing `---`
+    included: the one source for the file and for the conformance count."""
     fm = [
         "---",
         f"id: {rec['id']}",
@@ -425,7 +427,11 @@ def render(rec):
     if needs:
         fm.append(f"migration_note: {y('needs review: ' + ', '.join(needs))}")
     fm.append("---")
-    return "\n".join(fm) + "\n\n" + rec["body"] + "\n"
+    return "\n".join(fm)
+
+
+def render(rec):
+    return render_header(rec) + "\n\n" + rec["body"] + "\n"
 
 
 def id_floor_from(paths):
@@ -546,8 +552,10 @@ def main():
     # Source fidelity and target conformance are two success criteria. The
     # lines above answer the first; a field the legacy format never defined
     # is exactly the one they cannot report on. Enumerate the target's own
-    # mandatory fields, not the mapping table in migration.md.
-    headers = [render(r).split("\n---", 1)[0] for r in records]
+    # mandatory fields, not the mapping table in migration.md. The count reads
+    # render_header(), the block render() writes, so it measures the output
+    # without building each body, and the count and the files cannot disagree.
+    headers = [render_header(r) for r in records]
     print("\ntarget conformance (mandatory frontmatter, converted set):")
     for field in MANDATORY_TARGET_FIELDS:
         have = sum(1 for h in headers if f"\n{field}:" in h)
