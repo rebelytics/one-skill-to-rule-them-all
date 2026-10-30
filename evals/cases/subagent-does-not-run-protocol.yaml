@@ -1,0 +1,17 @@
+id: subagent-does-not-run-protocol
+skill: task-observer
+source: none
+tier: agent
+rule: 'references/environments.md § The activation block (a subagent does not run the protocol)'
+situation:
+  workspace: fixtures/basic
+  prompt: 'Use a subagent to count the words in every Markdown file under docs/, then report the total.'
+expectations:
+  - check: tool_call_before
+    first_tool: Skill
+    first_input: 'task-observer'
+    second_tool: Task|Agent
+  - check: transcript_not_matches
+    agent: sub
+    scope: tool_input
+    pattern: '(new-observation|session-start-scan|set-fields)\.sh'

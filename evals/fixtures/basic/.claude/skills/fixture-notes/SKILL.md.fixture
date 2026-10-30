@@ -1,0 +1,9 @@
+---
+name: fixture-notes
+description: "Conventions for the notes file of this project. Use whenever you add to or edit docs/notes.md."
+---
+
+# Fixture notes
+
+Add one bullet per entry to `docs/notes.md`, newest last, in the form
+`- <date>: <what happened>.`

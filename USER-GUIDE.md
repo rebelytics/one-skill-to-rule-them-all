@@ -97,6 +97,8 @@ I only ever reached this threshold once, because I normally update skills more r
 
 Now, since Claude Cowork introduced scheduled tasks, I have an automatic skill review task that runs every Monday, Wednesday and Friday morning. It goes through the 20 to 30 open observations that normally accumulate from my work every two working days. This 3x per week cadence works perfectly for me at the moment.
 
+When a review changes how a skill behaves rather than what it says (a restructure, or a change that has to be tested before it merges), the repository's eval set can check it: `evals/` runs cases headlessly against the old and the new version and reports the pass rate per case for both. You can keep your own cases for any skill you log observations for in a folder outside the repository, such as `[your shared folder]/skill-observations/evals/`; `evals/README.md` explains the format.
+
 ## The skill-creator
 
 Claude has a built-in skill called `skill-creator` that handles the actual building and restructuring of skills. The task observer and the skill creator work hand in hand: the observer identifies what to build or improve, and the creator handles how.

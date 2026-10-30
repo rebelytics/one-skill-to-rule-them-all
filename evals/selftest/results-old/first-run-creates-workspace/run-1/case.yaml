@@ -1,0 +1,19 @@
+id: first-run-creates-workspace
+skill: task-observer
+source: none
+tier: agent
+rule: 'references/observation-log.md § Workspace creation'
+situation:
+  workspace: fixtures/first-run
+  prompt: 'Summarise README.md in one sentence.'
+expectations:
+  - check: file_exists
+    path: skill-observations/observation-log/archive
+  - check: file_exists
+    path: skill-observations/cross-cutting-principles.md
+  - check: file_matches
+    path: skill-observations/last-review-date.txt
+    pattern: '^never$'
+  - check: file_matches
+    path: skill-observations/checkpoints.log
+    pattern: 'workspace: created='

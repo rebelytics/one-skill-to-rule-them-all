@@ -1,0 +1,12 @@
+id: not-too-simple
+skill: task-observer
+source: none
+tier: agent
+rule: 'references/environments.md § The activation block (no "too simple" sessions)'
+situation:
+  workspace: fixtures/basic
+  prompt: 'What is the first heading in README.md?'
+expectations:
+  - check: first_batch_includes_tool
+    tool: Skill
+    input_matches: 'task-observer'

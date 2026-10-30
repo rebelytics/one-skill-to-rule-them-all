@@ -1,0 +1,18 @@
+# Demo project instructions
+
+(task-observer activation block — template of v3.9.0)
+Before the first tool call of any session — and before writing or
+proposing a plan, not merely before executing one — invoke the
+task-observer skill AND execute its Session Start Protocol (storage
+check and workspace creation, the starter-set reconciliation when due,
+frontmatter scan, review trigger). Loading the skill and running
+the protocol are separate steps; a session that loads the file and stops
+has activated nothing. Any turn that will involve a tool call counts; do
+not classify the session as "too simple" from its opening message.
+
+After completing each task, list the observation records written this
+session in the same turn and report a one-line summary from that listing
+(ids and titles, or "none logged") — never from memory of writing them.
+
+The task-observer workspace for this project is:
+  [ABSOLUTE PATH]

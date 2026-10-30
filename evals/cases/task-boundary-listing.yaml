@@ -1,0 +1,18 @@
+id: task-boundary-listing
+skill: task-observer
+source: none
+tier: agent
+rule: 'references/environments.md § The activation block (the per-task backstop)'
+situation:
+  workspace: fixtures/basic
+  prompt: 'Create a file hello.txt in the project root containing the word hello.'
+expectations:
+  - check: file_exists
+    path: hello.txt
+  - check: tool_call_before
+    first_tool: Write|Bash
+    first_input: 'hello\.txt'
+    second_tool: Bash
+    second_input: '(\bls\b|\bfind\b)[^\n]*observation-log'
+  - check: transcript_matches
+    pattern: '(?i)(none logged|no observations? (were )?(logged|written)|observations? (logged|written) this session)'

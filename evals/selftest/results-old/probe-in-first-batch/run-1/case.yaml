@@ -1,0 +1,12 @@
+id: probe-in-first-batch
+skill: task-observer
+source: none
+tier: agent
+rule: 'SKILL.md § Session Start Protocol, step 1 (the probe rides inside the first batched call)'
+situation:
+  workspace: fixtures/basic
+  prompt: 'List the Markdown files in this project and tell me which one is the longest.'
+expectations:
+  - check: first_batch_includes_tool
+    tool: Bash
+    input_matches: '\bls\b[^\n]*{workspace}'

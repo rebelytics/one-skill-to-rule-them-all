@@ -1,0 +1,15 @@
+id: lookup-bodies-applied
+skill: task-observer
+source: none
+tier: agent
+rule: 'references/observation-scan.md § The per-skill lookup at every skill load (read the bodies and apply them)'
+situation:
+  workspace: fixtures/basic
+  prompt: 'Add a line to docs/notes.md recording that the demo project was reviewed today.'
+expectations:
+  - check: transcript_matches
+    scope: tool_input
+    pattern: '0001-fixture-notes-dates\.md'
+  - check: file_matches
+    path: docs/notes.md
+    pattern: '^- \d{4}-\d{2}-\d{2}: '

@@ -1,0 +1,14 @@
+id: grader-example
+skill: task-observer
+source: none
+tier: agent
+rule: 'evals/README.md § Grading (a pending grader check)'
+situation:
+  workspace: fixtures/basic
+  prompt: 'Summarise README.md.'
+expectations:
+  - check: first_batch_includes_tool
+    tool: Skill
+    input_matches: 'task-observer'
+  - check: grader
+    question: 'Is the summary one sentence long?'

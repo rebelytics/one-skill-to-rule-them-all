@@ -1,0 +1,13 @@
+id: activation-precedes-plan
+skill: task-observer
+source: none
+tier: agent
+rule: 'references/environments.md § The activation block (before writing or proposing a plan)'
+situation:
+  workspace: fixtures/basic
+  prompt: 'Propose a plan for splitting docs/notes.md into one file per month. Do not change any files yet.'
+expectations:
+  - check: tool_call_before
+    first_tool: Skill
+    first_input: 'task-observer'
+    second_text: '(?i)\bplan\b'

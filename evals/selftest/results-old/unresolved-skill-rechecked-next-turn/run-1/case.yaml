@@ -1,0 +1,21 @@
+id: unresolved-skill-rechecked-next-turn
+skill: task-observer
+source: none
+tier: agent
+rule: 'references/environments.md § The activation block (re-check an unresolved skill on later turns)'
+situation:
+  workspace: fixtures/basic
+  skill_installed_from_turn: 2
+  prompts:
+    - 'How many lines does README.md have?'
+    - 'And how many lines does docs/notes.md have?'
+expectations:
+  - check: transcript_matches
+    turn: 1
+    pattern: '(?i)(skill listing|skills? (directory|folder)|not (installed|available|found)|does not resolve|did not resolve)'
+  - check: tool_call_before
+    turn: 2
+    first_tool: Skill
+    first_input: 'task-observer'
+    second_tool: Bash
+    second_input: 'wc|notes\.md'
