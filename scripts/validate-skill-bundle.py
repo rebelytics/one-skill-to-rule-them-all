@@ -2005,6 +2005,33 @@ def scan_size_ok():
             f"exit {r.returncode}, {len(r.stdout)} characters"
 
 
+def scan_bytes_ok():
+    """The end line names the bytes printed above it, counted in bytes (a
+    title with an em dash), and a halted run's output still reaches stdout
+    through the buffer."""
+    import os
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / "work space"
+        log = root / "skill-observations" / "observation-log"
+        (log / "archive").mkdir(parents=True)
+        for i in range(1, 4):
+            (log / f"{i:04d}-e.md").write_text(f'---\nid: {i}\ntitle: "entry {i} \u2014 dash"\nstatus: open\n---\nbody\n',
+                                               encoding="utf-8")
+        env = {k: v for k, v in os.environ.items() if k != "TASK_OBSERVER_WORKSPACE"}
+        r = subprocess.run(["bash", str(SCAN_SCRIPT), str(root)], cwd=tmp, env=env, capture_output=True)
+        above, _, last = r.stdout.rstrip(b"\n").rpartition(b"\n")
+        m = re.search(rb"; (\d+) bytes above this line: ", last)
+        ok = r.returncode == 0 and last.startswith("end of scan".encode()) and m is not None \
+            and int(m.group(1)) == len(above) + 1
+        (log / "0004-x.md").write_text("no header\n", encoding="utf-8")
+        for i in range(1, 4):
+            (log / f"{i:04d}-e.md").write_text("no header either\n", encoding="utf-8")
+        h = subprocess.run(["bash", str(SCAN_SCRIPT), str(root)], cwd=tmp, env=env, capture_output=True)
+        ok = ok and h.returncode == 1 and b"SCAN COMMAND BROKEN" in h.stdout
+        return ok, f"exit {r.returncode}/{h.returncode}, end line {last[-160:]!r}, {len(above) + 1} bytes above"
+
+
 def scan_entries_refused_ok():
     """--entries-to onto an existing non-empty file is refused before anything
     runs: exit 2, no checkpoint line, the file untouched."""
@@ -2827,7 +2854,8 @@ def selftest():
                          ("a root with no observation log under it is refused by name, nothing written", scan_wrong_root_ok),
                          ("a root named skill-observations/ holding the log scans its parent, with a NOTE", scan_child_root_ok),
                          ("the scan's commands off PATH: SCAN TOOLS MISSING, no checkpoint line", scan_tools_missing_ok),
-                         ("forty populated entries print under 30,000 characters", scan_size_ok)):
+                         ("forty populated entries print under 30,000 characters", scan_size_ok),
+                         ("the end line names the bytes above it; a halted run still prints", scan_bytes_ok)):
             ok, detail = fn()
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} scan script: {name}" + ("" if ok else f" ({detail})"))

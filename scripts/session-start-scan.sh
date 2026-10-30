@@ -62,8 +62,8 @@
 # that needs another field; then the summary
 # block: every finding line (DUE / NOTE / LOST ENTRIES / UNFILLED / DUPLICATE
 # ID / RESURRECTED / SPLIT STORE / GAP) repeated VERBATIM, and LAST one `end of scan` line
-# repeating the counts, how many finding lines stand above the entries, and
-# this script's version (VERSION below, equal to the skill's `version:`), so
+# repeating the counts, how many finding lines stand above the entries, how
+# many bytes stdout carried above it, and this script's version (VERSION below, equal to the skill's `version:`), so
 # a run can tell a script that lacks a feature from one that is broken. The findings
 # open the output and close it, so a view cut by `head` keeps them and one
 # cut by `tail` keeps them with the summary; the same lines are written to
@@ -189,6 +189,18 @@ if [ -n "$miss" ]; then
   printf 'SCAN TOOLS MISSING —%s not on PATH; nothing scanned, no checkpoint line written\n' "$miss"
   printf 'SCAN TOOLS MISSING —%s not on PATH\n' "$miss" > "$root/skill-observations/last-scan-findings.txt" 2>/dev/null
   exit 1
+fi
+
+# --- the output is counted: stdout goes through a buffer up to the end line ---
+# The end line names how many bytes stand above it, so a copy that a harness
+# saved to a file or cut to a preview is told from the whole output by its
+# size, not by whether the end line happens to be in view. The buffer is
+# written out on every exit, a halt included; without mktemp the output runs
+# unbuffered and the end line says the bytes were not counted.
+buf=$(mktemp 2>/dev/null) || buf=
+if [ -n "$buf" ]; then
+  exec 5>&1 >"$buf"
+  trap 'exec >&5; cat "$buf"; rm -f "$buf"' EXIT
 fi
 
 # --- counts -------------------------------------------------------------------
@@ -507,6 +519,12 @@ printf '%s' "$findings" > "$sidecar" 2>/dev/null || sc="$sidecar (write failed)"
 printf '%s' "$findings"
 st=; [ "$rc" -eq 0 ] || st="; content print exited $rc"
 [ -n "${empty_ent:-}" ] && st="; the entries file is EMPTY (exit 3)"
-printf 'end of scan — files: %s  parsed: %s  suspect: %s  archive-suspect: %s  resurrected: %s  principles: %s; finding lines above the entries (DUE / NOTE / LOST ENTRIES / UNFILLED / DUPLICATE ID / RESURRECTED / SPLIT STORE / GAP): %s, repeated just above this line and written to %s%s%s; full headers in %s. Read the output whole: never cut it with head, tail or grep — session-start-scan.sh v%s\n' \
-  "$n" "$parsed" "$suspect" "$a_sus" "$nres" "$pr" "$fx" "$sc" "$ent" "$st" "$hd_note" "$VERSION"
+bytes="bytes above this line not counted (no mktemp)"
+if [ -n "$buf" ]; then
+  by=$(wc -c < "$buf" | tr -d ' ')
+  exec >&5; cat "$buf"; rm -f "$buf"; trap - EXIT
+  bytes="$by bytes above this line: a saved or cut copy holding fewer is a truncated scan"
+fi
+printf 'end of scan — files: %s  parsed: %s  suspect: %s  archive-suspect: %s  resurrected: %s  principles: %s; finding lines above the entries (DUE / NOTE / LOST ENTRIES / UNFILLED / DUPLICATE ID / RESURRECTED / SPLIT STORE / GAP): %s, repeated just above this line and written to %s%s%s; full headers in %s; %s. Read the output whole: never cut it with head, tail or grep — session-start-scan.sh v%s\n' \
+  "$n" "$parsed" "$suspect" "$a_sus" "$nres" "$pr" "$fx" "$sc" "$ent" "$st" "$hd_note" "$bytes" "$VERSION"
 exit "$rc"
