@@ -137,6 +137,7 @@ This is an open-source project for the community. If you use it, I would love to
 - **Platform compatibility reports:** Tried it somewhere other than Claude? Tell me what happened.
 - **Interesting use cases:** Have you come up with a creative way of using or improving Task Observer?
 - **Integrations with other systems:** One user told me that they connected task observer to Obsidian. Do you have a similar story?
+- **Skills you maintain with Task Observer:** If they are open source, add them to the [Open Skill Library](OPEN-SKILL-LIBRARY.md) with a pull request.
 
 ## Support the project
 
