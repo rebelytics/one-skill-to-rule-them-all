@@ -2401,13 +2401,15 @@ regression line "N past instances re-checked, 0 handled worse" (Step 5);
 where gate item (8) applies, the destination's check command and its
 result, or `not run here`; and the copy list: before the install
 instructions are written, apply `references/skill-authoring.md` editing
-rule 4 — search every known skill root for the skill's name, diff each
-copy against staged, classify it identical / older subset (safe to
-overwrite) / carrying content absent from staged (stop, merge first) — and
-list each copy with its class; an instruction that names a remembered
-target list is not derived. Where live is a repository checkout, the
-install replaces the skill's files only; the checkout's root files
-(`.claude-plugin/`, VCS metadata) stay.
+rule 4 — search every known skill root for the skill's name; tell a copy
+from a namesake (the same name from another publisher) by the provenance
+the host records for each, publisher or marketplace, before reporting any
+divergence; diff each copy against staged, classify it identical /
+older subset (safe to overwrite) / carrying content absent from staged
+(stop, merge first) — and list each copy with its class; an instruction
+that names a remembered target list is not derived. Where live is a
+repository checkout, the install replaces the skill's files only; the
+checkout's root files (`.claude-plugin/`, VCS metadata) stay.
 Two optional fields mark staged work whose wait costs something:
 `runs_on: <scheduled task name, cadence>` where Step 0's scheduler query
 shows a task that invokes the skill, and `needed_by: <date> (<id>)`, the
