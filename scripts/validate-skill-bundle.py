@@ -2674,6 +2674,51 @@ def extobs_case(scenario, opts, ident):
         return r.returncode, r.stdout, r.stderr, before, snap()
 
 
+# scripts/stage-patch.sh, the staging command for a non-skill file's patch:
+# (name, live text, changed text, --allow-repeat headings, live file suffix,
+# exit status, stdout prefix, patch file written?). "EXISTS" as the changed
+# text means the patch path already holds a file.
+STAGEPATCH_SCRIPT = pathlib.Path(__file__).resolve().parent / "stage-patch.sh"
+_SP_LIVE = "# Notes\n\n## Render settings\n\nwidth 80\n\n```sh\n# run it\n```\n"
+STAGEPATCH_FIXTURES = [
+    ("a heading the live file already has: HEADING REPEATED with its line, no patch",
+     _SP_LIVE, _SP_LIVE + "\n## Render settings\n\nwidth 72\n", [], ".md", 1,
+     "HEADING REPEATED — no patch written", False),
+    ("a new heading only: STAGED", _SP_LIVE, _SP_LIVE + "\n## Fonts\n\nserif\n", [], ".md", 0, "STAGED", True),
+    ("a section moved within the file keeps its count: STAGED",
+     _SP_LIVE, "# Notes\n\nlead\n\n```sh\n# run it\n```\n\n## Render settings\n\nwidth 80\n", [], ".md", 0,
+     "STAGED", True),
+    ("a heading-shaped line inside fenced code is not a heading: STAGED",
+     _SP_LIVE, _SP_LIVE + "\n```sh\n# run it\n```\n", [], ".md", 0, "STAGED", True),
+    ("an intended repeat named with --allow-repeat: STAGED", _SP_LIVE,
+     _SP_LIVE + "\n## Render settings\n\nagain\n", ["## Render settings"], ".md", 0, "STAGED", True),
+    ("a file that is not Markdown: the check is skipped and said to be", "# a: 1\nb: 2\n", "# a: 1\nb: 3\n# a: 1\n",
+     [], ".yaml", 0, "STAGED", True),
+    ("an existing patch path is never overwritten: ERROR", _SP_LIVE, "EXISTS", [], ".md", 2, "ERROR", None),
+    ("no change: NO CHANGE, nothing staged", _SP_LIVE, _SP_LIVE, [], ".md", 1, "NO CHANGE", False),
+]
+
+
+def stagepatch_case(live, changed, allow, suffix):
+    """Run stage-patch.sh; return (status, stdout, patch text or None)."""
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        t = pathlib.Path(tmp) / "a dir"
+        t.mkdir()
+        (t / f"live{suffix}").write_text(live, encoding="utf-8")
+        out = t / "live.patch"
+        if changed == "EXISTS":
+            out.write_text("earlier\n", encoding="utf-8")
+            changed = live + "x\n"
+        (t / f"changed{suffix}").write_text(changed, encoding="utf-8")
+        args = ["bash", str(STAGEPATCH_SCRIPT)]
+        for h in allow:
+            args += ["--allow-repeat", h]
+        r = subprocess.run(args + [str(t / f"live{suffix}"), str(t / f"changed{suffix}"), str(out)],
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+        return r.returncode, r.stdout, out.read_text(encoding="utf-8") if out.is_file() else None
+
+
 def newobs_case(scenario, slug, body):
     """Run the helper over a fixture workspace; return (status, stdout,
     stderr, numbered files in the log, floor content or None, created text)."""
@@ -3165,6 +3210,27 @@ def selftest():
     elif shutil.which("bash"):
         bad += 1; total += 1
         print(f"FAIL extend-observation script: {EXTOBS_SCRIPT.name} missing beside this file")
+    if shutil.which("bash") and STAGEPATCH_SCRIPT.is_file():
+        ok = subprocess.run(["bash", "-n", str(STAGEPATCH_SCRIPT)]).returncode == 0
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} stage-patch script: bash -n passes")
+        for name, live, changed, allow, suffix, want_rc, want_out, written in STAGEPATCH_FIXTURES:
+            rc, out, patch = stagepatch_case(live, changed, allow, suffix)
+            ok = rc == want_rc and out.startswith(want_out) and out.count("\n") == 1
+            if written is None:
+                ok = ok and patch == "earlier\n"
+            else:
+                ok = ok and (patch is not None) == written and (not written or patch.startswith("--- "))
+            if suffix != ".md":
+                ok = ok and "not a Markdown file" in out
+            if "live line 3" not in out and want_rc == 1 and want_out.startswith("HEADING"):
+                ok = False
+            bad += not ok; total += 1
+            print(f"{'ok  ' if ok else 'FAIL'} stage-patch script: {name}"
+                  + ("" if ok else f" (exit {rc}, out {out!r})"))
+    elif shutil.which("bash"):
+        bad += 1; total += 1
+        print(f"FAIL stage-patch script: {STAGEPATCH_SCRIPT.name} missing beside this file")
     if shutil.which("bash") and BINCHECK_SCRIPT.is_file():
         ok = subprocess.run(["bash", "-n", str(BINCHECK_SCRIPT)]).returncode == 0
         bad += not ok; total += 1

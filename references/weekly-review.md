@@ -2297,7 +2297,8 @@ here is a non-skill file another process owns and reads at run time — a
 routine's registry or config note, an instruction file. A review that
 changes one stages it under
 `skill-updates/<date>/_target-files/` as a patch: a unified diff against
-the live file (`diff -u "$live_file" "$changed" > "<file>.patch"`), or the
+the live file (`scripts/stage-patch.sh "$live_file" "$changed" "<file>.patch"`,
+which refuses a change adding a heading the live file already has), or the
 changed lines with enough context to place them. Its manifest entry
 records four things about the live path at staging time: byte size
 (`wc -c < "$live_file"`), sha256 (`sha256sum` on GNU, `shasum -a 256` on

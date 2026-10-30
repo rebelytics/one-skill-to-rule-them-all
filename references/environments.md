@@ -1802,7 +1802,7 @@ This skill consists of `SKILL.md`, the reference files it lists
 `signals.md`, `migration.md`,
 `starter-principles.md`) and `scripts/bin-check.sh`, `scripts/diff-staged.sh`,
 `scripts/migrate-log.py`, `scripts/new-observation.sh`, `scripts/session-start-scan.sh`,
-`scripts/set-fields.sh`, `scripts/extend-observation.sh`,
+`scripts/set-fields.sh`, `scripts/extend-observation.sh`, `scripts/stage-patch.sh`,
 `scripts/skill-load.sh` and `scripts/validate-skill-bundle.py`. If any is
 missing, SKILL.md "Reference files" applies (the rule lives there because
 this file can be the missing one). `references/ceilings.txt` travels with
