@@ -111,7 +111,7 @@
 
 set -u
 
-VERSION="3.9.0"   # equal to the skill's frontmatter version:; the end line names it
+VERSION="3.10.0"   # equal to the skill's frontmatter version:; the end line names it
 
 entries=   # --entries-to target; empty = the entries print to stdout
 while [ $# -gt 0 ]; do
