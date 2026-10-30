@@ -1815,8 +1815,11 @@ it. The snapshot also makes a sibling's work deleted by another writer
 detectable rather than silently absent from the merge. Every brief
 requires the final report to be written to a file in the scratch area as
 well as returned, so a hand-back lost with an interrupted conversation is
-recovered by reading the file, not by resuming the agent. After an
-interruption, re-list the staged tree against the pre-dispatch snapshot
+recovered by reading the file, not by resuming the agent. Where the
+harness refuses a subagent's report file, the parent writes each hand-back
+to the scratch area on receipt, one write per report, before it reads the
+next. After an interruption, re-list the staged tree against the
+pre-dispatch snapshot
 before dispatching anything again, and treat an unexplained change as a
 prior run of that cluster, never as clean seed. Where the harness offers
 per-agent sandboxes or worktrees, parallel writers use them and the
