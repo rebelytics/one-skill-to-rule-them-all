@@ -1,16 +1,18 @@
 # The session-start scan — the scan, its guards and the checkpoint pairing
 
-Load triggers: writing or changing any instrument that reads the log; the per-skill check feels redundant after the session-start scan; the scan's guard fires or the scan is being adapted; moving the scan's print; why the checkpoints are writes; adding or changing an enforcement trigger
+Load triggers: writing or changing any instrument that reads the log; a skill load where the per-skill lookup's fallback, a refusal or a first run applies; the per-skill check feels redundant after the session-start scan; the scan's guard fires or the scan is being adapted; moving the scan's print; why the checkpoints are writes; adding or changing an enforcement trigger
 
 The core skill carries the scan's invocation (Session Start step 2) and
 the checkpoint rules (How to Log). This file holds the reasoning behind
-the scan's form, the guard every instrument over the log carries, what a
-refusal means, and why the checkpoints are writes. The log's layout, the
+the scan's form, the per-skill lookup run at every skill load, the guard
+every instrument over the log carries, what a refusal means, and why the
+checkpoints are writes. The log's layout, the
 id snippet and archival are in `observation-log.md`.
 
 ## Contents
 
 - Scanning cheaply
+  - The per-skill lookup at every skill load
   - Why the session-start scan does not satisfy the per-skill check
   - An empty scan over a non-empty log is a broken command
   - Every instrument gets the same guard
@@ -99,11 +101,70 @@ not found`. Never carry a list in a variable: write it to a file under
 the workspace and read it back with `while IFS= read -r`, or compare two
 such files with `comm`; quote any word that starts with `=`.
 
+### The per-skill lookup at every skill load
+
+Loading a skill is not complete until you have queried the observation
+log for OPEN observations naming it and read their bodies. Where scripts
+run, the lookup and its checkpoint line are one command:
+
+```bash
+bash "<skill directory>/scripts/skill-load.sh" "[ABSOLUTE PATH]" <skill-name>
+```
+
+`<skill directory>` is the installed skill's own directory (the one
+holding `SKILL.md`), substituted at install exactly like `[ABSOLUTE PATH]`.
+The Skill invocation and that call are ONE batch — emit them together,
+one call per skill loaded, never the call in a later batch — at every
+skill load, however many skills load in one session. A skill whose
+frontmatter sets `disable-model-invocation: true` cannot be loaded by the
+Skill tool: emit neither call for it. A Skill call that is refused or
+errors gets, in the next call, the same command with `--correct
+"<refusal text>"` appended, which records `NOT loaded` under the false
+`loaded` line and prints nothing. A skill listed on disk but refused by
+the Skill tool ("Unknown skill") is loaded by reading its SKILL.md
+directly; the lookup call rides with that read, never with the refused
+call. On a first run the log does not exist yet (Session Start step 1
+creates it): the call says so and exits 0 with no checkpoint line; re-run
+it once per skill loaded in that batch after the Workspace creation
+command.
+
+The converse holds too: the lookup, and any checkpoint line recording the
+load, run only in the same batch as the Skill invocation, and take the
+skill name from a load that has actually happened — never from a list of
+skills you built to load. A checkpoint line written without the load is a
+false record. Before writing to any file a skill reads at run time (a
+state file), load that skill: a state file that describes itself is not a
+substitute for the skill that owns it.
+
+Where the harness cannot run a script, the lookup is a `find … grep`,
+with its checkpoint line written by hand in the same batch (the inline id
+snippet in SKILL.md is then the write path):
+
+```bash
+find "[ABSOLUTE PATH]/skill-observations/observation-log" -maxdepth 1 \
+  -name '*.md' -exec grep -l -E "^(skill|target_file):.*<skill-name>" {} +
+```
+
+`<skill-name>` is the bare name: drop a plugin: prefix, up to the last
+colon. A qualified pattern misses every entry filed under the bare name
+and reports a clean zero; the bare one matches both spellings. For an
+agent definition or instructions file it is the file name, which the
+`target_file:` field carries by any path. Use `find`, not a bare `*.md`
+glob: under zsh an unmatched glob aborts the whole command, and on an
+empty log it is unmatched in every session.
+
+Apply what the bodies say to the current work — let them change what you
+do in THIS task, with the user's consent at the point of use (SKILL.md,
+Surfacing Protocol). Editing the skill file, or writing the rule into any
+other file a later session reads, is acting on the observation and waits
+for the review ("Log, don't act": the test is whether the action leaves a
+durable change outside the observation log).
+
 ### Why the session-start scan does not satisfy the per-skill check
 
-**This scan does not satisfy the per-skill check** (the grep run each time a
-skill loads — `references/environments.md`, activation block). Different
-scope (every skill vs one), different depth (frontmatter vs body),
+**This scan does not satisfy the per-skill check** (the lookup run each
+time a skill loads — "The per-skill lookup at every skill load", above).
+Different scope (every skill vs one), different depth (frontmatter vs body),
 different moment (session start vs the point the skill's rules are
 applied). Both answer "have I looked at the log?", so running this one
 discharges the felt obligation and makes the targeted one feel redundant

@@ -471,8 +471,8 @@ drains is a second log nobody reviews.
 **Harvest the run-output notes next.** Runs that cannot write or get an
 approval answered end their final message with a `## Task-observer
 notes` section (`references/environments.md`, "Sessions whose output
-channel is owned by a caller") at the run-output paths the activation
-block's `[RUN OUTPUT PATHS]` line or a task definition names. For each
+channel is owned by a caller") at the run-output paths the `[RUN OUTPUT
+PATHS]` configuration line or a task definition names. For each
 path, read every file not yet marked, take the section's bullets through
 the same write path as an inbox entry — one at a time, file on disk
 before the source is marked — and mark the source: where the file is
@@ -1010,7 +1010,7 @@ each foreign-maintained skill with open observations, state its installed
 observations "currency unverified — may already be fixed upstream"; offer
 the feedback pre-flight's HEAD re-read (`skill-authoring.md`) before such
 an entry is clustered, escalated or approved. An upstream that was not
-reached is "unknown", never "current". Where the activation block carries
+reached is "unknown", never "current". Where the instruction file carries
 the opt-in line ("the review may check upstream versions"), Step 2 instead
 fetches the upstream's version for each such skill and compares it with
 the installed one — the one network use a review starts, and only on that

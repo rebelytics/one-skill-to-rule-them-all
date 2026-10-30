@@ -63,7 +63,7 @@ If you want to browse the observations yourself, you'll find them at `[your shar
 
 ### Upgrading between 3.x versions
 
-Replace the bundle, then re-diff your activation block against the template in `references/environments.md`: the block's first line names the template version it came from, and a session that finds an older or unstamped block tells you which paragraphs it lacks and offers the current block without rewriting your file.
+Replace the bundle, then re-diff your activation block against the template in `references/environments.md`: the block's first line names the template version it came from, and a session that finds an older or unstamped block tells you how it differs and offers the current block without rewriting your file. From 3.10.0 the block is shorter — only what must act before the skill loads — so replace an older block whole rather than merging paragraphs into it.
 
 ### Upgrading from a version before 3.0
 

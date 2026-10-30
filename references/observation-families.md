@@ -132,8 +132,8 @@ over a root that holds directories is an answer about this machine only
 if those directories are the repositories you meant; `0 directories` is
 a wrong root. Add the equivalent directory of any other tool the user
 runs skills from (its project-level skills directory, in place of
-`.claude/skills`); the activation block pins the root as
-`[PROJECTS ROOT]`, substituted at install like `[ABSOLUTE PATH]`. Run the
+`.claude/skills`); a configuration line beside the activation block pins
+the root as `[PROJECTS ROOT]`, substituted at install like `[ABSOLUTE PATH]`. Run the
 sweep before a `proposes_skill:` write, and name its root and count in
 `siblings_checked:`.
 
