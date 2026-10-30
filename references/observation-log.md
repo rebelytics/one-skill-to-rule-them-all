@@ -83,6 +83,10 @@ done
 printf '%s [%s] workspace: created=%s\n' "$(date '+%F %H:%M')" "${PWD##*/}" "${c:-none}" >> "$d/checkpoints.log"   # step 1's trace
 ```
 
+A checkpoint line whose `created=` names `observation-log` is a new log:
+before its first write, list the sibling logs and their open entries
+(`environments.md`, "A renamed project orphans its log").
+
 `mkdir -p` creates the parent, so `observation-log/` needs no separate line;
 the `[ -e ]` guards make the command safe to re-run on an existing
 workspace, which is what lets step 1 run it unconditionally rather than

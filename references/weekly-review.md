@@ -133,7 +133,7 @@ Given the roots:
 - **Qualify every id that leaves its log.** Ids are allocated per log,
   so `#5` exists in each of them. Any cross-log reference — approval
   list, `resolution: "by #N"`, Step 7 summary, manifest entry — carries
-  the workspace key alongside the number. **The key is an identifier:** it
+  the workspace key alongside the number, written `key#N`. **The key is an identifier:** it
   is derived from a path, and the path carries the project's name. When a
   cross-log reference leaves the machine — an upstream report, a shared
   summary — re-key the workspaces neutrally (`root`, `p1`, `p2`) and say so

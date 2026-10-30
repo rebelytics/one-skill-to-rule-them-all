@@ -1,6 +1,6 @@
 # Environments, Activation Setup, and Handoff-Doc Mode
 
-Load triggers: anchoring, pinning, re-pinning or diagnosing a shard of the workspace; setting up or diagnosing activation (instruction block, hooks, activation config); placing the session-start mount probe in the first batched call; the folder picker is refused or no device-bridge tool is found; no filesystem at all (handoff-doc mode); no stable path resolves for a disposable worker (report-back mode); a session whose output a caller owns; after a compaction or resume; the checkpoint in a priced-write workspace; a permission or classifier denial of a log write; a mode that forbids every write by design; the first-run backfill
+Load triggers: anchoring, pinning, re-pinning or diagnosing a shard of the workspace; a new log was just created (list the sibling logs); setting up or diagnosing activation (instruction block, hooks, activation config); placing the session-start mount probe in the first batched call; the folder picker is refused or no device-bridge tool is found; no filesystem at all (handoff-doc mode); no stable path resolves for a disposable worker (report-back mode); a session whose output a caller owns; after a compaction or resume; the checkpoint in a priced-write workspace; a permission or classifier denial of a log write; a mode that forbids every write by design; the first-run backfill
 
 Load this for setup questions, compaction/resume behaviour, or when running
 in an environment without filesystem access.
@@ -480,6 +480,42 @@ still in use, perhaps on purpose, so report both roots and ask; never
 consolidate, delete or re-anchor on its word alone. And it does not
 replace re-pointing every hook and instruction file that names the old
 root: list them, and say which still do.
+
+**A renamed project orphans its log.** The anchor derives from the
+project path, so once the project folder is renamed or moved the old
+anchor is no longer among the plausible candidates above: sessions open
+a fresh log, the old one's open entries are read by no session, and both
+logs number from 1. So when Workspace creation makes a new log
+(`created=` names `observation-log` on its checkpoint line), list the
+sibling workspaces before the first write — every log under the pinned
+root's parent, which holds a renamed folder and an identity directory
+encoded from the old path alike, plus any other plausible anchor whose
+name contains the project's name — with each one's open entries:
+
+```bash
+root="[ABSOLUTE PATH]"; parent=$(dirname "$root")   # the pinned root, quoted: it may contain a space; bash
+find "$parent" -maxdepth 5 \( -name .git -o -name node_modules -o -name skill-updates \) -prune \
+  -o -type d -path '*/skill-observations/observation-log' -print 2>/dev/null |
+while IFS= read -r d; do
+  r=${d%/skill-observations/observation-log}; [ "$r" = "$root" ] && continue
+  n=$(find "$d" -maxdepth 1 -name '*.md' -exec grep -l '^status: open' {} + 2>/dev/null | wc -l | tr -d ' ')
+  printf '%s open=%s
+' "$r" "$n"
+done
+```
+
+Every sibling prints, zero included; no output means no other log under
+the parent, or a parent the probe could not read (the scan's `logs under
+the parent` line is the cross-check). For a sibling with open entries,
+name it in one line and offer to carry those entries over — never carry
+unasked, since two logs can be the legitimate plural case. A carried
+entry is appended to the new log through the write path, one at a time,
+with a new id from the new log's counter and its provenance in the body
+(the old log's path and the old id); then mark the source `actioned` with
+a resolution naming the new id, and leave the `MOVED.md` pointer, as in a
+consolidation above. In a review that spans several logs before the
+carry-over, cite each entry as `log#N` (`weekly-review.md`, "Qualify
+every id that leaves its log").
 
 **A re-anchor moves the root, not only the log.** Session Start step 1's
 ephemeral-to-stable re-anchor and a shard consolidation relocate every
