@@ -2216,6 +2216,12 @@ BINCHECK_FIXTURES = [
     ("a .bin/ file with no installed digest: refused", "extra", 3, "", "has no digest in the installed set"),
     ("the named script is absent from .bin/: refused", "absent", 3, "", "BIN REFUSED — no 'gone.sh'"),
     ("no digests file: usage, exit 2", "nodig", 2, "", "digests file missing"),
+    ("installed version newer than the MANIFEST's verified_against: refused", "older", 3, "", "is newer than .bin/MANIFEST verified_against 3.8.0"),
+    ("installed version equal to verified_against: the script runs", "same", 0, "hello a b", ""),
+    ("--installed-version newer than verified_against: refused", "flag", 3, "", "installed 3.10.0 is newer"),
+    ("installed version known, MANIFEST without verified_against: refused", "nover", 3, "", "has no verified_against: line"),
+    ("the MANIFEST passed as the digests file: refused", "selfdig", 3, "", "it is the MANIFEST"),
+    ("no installed version anywhere: gate skipped with a note, digests decide", "match", 0, "hello a b", "version gate skipped"),
 ]
 
 
@@ -2235,9 +2241,17 @@ def bincheck_case(scenario):
         if scenario == "extra":
             (bin_dir / "extra.py").write_text("print(1)\n", encoding="utf-8")
         dig = pathlib.Path(tmp) / "installed.sha256"
-        dig.write_text("".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p}\n"
-                               for p in sorted(installed.iterdir())), encoding="utf-8")
-        args = ["bash", str(BINCHECK_SCRIPT), str(root),
+        sums = "".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p}\n"
+                       for p in sorted(installed.iterdir()))
+        head = 'version: "3.9.0"\n' if scenario in ("older", "same", "nover", "selfdig") else ""
+        dig.write_text(head + sums, encoding="utf-8")
+        manifest = bin_dir / "MANIFEST"
+        va = {"older": "3.8.0", "same": "3.9.0", "flag": "3.9.0", "selfdig": "3.9.0"}.get(scenario)
+        manifest.write_text((f"verified_against: {va}\n" if va else "") + sums, encoding="utf-8")
+        if scenario == "selfdig":
+            dig = manifest
+        flag = ["--installed-version", "3.10.0"] if scenario == "flag" else []
+        args = ["bash", str(BINCHECK_SCRIPT), *flag, str(root),
                 str(dig if scenario != "nodig" else pathlib.Path(tmp) / "none"),
                 "gone.sh" if scenario == "absent" else "hello.sh", "a", "b"]
         r = subprocess.run(args, cwd=tmp, capture_output=True, text=True, encoding="utf-8", errors="replace")

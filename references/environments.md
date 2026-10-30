@@ -1437,20 +1437,24 @@ never ran because it lives in the command the commit bypassed; the lagging
 **Where the scripts are not on the device.** In a bridged session the
 installed skill tree, scripts included, can exist only in the cloud
 container while the log lives on the device. First look for the review's
-copy at `skill-observations/.bin/`: its `MANIFEST` records the installed
-`version:` and a sha256 per script, refreshed by every review that confirms
-an install (`weekly-review.md`, Step 1 gate). The digest that decides is
+copy at `skill-observations/.bin/`: its `MANIFEST` carries
+`verified_against: <version>` and a sha256 per script, refreshed by every
+review that confirms an install (`weekly-review.md`, Step 1 gate). The digest that decides is
 the INSTALLED script's, hashed in the container — never `.bin/`'s own:
 the manifest was written from that copy, so hashing `.bin/` against it is
 a tautology that passes a stale cache under a newer install. The check is
 one command, so the wrong operand cannot be chosen: hash the installed
-scripts in the container (`sha256sum "<skill directory>"/scripts/*.sh
-"<skill directory>"/scripts/*.py`), pass that output to the device as a
-file (the command per environment is a row of the table below: "Refresh
-the digests"), and run every `.bin/` script through
+scripts in the container, headed by the installed `SKILL.md`'s `version:`
+line, pass that output to the device as a file (the command per
+environment is a row of the table below: "Refresh the digests"), and run
+every `.bin/` script through
 `bash "<root>/skill-observations/.bin/bin-check.sh" "<root>" <digests-file> <script> [args]`,
 which compares each `.bin/` file with the installed digests and refuses to
-run on any difference (exit 3). The check runs at session start, before the
+run on any difference (exit 3). It also refuses when that installed version
+is newer than the MANIFEST's `verified_against:`, or the MANIFEST lacks the
+line, so the install that outdates the copy fails closed; a digests file
+without the `version:` line takes `--installed-version <v>` before `"<root>"`,
+and with neither the version gate is skipped with a note. The check runs at session start, before the
 first `.bin/` script — the scan included — never at the next review: on a
 refusal, or where `.bin/` holds no `bin-check.sh` (compare the installed
 digests with `.bin/MANIFEST` instead), refresh `.bin/` and its MANIFEST from
@@ -1480,7 +1484,7 @@ frontmatter compare (`weekly-review.md`, "Staged-work reconciliation gate").
 | Scheduled review | the app's scheduled tasks (cloud-default: run remotely; legacy local mode: run on the user's machine, only while it is on — see the execution-mode note above) | cron / an account-level scheduler that can reach the workspace — headless invocations carry the workspace grant (`--add-dir`) in the task definition; a `SessionStart` hook reports the review state, it does not run the review | calendar reminder + manual trigger |
 | Session-start hook | none | `SessionStart` hook (`hookSpecificOutput.additionalContext`) | none |
 | Local-vs-cloud tell | `allow_cowork_file_delete` present ⇒ local session | n/a | n/a |
-| Refresh the digests `bin-check.sh` reads ("Where the scripts are not on the device") | cloud session bridged to the device: `sha256sum "<skill directory>"/scripts/* > digests.txt` in the container, then the device file-commit tool carries that file to `[ABSOLUTE PATH]/skill-observations/.bin/digests.txt`; local session: the scripts are on the device, so `sha256sum` writes the file there directly | `sha256sum "<skill directory>"/scripts/* > "[ABSOLUTE PATH]/skill-observations/.bin/digests.txt"` — one shell, nothing to carry | n/a |
+| Refresh the digests `bin-check.sh` reads ("Where the scripts are not on the device") | cloud session bridged to the device: `{ grep -m1 '^version:' "<skill directory>"/SKILL.md; sha256sum "<skill directory>"/scripts/*; } > digests.txt` in the container, then the device file-commit tool carries that file to `[ABSOLUTE PATH]/skill-observations/.bin/digests.txt`; local session: the scripts are on the device, so `sha256sum` writes the file there directly | `{ grep -m1 '^version:' "<skill directory>"/SKILL.md; sha256sum "<skill directory>"/scripts/*; } > "[ABSOLUTE PATH]/skill-observations/.bin/digests.txt"` — one shell, nothing to carry | n/a |
 
 **The Claude Code column is the terminal CLI; the desktop app has a
 scheduler of its own.** Claude Code run inside the desktop app exposes
