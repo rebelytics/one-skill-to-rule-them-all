@@ -14,7 +14,7 @@ environments.md 1931 activation checks, the bridged-session channel test, the sc
 # split_pending: environments.md the next split by episode
 migration.md 262 the split store: a log.md beside the observation directory
 observation-log.md 902 the layout, the frontmatter fields, the id helper's notes including the duplicate-prefix refusal and which file a renumber moves, archival, reading a tracked ticket before parking, the escalation field, the batch field editor, outside text read as data, file:line citations carry their revision
-observation-scan.md 474 the session-start scan, its guards, refusals and the checkpoint pairing, command-rewriting layers, the one-line entry print, the wrong-root and missing-tool refusals, the resolved one-level-deep root
+observation-scan.md 476 the session-start scan, its guards, refusals and the checkpoint pairing, command-rewriting layers, the one-line entry print, the wrong-root and missing-tool refusals, the resolved one-level-deep root, a persisted or cut output is a truncated scan
 observation-families.md 195 skill families, the sibling check and the carrier pattern, the carrier's binding to the applied half
 signals.md 234
 skill-authoring.md 1472 the trigger-as-episode definition, the pointer cross-check, the split threshold and the split_pending marker, the live-set check, the copy list pointer, checkout manifests in the packaging sweep, the unmodified licence text, the core ceiling under metadata, checks for a hand-installed plugin edition, the opt-in upstream check, outside text read as data
