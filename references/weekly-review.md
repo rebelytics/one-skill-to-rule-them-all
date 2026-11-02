@@ -265,10 +265,9 @@ stays recommendation-first, where the label costs nothing. The record
 notes per decision whether it was status-quo or substantive and whether
 the pick matched the recommendation; only the substantive, unlabelled
 picks feed the acceptance rate, and the tier moves only after a handful
-of reviews. The failure shape: every decision presented
-recommendation-first and labelled is accepted, and the loop cannot tell
-good recommendations from anchoring — yet reads the number as grounds to
-loosen.
+of reviews. The failure shape: every recommendation-first, labelled
+decision is accepted, and the loop cannot tell good recommendations from
+anchoring — yet reads the number as grounds to loosen.
 
 Criterion (2) is about whose judgement is driving the change, not about
 the size of the diff. Where the observation records the removal or
@@ -303,11 +302,12 @@ mechanical work.
 
 **Retrieve before you escalate.** Before an item goes to the user, in
 either mode, name the question it asks and the records that could answer
-it — the project's history, archives, decision notes, code and
-configuration — and look. Escalate only when they are silent, disagree,
-or the decision is the user's by authority rather than by knowledge.
+it — history, archives, decision notes and any `decisions-*.md` file in
+the publishing or project folder, code, configuration — and search them;
+a hand-built decision list is not a search. Escalate only when they are
+silent, disagree, or the decision is the user's by authority, not knowledge.
 "Confirm with the owner" in an observation is a lead to a record, not an
-escalation trigger. Under each escalated item, list the records checked.
+escalation trigger. List the records checked under each escalation.
 
 **An escalation is recorded on the entry, and silence never decides it.**
 An entry the user has been asked about and has not answered looks unseen

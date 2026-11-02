@@ -351,9 +351,8 @@ with a short usage notice (e.g., "shared privately for internal use; please
 ask the author before redistributing"); no LICENSE file
 needed. All confidentiality sweeps still apply — other-client information
 must not leak even when the recipient is a known client. Do not treat "not
-internal" as "therefore open source": distribution channel determines the
-rights framing, not just the feedback routing (see the distribution-channel
-note below).
+internal" as "therefore open source": the channel sets the rights framing,
+not just the feedback routing (see the distribution-channel note below).
 
 ## Versioning releases
 
@@ -411,13 +410,14 @@ instead.
 ```
 
 The feedback section names its two checks inline because a standalone
-skill ships no reference holding the pre-flight below; this skill's own
-section points at the reference instead. Keep the canonical repository
-string byte-identical wherever it appears, scheme included: it is how
-redistributions and derivatives are traced. Credit wording is short-form
-("[Author] and contributors") in the frontmatter, the footer,
+skill ships no reference holding the pre-flight below. Keep the canonical
+repository string byte-identical wherever it appears, scheme included: it
+is how redistributions and derivatives are traced. Credit wording is
+short-form ("[Author] and contributors") in the frontmatter, the footer,
 reference-file and script headers, and long-form ("Created and maintained
-by [Author], improved by its community of users") in human-facing docs.
+by [Author], improved by its community of users") in human-facing docs. A
+per-file credit may join an existing header sentence — the line-neutral
+form for a skill at its ceilings; attribution never earns a ceiling raise.
 
 **A skill this skill helps create ships two maintenance aids.** Its README
 gets a short "How this skill improves" section, written for the skill's

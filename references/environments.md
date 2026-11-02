@@ -1150,8 +1150,7 @@ protections missing.
 So: deliver a config change as a **complete replacement file** built from
 the user's current one, never as a fragment to splice in; state in one line
 what else that file was carrying, so the user can verify it survived; and
-where the harness supports it, prefer a separate file over editing a shared
-one.
+where the harness allows, prefer a separate file over editing a shared one.
 
 ### If CLAUDE.md (or the equivalent config) is governance-protected
 
@@ -1197,8 +1196,7 @@ believes the strongest tier is active.
 
 The fallbacks above branch on two kinds of denial: a hard guard (a
 governance hook, a file-protection rule) and an interactive permission
-prompt that one user approval clears. There is a third, and it behaves like
-neither.
+prompt that one user approval clears. A third behaves like neither.
 
 An automated content classifier can refuse the edit on the grounds that the
 activation block is **third-party instruction text being written into a
@@ -1450,8 +1448,7 @@ permission tool (`allow_cowork_file_delete`) present in the tool surface
 Steps that must edit scheduled tasks, delete workspace files (review
 cleanup, keep-two pruning), or run git in the shared folder need a local
 session — treat that as a one-line precondition on those steps, and when
-reporting a mode-conditional limit, name the mode and the switch in the
-same breath.
+reporting a mode-conditional limit, name the mode and the switch with it.
 
 **A cloud session bridged to the user's machine writes observations
 through the device shell, at write time.** In a bridged session the agent
