@@ -214,8 +214,8 @@ fi
 # large log); one mv per stale resolved file, bounded by the files due
 ( cd "$d" && LC_ALL=C awk -v today="$today" 'FNR==1 {st=""; r=""; sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) nextfile; next}
     fm && /^---[[:space:]]*$/ {if (st ~ /^(actioned|declined|superseded)$/ && r ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/ && r < today) print FILENAME; nextfile}
-    fm && /^status:/ {st=$2}
-    fm && /^resolved:/ {r=$2}' [0-9]*.md 2>/dev/null | while IFS= read -r x; do
+    fm && /^status:/ {st=$2; gsub(/["\047]/, "", st)}
+    fm && /^resolved:/ {r=$2; gsub(/["\047]/, "", r)}' [0-9]*.md 2>/dev/null | while IFS= read -r x; do
       mv -n "$x" archive/ 2>/dev/null   # -n: never overwrite a same-named archived file
       if [ -e "$x" ]; then
         if [ -e "archive/$x" ]; then echo "NOTE: $x not archived — archive/$x already exists; compare the two copies by hand" >&2
