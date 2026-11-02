@@ -1872,10 +1872,13 @@ next session writes each as its own file in `observation-log/`]
 A cloud or scheduled run can have a filesystem of its own and no route to
 the workspace: the probe fails, and no folder-picker or device-bridge tool
 is on the tool surface — absent, not denied. Check once with a tool
-search; if none appears, the request-and-retry branch of Session Start
-step 1 has nothing to call, so skip it. The same file is the landing
-place when the folder request was refused and the one permitted retry was
-refused too.
+search; if none appears, skip Session Start step 1's request-and-retry
+branch, which has nothing to call. A bridge whose device lists no connected
+folders is not this case, whatever a reminder announced: the folder-grant
+tool (`device_request_folder_access` on a device bridge), called once for
+the announced path, precedes any no-workspace branch, and an auto-approved
+scheduled task may grant it with no prompt. This file is also the landing
+place when the folder request and its one permitted retry were refused.
 
 **Fallback order when the log is unreachable.** (a) The observation log.
 (b) A user-scoped store this surface can write and every other surface
