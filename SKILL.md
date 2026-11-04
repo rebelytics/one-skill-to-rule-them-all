@@ -33,7 +33,7 @@ cwd inside an ephemeral checkout — a git worktree under
 `.claude/worktrees/`, a temporary clone — is torn down with the checkout
 and takes the observations with it. **Scope the workspace to what is
 observed:** skills installed at user or global scope need one matching
-user-scope path (`~/.claude/skill-observations/` or the equivalent outside
+user-scope root (`~/.claude`, which holds `skill-observations/`, or one outside
 any project — written as an absolute path when more than one config home
 exists), shared across projects, tools and agents; keep a per-project
 anchor only for skills that exist in that project alone: a per-project
