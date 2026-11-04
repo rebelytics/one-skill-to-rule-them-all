@@ -424,19 +424,19 @@ than consolidating on your own judgement, because one plural case is
 legitimate (see the multi-log block in `weekly-review.md`).
 
 **The session-start scan lists the neighbours on every run.** One line of
-the scan (`scripts/session-start-scan.sh`) finds every
-`skill-observations/observation-log/` up to five levels under the
-pinned root's parent (one project folder below a projects folder; `.git`,
-`node_modules` and `skill-updates` trees pruned) and prints each with its
-file count and the date of its `checkpoints.log`'s last line — `logs under
-the parent (…): /a/proj=157 last=<date>  /a/other=19 last=none`; a shard
-still being written shows a recent date. One entry is the ordinary
-case. Several are either shards or the legitimate plural case, and the
-line cannot tell which: report it in one line, route to "Several
-observation logs on one machine" in `weekly-review.md`, and never
-consolidate from the scan. The probe is bounded by the parent's depth-5
-tree, not by any log's size; an empty line means the probe could not read
-the parent, since the pinned log itself is always under it.
+the scan (`scripts/session-start-scan.sh`) searches the anchors named here:
+the pinned root's parent to five levels, and to a workspace two folders
+below each the parent's siblings, the user-scope config home and its
+`projects/` (identity roots, `memory/`), `.git`, `node_modules` and
+`skill-updates` pruned — a search keyed on one directory's ancestry never
+sees a store kept at another scope. It prints each log with its file count, its
+`checkpoints.log`'s last date and `legacy=N` for a `log.md` beside it —
+`logs at the plausible anchors (…): /a/proj=157 last=<date>  /a/other=19
+last=none legacy=4`; another root's `log.md` beside its directory is a
+SPLIT STORE line naming that root. One entry is the ordinary case; several
+are shards or the legitimate plural case: report them in one line, route to
+"Several observation logs on one machine" in `weekly-review.md`, and never
+consolidate from the scan. An empty line means the probe could not read the parent.
 
 **Before creating a log, search for one.** Check the plausible anchor
 candidates — the pinned path, the project identity root, the
@@ -487,15 +487,15 @@ anchor is no longer among the plausible candidates above: sessions open
 a fresh log, the old one's open entries are read by no session, and both
 logs number from 1. So when Workspace creation makes a new log
 (`created=` names `observation-log` on its checkpoint line), list the
-sibling workspaces before the first write — every log under the pinned
-root's parent, which holds a renamed folder and an identity directory
-encoded from the old path alike, plus any other plausible anchor whose
+sibling workspaces before the first write — every log at the scan's anchors
+(the root's parent holds a renamed folder and an identity directory encoded
+from the old path alike), plus any other plausible anchor whose
 name contains the project's name — with each one's open entries:
 
 ```bash
-root="[ABSOLUTE PATH]"; parent=$(dirname "$root")   # the pinned root, quoted: it may contain a space; bash
-find "$parent" -maxdepth 5 \( -name .git -o -name node_modules -o -name skill-updates \) -prune \
-  -o -type d -path '*/skill-observations/observation-log' -print 2>/dev/null |
+root="[ABSOLUTE PATH]"; par=$(dirname "$root"); c="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"   # quoted: it may contain a space; bash
+for a in "$par" "$(dirname "$par")"/* "$HOME/.claude" "$HOME/.claude/projects" "$c" "$c/projects"; do [ -d "$a" ] && find "$a" -maxdepth 5 \( -name .git -o \
+  -name node_modules -o -name skill-updates \) -prune -o -type d -path '*/skill-observations/observation-log' -print 2>/dev/null; done | sort -u |
 while IFS= read -r d; do
   r=${d%/skill-observations/observation-log}; [ "$r" = "$root" ] && continue
   n=$(find "$d" -maxdepth 1 -name '*.md' -exec grep -l '^status: open' {} + 2>/dev/null | wc -l | tr -d ' ')
@@ -504,9 +504,9 @@ while IFS= read -r d; do
 done
 ```
 
-Every sibling prints, zero included; no output means no other log under
-the parent, or a parent the probe could not read (the scan's `logs under
-the parent` line is the cross-check). For a sibling with open entries,
+Every sibling prints, zero included; no output means no other log at the
+anchors, or anchors the probe could not read (the scan's `logs at the
+plausible anchors` line is the cross-check). For a sibling with open entries,
 name it in one line and offer to carry those entries over — never carry
 unasked, since two logs can be the legitimate plural case. A carried
 entry is appended to the new log through the write path, one at a time,

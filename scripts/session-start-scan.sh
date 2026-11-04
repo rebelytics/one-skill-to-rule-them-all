@@ -49,9 +49,9 @@
 # roots) or NOTE: legacy staging root line when
 # skill-observations/skill-updates/ (the pre-3.0 staging root) exists; a NOTE: pointer line when
 # skill-observations/MOVED.md exists; a GAP
-# line when the previous scan in checkpoints.log is 7 or more days old; the logs found up to
-# five levels under the root's parent, each with its entry count and its
-# checkpoints.log's last date; the active principles' headings; then one line per numbered entry,
+# line when the previous scan in checkpoints.log is 7 or more days old; the logs found at the
+# plausible anchors, each with its entry count, its checkpoints.log's last
+# date and any log.md beside it; the active principles' headings; then one line per numbered entry,
 # `id | status | skill | proposes_skill | title` (`-` for a field the header
 # lacks), parked entries after the others, an actioned, declined or
 # superseded entry as `id | status | skill | proposes_skill | resolved <date>
@@ -474,16 +474,53 @@ gap=$( [ -f "$ck" ] && LC_ALL=C awk -v today="$(date +%F)" '
 printf '%s [%s] session-start scan: files=%s parsed=%s principles=%s\n' "$(date '+%F %H:%M')" "${PWD##*/}" "$n" "$parsed" "$pr" \
   >> "$root/skill-observations/checkpoints.log"
 
-# --- sibling logs: every observation log up to five levels under the parent --
-# A report, never a reason to consolidate from here. Five levels reach a log
-# one project folder below a projects folder; .git, node_modules and
-# skill-updates trees are pruned, so a large parent stays cheap. Each log
-# carries its entry count and the date of its checkpoints.log's last line,
-# so a shard still being written reads differently from an abandoned one.
-find "$(dirname "$root")" -maxdepth 5 \( -name .git -o -name node_modules -o -name skill-updates \) -prune -o -type d -path '*/skill-observations/observation-log' -print 2>/dev/null | LC_ALL=C sort | while IFS= read -r o; do
-  w="${o%/observation-log}/checkpoints.log"; lc=none
-  [ -f "$w" ] && lc=$(tail -n 1 "$w" | cut -c 1-10) && case $lc in ([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;; (*) lc=none ;; esac
-  printf '%s=%s last=%s\n' "${o%/skill-observations/observation-log}" "$(find "$o" -maxdepth 1 -name '[0-9]*.md' | wc -l | tr -d ' ')" "$lc"; done | awk '{s = s "  " $0} END {print "logs under the parent (report; never consolidate from here):" s}'
+# --- sibling logs: every observation log at the plausible anchors ----------
+# A report, never a reason to consolidate from here. One directory's ancestry
+# cannot see a store kept at another scope, so the anchors are the homes
+# references/environments.md names: the root's parent (the root, its
+# siblings, a renamed folder), the parent's siblings, the user-scope config
+# home (~/.claude, and CLAUDE_CONFIG_DIR when set) and its projects/ (the
+# project identity roots and their memory/ directories). The parent keeps
+# five levels (a log one project folder below a projects folder, with
+# margin); every other anchor is searched to a workspace two folders below
+# it; .git, node_modules and skill-updates trees are pruned. The parent's
+# siblings are skipped when the parent is a top-level directory (its
+# siblings are system trees). A workspace
+# holding only a legacy log.md is listed too. Each log carries its entry
+# count (`-` without the directory), its checkpoints.log's last date, so a
+# shard still being written reads differently from an abandoned one, and
+# legacy=N for a log.md beside it: the split-store check reads every log
+# found, and another root's split store is a finding of its own.
+par=$(dirname "${root%/}"); anchors="$par"
+gp=$(dirname "$par")
+case $gp in
+  (/|.|[A-Za-z]:|[A-Za-z]:[/\\]) ;;
+  (*) for s_a in "$gp"/*; do [ -d "$s_a" ] && [ "$s_a" != "$par" ] && anchors="$anchors"$'\n'"$s_a"; done ;;
+esac
+for c_a in "${CLAUDE_CONFIG_DIR:-}" "${HOME:+$HOME/.claude}"; do
+  [ -n "$c_a" ] && anchors="$anchors"$'\n'"${c_a%/}"$'\n'"${c_a%/}/projects"
+done
+found=$(printf '%s\n' "$anchors" | while IFS= read -r a; do
+    [ -n "$a" ] && [ -d "$a" ] || continue
+    md=4; [ "$a" = "$par" ] && md=5
+    find "$a" -maxdepth "$md" \( -name .git -o -name node_modules -o -name skill-updates \) -prune \
+      -o \( -type d -path '*/skill-observations/observation-log' -o -type f -path '*/skill-observations/log.md' \) -print 2>/dev/null
+  done | sed 's|/skill-observations/observation-log$||; s|/skill-observations/log\.md$||' | LC_ALL=C sort -u)
+sib=
+while IFS= read -r w; do
+  [ -n "$w" ] || continue
+  o="$w/skill-observations/observation-log"; w_lg="$w/skill-observations/log.md"; w_ck="$w/skill-observations/checkpoints.log"
+  cnt=-; [ -d "$o" ] && cnt=$(find "$o" -maxdepth 1 -name '[0-9]*.md' | wc -l | tr -d ' ')
+  lc=none
+  [ -f "$w_ck" ] && lc=$(tail -n 1 "$w_ck" | cut -c 1-10) && case $lc in ([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;; (*) lc=none ;; esac
+  lgn=; [ -f "$w_lg" ] && lgn=$(grep -c '^### Observation ' "$w_lg" | tr -d ' ')
+  sib="$sib  $w=$cnt last=$lc${lgn:+ legacy=$lgn}"
+  # the pinned root's own split store is the SPLIT STORE line above
+  if [ -n "$lgn" ] && [ -d "$o" ] && [ "$w" != "${root%/}" ]; then
+    finding "SPLIT STORE — $w: log.md holds $lgn observations beside that root's observation-log/: an older installed copy still writes there; report the root and its copy's version, never migrate or consolidate another root from this scan (references/migration.md)"
+  fi
+done <<< "$found"
+printf 'logs at the plausible anchors (report; never consolidate from here):%s\n' "$sib"
 
 # --- content: printed with the headers below ---------------------------------
 # The active principles' headings.

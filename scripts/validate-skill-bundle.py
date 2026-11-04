@@ -1749,6 +1749,16 @@ SCAN_FIXTURES = [
     ("a sibling's entry count carries the date of its checkpoints.log's last line", "siblings", True, 0,
      "/projA=1 last=2026-01-05", 1, "/c/d="),
     ("depth 5 is the bound: a log there is listed", "siblings", True, 0, "/a/b/c=1 last=none", 1, ".git"),
+    ("a user-scope workspace is listed; past two folders below an anchor is not", "userscope", True, 0,
+     "/home dir/.claude=1 last=none  ", 1, "/x/y="),
+    ("the project identity root's memory/ workspace is listed", "userscope", True, 0,
+     "/home dir/.claude/projects/-w/memory=2 last=none", 1, ""),
+    ("another root's log.md beside its directory: SPLIT STORE names that root", "splitsib", True, 0,
+     "/old: log.md holds 2 observations beside that root's observation-log/", 1, ""),
+    ("a legacy count rides on another root's listing", "splitsib", True, 0,
+     "/old=1 last=none legacy=2", 1, ""),
+    ("a log.md-only workspace is listed with -, not a split store", "splitsib", True, 0,
+     "/legacy=- last=none legacy=1", 1, "/legacy: log.md"),
     ("a header key written twice is a NOTE naming the file and the key, active and archive", "dupkey", True, 0,
      "keep one line, never batch-rewrite: 0002-b.md (resolved), archive/0009-z.md (status)", 1, ""),
     ("a key-shaped run beside api_key: the file is named, never the match", "secret", True, 0,
@@ -1807,6 +1817,22 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
                     (sl / f"{j:04d}-x.md").write_text(f"---\nid: {j}\n---\n", encoding="utf-8")
             (pathlib.Path(tmp) / "projA" / "skill-observations" / "checkpoints.log").write_text(
                 "2026-01-05 09:00 [w] session-start scan: files=1 parsed=1 principles=absent\n", encoding="utf-8")
+        # HOME for the run, deeper than the parent's five levels: only the user-scope anchor reaches it
+        home = pathlib.Path(tmp) / "h" / "i" / "j" / "home dir"
+        if scenario == "userscope":   # the user scope, an identity root's memory/, one past the bound
+            for rel, k in ((".claude", 1), (".claude/projects/-w/memory", 2), (".claude/projects/-w/x/y", 1)):
+                sl = home / rel / "skill-observations" / "observation-log"
+                sl.mkdir(parents=True)
+                for j in range(1, k + 1):
+                    (sl / f"{j:04d}-x.md").write_text(f"---\nid: {j}\n---\n", encoding="utf-8")
+        if scenario == "splitsib":   # a split store and a log.md-only workspace beside the root
+            so_old = pathlib.Path(tmp) / "old" / "skill-observations"
+            (so_old / "observation-log").mkdir(parents=True)
+            (so_old / "observation-log" / "0001-x.md").write_text("---\nid: 1\n---\n", encoding="utf-8")
+            (so_old / "log.md").write_text("### Observation 1: A\n\n### Observation 2: B\n", encoding="utf-8")
+            (pathlib.Path(tmp) / "legacy" / "skill-observations").mkdir(parents=True)
+            (pathlib.Path(tmp) / "legacy" / "skill-observations" / "log.md").write_text(
+                "### Observation 1: A\n", encoding="utf-8")
         if scenario == "dupkey":
             (log / "archive" / "0009-z.md").write_text('---\nid: 9\nstatus: actioned\nstatus: open\n---\n', encoding="utf-8")
         if scenario == "resurrect":
@@ -1861,7 +1887,9 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
         if scenario == "split":
             (root / "skill-observations" / "log.md").write_text(
                 "### Observation 1: A\n\n### Observation 2: B\n", encoding="utf-8")
-        env = {k: v for k, v in os.environ.items() if k != "TASK_OBSERVER_WORKSPACE"}
+        env = {k: v for k, v in os.environ.items() if k not in ("TASK_OBSERVER_WORKSPACE", "CLAUDE_CONFIG_DIR")}
+        home.mkdir(parents=True, exist_ok=True)
+        env["HOME"] = str(home)
         import shutil
         args = [shutil.which("bash") or "bash", str(SCAN_SCRIPT)] + list(extra or [])
         if env_path is not None:
@@ -1903,7 +1931,7 @@ def scan_repeat_ok(scenario, prefix):
     if len(lines) != 2 or lines[0] != lines[1]:
         return False, f"{len(lines)} copies of the line"
     first, second, end = out.index(lines[0]), out.rindex(lines[0]), out.rindex("end of scan")
-    entries_at = out.index("logs under the parent")
+    entries_at = out.index("logs at the plausible anchors")
     counted = re.search(r"GAP\): (\d+), repeated", out)
     ok = (first < entries_at < second < end and side is not None and lines[0] + "\n" in side
           and counted is not None and side.count("\n") == int(counted.group(1)))
