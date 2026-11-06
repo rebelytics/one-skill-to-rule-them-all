@@ -1740,6 +1740,9 @@ SCAN_FIXTURES = [
     ("a marker below the shipped set: DUE names both versions", "oldmarker", True, 0,
      "DUE: starter-set reconciliation — marker v1 < shipped set v", 1, "DUE: workspace creation"),
     ("the artefacts and a current marker: no DUE line", "healthy", True, 0, "files: 2", 1, "DUE: "),
+    ("--skill-dir without a starter set: a NOTE, not a silent skip", "healthy", True, 0,
+     "NOTE: shipped starter set not found at /nonexistent/skill/references/starter-principles.md", 1, "DUE: ",
+     ["--skill-dir", "/nonexistent/skill"]),
     ("the session-start record is printed with its measured items", "healthy", True, 0,
      "session start: 1 storage=ok 2 scan=files 2 parsed 2", 1, ""),
     ("a missing artefact shows in the record's storage item", "fresh", True, 0,
@@ -1805,7 +1808,11 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
             (so / "last-review-date.txt").write_text("never\n", encoding="utf-8")
             (so / "cross-cutting-principles.md").write_text("# P\n\n## Active Principles\n", encoding="utf-8")
             (so / "starter-principles-reviewed.txt").write_text(
-                ("1" if scenario == "oldmarker" else shipped_starter_version()) + "\n", encoding="utf-8")
+                ("1" if scenario == "oldmarker" else "5") + "\n", encoding="utf-8")
+        fixture_skill = pathlib.Path(tmp) / "skill"   # the shipped set the scan reads, wherever this copy runs
+        (fixture_skill / "references").mkdir(parents=True)
+        (fixture_skill / "references" / "starter-principles.md").write_text(
+            "# Starter principles\n\nStarter set version: 5\n", encoding="utf-8")
         if scenario in ("oldstage", "splitstage"):
             for rnd in ("2025-01-01", "2025-01-08"):
                 (so / "skill-updates" / rnd).mkdir(parents=True)
@@ -1895,7 +1902,7 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
         home.mkdir(parents=True, exist_ok=True)
         env["HOME"] = str(home)
         import shutil
-        args = [shutil.which("bash") or "bash", str(SCAN_SCRIPT)] + list(extra or [])
+        args = [shutil.which("bash") or "bash", str(SCAN_SCRIPT), "--skill-dir", str(fixture_skill)] + list(extra or [])
         if env_path is not None:
             env["PATH"] = env_path
         ef = None

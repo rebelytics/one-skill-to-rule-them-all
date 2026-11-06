@@ -11,6 +11,10 @@
 #                     variable TASK_OBSERVER_WORKSPACE. One of the two is
 #                     required; the log is never resolved from the cwd. The
 #                     path may contain spaces.
+#   --skill-dir <dir>
+#                     the installed skill directory, read for the shipped
+#                     starter set; default: the directory above this script.
+#                     A copy run from skill-observations/.bin/ passes it.
 #   --entries-to <file>
 #                     write the per-entry listing to <file>
 #                     instead of stdout, for a channel that caps the output
@@ -117,12 +121,15 @@ set -u
 VERSION="3.11.0"   # equal to the skill's frontmatter version:; the end line names it
 
 entries=   # --entries-to target; empty = the entries print to stdout
+skill_dir= # --skill-dir: the installed skill directory; empty = the one this script sits in
 while [ $# -gt 0 ]; do
   case $1 in
     (--entries-to) [ $# -ge 2 ] || { echo "--entries-to needs a file path" >&2; exit 2; }; entries="$2"; shift 2 ;;
     (--entries-to=*) entries="${1#--entries-to=}"; shift ;;
+    (--skill-dir) [ $# -ge 2 ] || { echo "--skill-dir needs a directory" >&2; exit 2; }; skill_dir="$2"; shift 2 ;;
+    (--skill-dir=*) skill_dir="${1#--skill-dir=}"; shift ;;
     (--) shift; break ;;
-    (-*) echo "unknown option '$1' (the options are --entries-to <file>)" >&2; exit 2 ;;
+    (-*) echo "unknown option '$1' (the options are --entries-to <file> and --skill-dir <dir>)" >&2; exit 2 ;;
     (*) break ;;
   esac
 done
@@ -314,14 +321,18 @@ for x in observation-log/archive last-review-date.txt cross-cutting-principles.m
 done
 [ -n "$miss" ] && finding "DUE: workspace creation — missing: $miss; run the Workspace creation command (references/observation-log.md) before anything else this session"
 # Starter-set reconciliation: the marker against the shipped set, read from
-# the reference beside this script. Where that file is unreadable (a .bin/
-# copy), an absent marker is still due; an older one cannot be compared.
+# the installed skill (--skill-dir, else the directory this script sits in).
+# A copy run away from its install (.bin/) finds no set there: an absent
+# marker is still due, and an existing one cannot be compared — said in a
+# NOTE, never skipped silently.
 mk="$root/skill-observations/starter-principles-reviewed.txt"
-sp="$(dirname "$0")/../references/starter-principles.md"
+sp="${skill_dir:-$(dirname "$0")/..}/references/starter-principles.md"
 ship=; [ -r "$sp" ] && ship=$(sed -n 's/^Starter set version:[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$sp" | head -n 1)
 if [ ! -e "$mk" ]; then
   finding "DUE: starter-set reconciliation — skill-observations/starter-principles-reviewed.txt is absent; offer once, in a review or a session opened for skill work, never in another task's reply (references/starter-principles.md, Reconciliation)"
-elif [ -n "$ship" ]; then
+elif [ -z "$ship" ]; then
+  finding "NOTE: shipped starter set not found at $sp — the marker cannot be compared with it; pass --skill-dir <installed skill directory> (a copy run from skill-observations/.bin/ has no references/ beside it)"
+else
   mv_v=$(sed '1!d; s/[^0-9]//g' "$mk")
   if [ -z "$mv_v" ] || [ "$((10#$mv_v))" -lt "$ship" ]; then
     finding "DUE: starter-set reconciliation — marker v${mv_v:-?} < shipped set v$ship; offer once, in a review or a session opened for skill work, never in another task's reply (references/starter-principles.md, Reconciliation)"
