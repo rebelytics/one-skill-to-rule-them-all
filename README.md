@@ -127,7 +127,7 @@ If you try it in another environment, please let me know how it goes. Issues and
 2. Give the content of this repo (skill, readme and user guide) to the AI system of your choice and let it guide you towards the ideal configuration for your individual setup.
 3. Make sure that the skill loads in all sessions where it's needed (I solved this via an instruction in my CLAUDE.md file).
 4. Try to remember to ask "Any observations logged?" when you finish a session (I do this every time I archive a session). Sometimes, the skill then finds additional improvement potential that it didn't log before.
-5. Schedule a recurring review session that applies all open observations. Mine runs Monday, Wednesday and Friday morning, but you should adapt this to your needs.
+5. Schedule a recurring review session. Open observations can already shape a session as soon as they are logged: when one changes what the agent is about to do, it asks once and you accept or opt out. The review consolidates them into skill updates for you to install. Mine runs Monday, Wednesday and Friday morning, but you should adapt this to your needs.
 
 ## Contributing
 
