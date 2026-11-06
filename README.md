@@ -78,9 +78,9 @@ One honest boundary: the formal observation log and review cycle pay off most as
 
 The skill is a small bundle: `SKILL.md`, the files in `references/` that are loaded on demand (this keeps the always-loaded part lean), and six helper scripts in `scripts/`. Installing only SKILL.md works, but runs degraded and isn't recommended — the skill will tell you which files are missing.
 
-**Get the files:** download the `.skill` bundle attached to the latest release, or download the repo as a ZIP (Code → Download ZIP) / clone it and keep `SKILL.md`, `references/` and `scripts/` together.
+**Get the files:** download the `.skill` bundle attached to the latest release, or download the repo as a ZIP (Code → Download ZIP) / clone it and copy the `skills/task-observer/` folder, which holds `SKILL.md`, `references/` and `scripts/`. In this repository the skill lives in `skills/task-observer/`, and paths such as `references/environments.md` are relative to that folder.
 
-**Claude (web interface, desktop app, mobile app, Cowork):** without the release bundle, put `SKILL.md`, `references/` and `scripts/` into one folder, zip that folder and upload it via Settings → Customize. The skill is then available in all chats and in Cowork tasks.
+**Claude (web interface, desktop app, mobile app, Cowork):** without the release bundle, zip the `skills/task-observer/` folder and upload it via Settings → Customize. The skill is then available in all chats and in Cowork tasks.
 
 **Claude Code:** place the folder at `.claude/skills/task-observer/` (project-level) or in your user-level skills directory, preserving the `references/` and `scripts/` subfolders.
 

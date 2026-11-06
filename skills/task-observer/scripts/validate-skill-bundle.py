@@ -3321,6 +3321,10 @@ def check_repo_versions(repo_dir, fails):
     # name what it loaded without the repo-only manifest (which never ships
     # inside a bundle). It is a copy of the canonical number like the others.
     skill_md = repo_dir / "SKILL.md"
+    if not skill_md.is_file():   # a repo that keeps the skill under skills/<name>/
+        found = sorted((repo_dir / "skills").glob("*/SKILL.md")) if (repo_dir / "skills").is_dir() else []
+        if found:
+            skill_md = found[0]
     if skill_md.is_file():
         fm = frontmatter(skill_md.read_text(encoding="utf-8")) or ""
         m = re.search(r'(?m)^version:\s*["\']?([^"\'\s]+)["\']?\s*$', fm)
