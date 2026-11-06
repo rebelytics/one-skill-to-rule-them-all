@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "task-observer",
   "displayName": "Task Observer — One Skill to Rule Them All",
-  "description": "Observes agent work sessions and turns recurring friction, corrections and judgement calls into proposed skill improvements and new skill candidates, with a human review gate.",
+  "description": "Turns the corrections and repeated workflows of your work sessions into small, reviewed skill updates: every change comes with its evidence and a written reason, and nothing touches a skill until you approve and install it.",
   "version": "3.10.0",
   "author": {
     "name": "Eoghan Henn",

@@ -12,7 +12,7 @@
         "source": "github",
         "repo": "rebelytics/one-skill-to-rule-them-all"
       },
-      "description": "Observes agent work sessions and turns recurring friction, corrections and judgement calls into proposed skill improvements and new skill candidates, with a human review gate.",
+      "description": "Turns the corrections and repeated workflows of your work sessions into small, reviewed skill updates: every change comes with its evidence and a written reason, and nothing touches a skill until you approve and install it.",
       "category": "productivity",
       "keywords": [
         "agent-skills",
