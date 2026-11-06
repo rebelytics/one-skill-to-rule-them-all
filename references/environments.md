@@ -151,9 +151,9 @@ Start Protocol: loading the skill without running the protocol activates
 nothing. Any turn that will involve a tool call counts; do not classify
 the session as "too simple" from its opening message. A step you did not
 run is reported before the answer, in one line — never after it, where it
-reads as a suggestion. If the skill does not resolve on this turn, say
-which probe told you so (the skill listing, or the skill directory on
-disk), re-check the listing on every later turn that makes a tool call,
+reads as a suggestion. If the skill does not resolve on this turn, tell
+the user in your first reply, never only in a log; say which probe told
+you so (the skill listing, or the skill directory on disk), re-check the listing on every later turn that makes a tool call,
 and run the protocol the first time it resolves — a "not installed"
 verdict holds for one turn. Listed on disk but refused by the Skill tool
 ("Unknown skill"): read its SKILL.md directly and run the protocol.
@@ -573,6 +573,12 @@ and inject it rather than asking the agent to go and look:
 #!/bin/sh
 # SessionStart hook: inject activation + review state as additionalContext.
 d="$OBS_WORKSPACE/skill-observations"      # the pinned absolute path
+s="$OBS_SKILL_DIR"                          # the installed task-observer directory
+if [ ! -f "$s/SKILL.md" ] || [ ! -f "$s/scripts/new-observation.sh" ]; then   # the payload, not the workspace
+  msg="task-observer is NOT INSTALLED at $s (SKILL.md or scripts/ missing): tell the user in your first reply and offer to install it from the repository. Do not invoke it and do not offer a review."
+  msg=$(printf '%s' "$msg" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '\000-\037')
+  printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$msg"; exit 0
+fi
 open=$(find "$d/observation-log" -maxdepth 1 -name '*.md' -exec grep -l '^status: open$' {} + 2>/dev/null | wc -l | tr -d ' ')
 last=$(tr -d '\r' 2>/dev/null < "$d/last-review-date.txt"); last=${last:-never}   # a CRLF file must not carry \r into the JSON
 msg="Make the first tool call of this session one batched call that both lists the task-observer workspace ($OBS_WORKSPACE) and invokes the task-observer skill; then run its Session Start Protocol. Observation files are created only by scripts/new-observation.sh in the skill directory, never by copying a header."
@@ -588,7 +594,11 @@ msg=$(printf '%s' "$msg" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '\000-\037')   #
 printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$msg"
 ```
 
-The message names the resolved workspace and the whole first batch,
+The hook checks the payload before the workspace: a workspace, an
+instruction block and both hooks can all be in place while the skill
+directory is not, and a message built from the workspace alone keeps
+telling every session to invoke a skill it cannot invoke, with a review
+offer on top. Set `OBS_SKILL_DIR` beside `OBS_WORKSPACE`. The message names the resolved workspace and the whole first batch,
 because it is the one pre-skill text the harness delivers on turn 1
 ("The probe rides inside the first batched call", below): a message that
 only says "invoke the skill" leaves the probe to a skill not yet read,
@@ -676,8 +686,16 @@ try {
   for (const n of fs.readdirSync(path.join(base, 'observation-log')))
     if (n.endsWith('.md')) files.push(path.join(base, 'observation-log', n));
 } catch { process.exit(0); }                             // unreachable log: stay silent
-const touched = files.some((f) => { try { return fs.statSync(f).mtimeMs > started; } catch { return false; } });
-if (touched) process.exit(0);
+const touched = files.filter((f) => { try { return fs.statSync(f).mtimeMs > started; } catch { return false; } });
+// "I could not run" is not work: a checkpoint line saying the skill is not installed
+// would otherwise satisfy the backstop in every session while the bundle stays missing.
+let notInstalled = false;
+if (touched.length === 1 && touched[0] === files[0]) {
+  try { notInstalled = /not installed/i.test(fs.readFileSync(files[0], 'utf8').trimEnd().split('\n').pop()); } catch {}
+}
+if (notInstalled) block('task-observer backstop: skill bundle missing — this session logged that task-observer is ' +
+  'not installed. Tell the user in your reply and offer to install it from the repository. Fires once per session.');
+if (touched.length) process.exit(0);
 
 block('task-observer backstop: this session used tools but wrote no observation file and no checkpoint line. ' +
   'If the skill was never invoked, invoke it now; then write pending observations, or append a ' +
