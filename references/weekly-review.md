@@ -452,6 +452,10 @@ probe tool (`references/environments.md`, "A deferred probe tool moves the
 probe to batch 2") is not a finding. The failure shape: a late lookup
 looks compliant from every later batch, and the record is the one place
 the mismatch shows.
+The same pass reads `session-starts.log`: every session with a `loaded
+task-observer` line in `checkpoints.log` has a `session start:` line of the
+same day, and a load without one — the protocol loaded but not
+run — is a Log integrity finding.
 
 **Drain the observation inbox before the work queue is built.** Where this
 run can read the user-scoped store that sessions without the log park

@@ -1,6 +1,6 @@
 ---
 name: task-observer
-core_max_lines: 756
+core_max_lines: 758
 version: 3.11.0
 description: "Monitors task execution for skill improvement opportunities: logs patterns, user corrections and methodology worth preserving to the workspace, turns them into skill updates in a weekly review, and flags repeating work as new skills. Use during ANY multi-step task, agentic workflow, or work session. Also triggers in post-task feedback discussions and when the user mentions skill observations, the observation log, or skill taxonomy. Also known as \"One Skill to Rule Them All\" — trigger on this phrase too. IMPORTANT: invoke this skill before the FIRST tool call of any session and before writing or proposing a plan — any turn that will involve a tool call counts. This sentence is the session-start trigger and the only activation layer that survives an unreachable config file; pair it with a CLAUDE.md instruction or a session-start hook (references/environments.md). A subagent dispatched by a session already running it does not run it: it writes nothing and puts its findings in its report."
 license: CC-BY-4.0
@@ -104,6 +104,9 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
 Copy the seven items below into your first reply as `- [ ]` lines and tick
 each as it runs — an unticked item is reported, never assumed; the `- [ ]`
 items under How to Log are ticked the same way in the turn that writes.
+The scan also writes items 1, 2, 3, 6 and 7 with their outcomes to
+`skill-observations/session-starts.log`: in a run nobody reads, that line
+is the checklist's record, and items 4–5 go in the run's report.
 
 - [ ] **1. Storage.** The existence check for `skill-observations/` is also
    the workspace-mount probe — one `ls` of the pinned path, carried INSIDE

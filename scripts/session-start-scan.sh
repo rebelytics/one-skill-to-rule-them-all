@@ -76,6 +76,9 @@
 # whole, which the end line says.
 # Appends one line to skill-observations/checkpoints.log:
 #   YYYY-MM-DD HH:MM [<cwd's last segment>] session-start scan: files=N parsed=N principles=N
+# and one to skill-observations/session-starts.log (also printed), the
+# checklist items it can measure:
+#   YYYY-MM-DD HH:MM [<label>] session start: 1 storage=… 2 scan=… 3 review=… 6 staged=… 7 log=…
 #
 # Exit status:
 #   0  the scan ran (NOTE lines are findings, not failures)
@@ -473,6 +476,23 @@ gap=$( [ -f "$ck" ] && LC_ALL=C awk -v today="$(date +%F)" '
 # --- the trace: one line per session, with date, time and source -------------
 printf '%s [%s] session-start scan: files=%s parsed=%s principles=%s\n' "$(date '+%F %H:%M')" "${PWD##*/}" "$n" "$parsed" "$pr" \
   >> "$root/skill-observations/checkpoints.log"
+
+# --- the session-start record: the checklist items this scan can measure ----
+# The Session Start checklist lives in the agent's first reply, and a run
+# nobody reads (scheduled, delegated) skips it while doing the steps, so the
+# reply is no record. The items a script can measure are written here, one
+# line per session, to skill-observations/session-starts.log, and printed;
+# the review's Step 1 checks every session that loaded the skill left one.
+# Items 4 (activation) and 5 (concurrency) are judgements: the run reports them.
+rv=$(sed '1!d' "$root/skill-observations/last-review-date.txt" 2>/dev/null | tr -d '\r'); rv=${rv:-absent}
+rs=$(sed '1!d' "$root/skill-observations/review-started.txt" 2>/dev/null | tr -d '\r' | cut -c 1-40); rs=${rs:-absent}
+if [ -f "$su/PENDING.md" ]; then sg="manifest $(grep -c . "$su/PENDING.md" | tr -d ' ') lines, $su_n dirs"
+elif [ -d "$su" ]; then sg="no manifest, $su_n dirs"; else sg="none"; fi
+rec=$(printf '%s [%s] session start: 1 storage=%s 2 scan=files %s parsed %s 3 review=last %s, marker %s 6 staged=%s 7 log=%s entries; 4-5 in the run report' \
+  "$(date '+%F %H:%M')" "${PWD##*/}" "${miss:+missing: $miss}" "$n" "$parsed" "$rv" "$rs" "$sg" "$n")
+rec=${rec/1 storage= /1 storage=ok }
+printf '%s\n' "$rec" >> "$root/skill-observations/session-starts.log"
+printf '%s\n' "$rec"
 
 # --- sibling logs: every observation log at the plausible anchors ----------
 # A report, never a reason to consolidate from here. One directory's ancestry
