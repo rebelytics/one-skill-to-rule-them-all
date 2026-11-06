@@ -1990,7 +1990,11 @@ staged from the bundles this run packed, presented from the delivered-file
 list the presentation call returns (where the environment has no such
 call, from the staged paths listed in chat) — never from memory of having
 presented them. A difference is closed by presenting the missing bundles
-in one call and counting again. The template:
+in one call and counting again. Present at most 20 bundles per call,
+highest priority first: one 21-file call listed 21 delivered and showed
+20 cards. The delivered list is what was sent, not what the user saw, so
+the install check closes the count, and a skill whose installed copy is
+still the old one is re-presented by name. The template:
 
 ```markdown
 ## Weekly Skill Review Complete — [date]
