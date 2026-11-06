@@ -3,7 +3,7 @@
   "name": "task-observer",
   "displayName": "Task Observer — One Skill to Rule Them All",
   "description": "Turns the corrections and repeated workflows of your work sessions into small, reviewed skill updates: every change comes with its evidence and a written reason, and nothing touches a skill until you approve and install it.",
-  "version": "3.10.0",
+  "version": "3.11.0",
   "author": {
     "name": "Eoghan Henn",
     "url": "https://rebelytics.com"
