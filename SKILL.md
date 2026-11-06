@@ -6,7 +6,7 @@ description: "Monitors task execution for skill improvement opportunities: logs 
 license: CC-BY-4.0
 metadata:
   author: Eoghan Henn and contributors
-  source: github.com/rebelytics/one-skill-to-rule-them-all
+  source: https://github.com/rebelytics/one-skill-to-rule-them-all
 ---
 
 # Task Observer — Continuous Skill Discovery & Improvement
