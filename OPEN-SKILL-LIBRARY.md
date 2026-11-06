@@ -8,8 +8,8 @@ A listing is not a security review: read a skill before you install it. This pag
 
 | Skill | What it does | Licence | Last skill update |
 |---|---|---|---|
-| [skill-publishing](https://github.com/rebelytics/skill-publishing) | Publishes agent skills as open-source repositories and keeps the published copies identical to the installed ones. | CC BY 4.0 | 2026-10 |
-| [task-observer](https://github.com/rebelytics/one-skill-to-rule-them-all) | Watches your work sessions, logs where skills fall short, and turns the observations into reviewed skill updates. | CC BY 4.0 | 2026-10 |
+| [skill-publishing](https://github.com/rebelytics/skill-publishing) | Publishes agent skills as open-source repositories and keeps the published copies identical to the installed ones. | CC BY 4.0 | 2026-11 |
+| [task-observer](https://github.com/rebelytics/one-skill-to-rule-them-all) | Watches your work sessions, logs where skills fall short, and turns the observations into reviewed skill updates. | CC BY 4.0 | 2026-11 |
 
 ## AI visibility strategy
 
@@ -25,8 +25,9 @@ A listing is not a security review: read a skill before you install it. This pag
 | Skill | What it does | Licence | Last skill update |
 |---|---|---|---|
 | [peec-ai-mcp](https://github.com/rebelytics/peec-ai-mcp) | Companion skill for the Peec AI MCP server: reports, competitive analysis and reading Peec metrics correctly. | CC BY 4.0 | 2026-10 |
-| [searchviu-mcp](https://github.com/rebelytics/searchviu-mcp) | Companion skill for the searchVIU MCP server: querying crawl reports, date filters, row caps and API passthrough. | CC BY 4.0 | 2026-10 |
-| [sistrix-mcp](https://github.com/rebelytics/sistrix-mcp) | Companion skill for the SISTRIX MCP server: visibility, keyword, backlink and AI visibility data. | CC BY 4.0 | 2026-10 |
+| [screaming-frog-mcp](https://github.com/rebelytics/screaming-frog-mcp) | Companion skill for the Screaming Frog SEO Spider MCP server: querying a crawl without flooding the context, response shapes and cost traps. | CC BY 4.0 | 2026-11 |
+| [searchviu-mcp](https://github.com/rebelytics/searchviu-mcp) | Companion skill for the searchVIU MCP server: querying crawl reports, date filters, row caps and API passthrough. | CC BY 4.0 | 2026-11 |
+| [sistrix-mcp](https://github.com/rebelytics/sistrix-mcp) | Companion skill for the SISTRIX MCP server: visibility, keyword, backlink and AI visibility data. | CC BY 4.0 | 2026-11 |
 
 ## Technical SEO
 
