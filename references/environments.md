@@ -144,7 +144,7 @@ skill that never loads cannot announce that it was relevant.
 ### The activation block
 
 ```text
-(task-observer activation block — template of v3.10.0)
+(task-observer activation block — template of v3.11.0)
 Before the first tool call of any session, and before writing or
 proposing a plan, invoke the task-observer skill AND run its Session
 Start Protocol: loading the skill without running the protocol activates
@@ -212,7 +212,7 @@ channel is owned by a caller"; which runs those are: "Before writing a
 user-scope block" below). The last line lets the review's Step 2 fetch a
 foreign-maintained skill's upstream version — the one network use a
 review starts; leave it out to keep reviews local. A block from before
-v3.10.0 carries these lines inside it; they are read the same way there.
+v3.11.0 carries these lines inside it; they are read the same way there.
 
 **The first line is the template's stamp, and an upgrade does not move
 it.** The block lives in the user's instruction file, outside the bundle,
@@ -225,7 +225,7 @@ the version that releases it, never under the released one, since two
 texts under one stamp read as the same block to step 4. Session Start
 step 4 compares the stamp with this version's: a block whose stamp
 is older, or has none, is reported in one line with how it differs — the
-paragraphs it lacks, or, for a block from before v3.10.0, the paragraphs
+paragraphs it lacks, or, for a block from before v3.11.0, the paragraphs
 that now live in the skill — and the current block is offered whole, the
 configuration lines beside it kept; the file is never rewritten unasked. On every upgrade, list every config home that holds a
 copy of the skill and upgrade them together, then diff each installed
