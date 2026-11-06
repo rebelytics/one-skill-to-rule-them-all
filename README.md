@@ -174,6 +174,9 @@ task-observer is indexed in these community lists and skill directories:
 - [Archestack — Best of Vibe Coding](https://archestack.com/best-of-vibe-coding/projects/one-skill-to-rule-them-all/)
 - [AI TRY — Harness teardown](https://aitryed.com/en/teardowns/harness/task-observer/)
 - [VITON13 — Agent skills](https://school.viton13.com/skills/task-observer)
+- [Skillario](https://skillario.es/skills/task-observer/)
+- [hotskills.dev](https://hotskills.dev/skill/rebelytics-one-skill-to-rule-them-all/)
+- [ToolPassed](https://toolpassed.com/skills/one-skill-to-rule-them-all/)
 
 ## Recommended by
 
@@ -232,6 +235,12 @@ I would like to thank the following creators, platforms, publications, companies
 - Tech from Korea (전데요옹): [https://techfromkorea.com/read/claude-tools/](https://techfromkorea.com/read/claude-tools/)
 - John Paolo Ruelo (jeyps.dev): [https://jeyps.dev/blog/task-observer-the-skill-that-improves-your-other-skills](https://jeyps.dev/blog/task-observer-the-skill-that-improves-your-other-skills)
 - SkillCritic: [https://skillcritic.com/skills/rebelytics/one-skill-to-rule-them-all/](https://skillcritic.com/skills/rebelytics/one-skill-to-rule-them-all/)
+- The Claude Atlas: [https://theclaudeatlas.vercel.app](https://theclaudeatlas.vercel.app)
+- Collective Brain: [https://collectivebrain.de/en/skills/task-observer/](https://collectivebrain.de/en/skills/task-observer/)
+- ひで (Claude Code ズボラ塾): [https://github.com/claudecode-chefhide/claude-code-skills-5](https://github.com/claudecode-chefhide/claude-code-skills-5)
+- Smartech: [https://smartech.tistory.com/362](https://smartech.tistory.com/362)
+- Cindy Zhu: [https://cindyzhu.com.au/guides/5-claude-code-skills-10x.html](https://cindyzhu.com.au/guides/5-claude-code-skills-10x.html)
+- 飞熊 (East196): [https://east196.cn/index.php/2026/10/29/task-observer-%e8%b0%83%e7%a0%94-3-6k-%e6%98%9f%e7%9a%84-%e4%b8%87%e6%8a%80%e8%83%bd%e4%b9%8b%e6%af%8d-%e4%b8%80%e4%b8%aa%e8%a7%82%e5%af%9f-84-%e4%b8%aa%e6%8a%80%e8%83%bd%e7%9a%84%e8%87%aa%e8%bf%9b/](https://east196.cn/index.php/2026/10/29/task-observer-%e8%b0%83%e7%a0%94-3-6k-%e6%98%9f%e7%9a%84-%e4%b8%87%e6%8a%80%e8%83%bd%e4%b9%8b%e6%af%8d-%e4%b8%80%e4%b8%aa%e8%a7%82%e5%af%9f-84-%e4%b8%aa%e6%8a%80%e8%83%bd%e7%9a%84%e8%87%aa%e8%bf%9b/)
 
 If I forgot to list your recommendation here, please let me know or submit it via a PR in the same format as the others.
 
