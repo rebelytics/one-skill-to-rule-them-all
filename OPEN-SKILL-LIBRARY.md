@@ -29,7 +29,7 @@ A listing is not a security review: read a skill before you install it. This pag
 | [searchviu-mcp](https://github.com/rebelytics/searchviu-mcp) | Companion skill for the searchVIU MCP server: querying crawl reports, date filters, row caps and API passthrough. | CC BY 4.0 | 2026-11 |
 | [sistrix-mcp](https://github.com/rebelytics/sistrix-mcp) | Companion skill for the SISTRIX MCP server: visibility, keyword, backlink and AI visibility data. | CC BY 4.0 | 2026-11 |
 
-## Technical SEO
+## Technical & International SEO
 
 | Skill | What it does | Licence | Last skill update |
 |---|---|---|---|
