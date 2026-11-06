@@ -20,9 +20,11 @@ Choose the user scope.
 ## Where it runs
 
 - **Claude Code in a terminal:** verified.
-- **Cowork:** Cowork loads the plugins enabled on your claude.ai account, so
-  the plugin has to be enabled there; a terminal install never reaches
-  Cowork. This has not been tried yet.
+- **Cowork:** a terminal install never reaches Cowork, which loads the
+  plugins enabled on your claude.ai account. Tried with the plugin enabled
+  there: in a fresh cloud Cowork session no note appeared, and another
+  hook plugin enabled the same way did not fire either, so Cowork does
+  not appear to run these hooks. Reports from other setups are welcome.
 - **The desktop app's Code tab:** unknown.
 
 Please report what you see, whether it works or not, in a new issue in this
