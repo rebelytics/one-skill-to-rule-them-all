@@ -1736,7 +1736,13 @@ hard-won discipline densely), and existing agent-instruction files, which
 are largely a record of corrections the user already had to make.
 Backfilled entries cite the durable artefact, and one batched write
 satisfies the same-turn rule; the pass runs once, and the scheduled
-review takes over afterwards.
+review takes over afterwards. **A backfill has no live context to correct
+it**, so it compresses summaries into claims nobody re-reads: every
+factual sentence in a backfilled Issue cites the file and line (or the
+commit) that states it; a number, frequency or ordering that cannot be
+pointed at is written as an impression ("seemed to") or left out; and one
+read-only claim check over the backfilled entries runs before they are
+presented, reading each cited line against its sentence.
 
 **The same pass, scoped to one named session.** "Review today's session
 retrospectively" and "the one where we did X" name a finished session,
