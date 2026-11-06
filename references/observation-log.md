@@ -110,15 +110,20 @@ rather than this command: `starter-principles-reviewed.txt` (starter-set
 reconciliation) and `skill-families.md` (created when the first family
 is named).
 
-**A read-only or permission error on an allowlisted path is a missing
-path, not an unwritable log.** When this command fails with `Read-only
-file system` or a permission error on a workspace path the harness's
-write allowlist names, the likely cause is that the path does not exist
-yet and the sandbox cannot create it (`environments.md`, "Anchoring the
-workspace", "A grant names a path"). Say that to the user in one line and
-hand them the fix — create `skill-observations/` and `skill-updates/`
-under the pinned root from outside the sandbox — instead of retrying
-through another interface or falling through to the unwritable-log or
+**A read-only or permission error is one of two cases — tell them apart
+before naming a remedy.** When this command fails with `Read-only file
+system` or a permission error on a workspace path, read the harness's
+write allowlist first (`environments.md`, "A grant names a path"):
+(a) **the allowlist names the path** — it is missing and the sandbox cannot
+create it: hand the user the fix in one line, create `skill-observations/`
+(the log) and `skill-updates/` (staged skill updates) under the pinned root
+from outside the sandbox; (b) **the allowlist does not name it** — creating
+the folders cannot help: the fix is an allowlist entry for both folders in
+the harness settings, plus the folders; until then, writes go through an
+approved unsandboxed run or report-back mode (`environments.md`). Test
+writability with a probe (`touch` and `rm` of a file in each folder), not
+existence, so case (b) surfaces here and not at the first checkpoint. Never
+retry through another interface or fall through to the unwritable-log or
 no-filesystem branches.
 
 The assertion loop is the half that matters, because the four artefacts

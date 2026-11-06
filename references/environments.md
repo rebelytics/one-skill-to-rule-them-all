@@ -498,6 +498,12 @@ install time, from outside the sandbox — by the user or an install step —
 and only then rely on the session to create everything below them. The
 folder picker and the one-retry rule for a failed write do not help here:
 every interface inside the same sandbox sees the same read-only mount.
+A path the allowlist does not name at all is the other case: creating it
+from outside does not help, because the sandbox still refuses the write.
+The fix is the allowlist entry — in Claude Code's user settings,
+`"sandbox": {"filesystem": {"allowWrite": ["~/.claude/skill-observations", "~/.claude/skill-updates"]}}`
+for a user-scope workspace, which applied without a restart where it was
+reported — and a `touch`/`rm` probe in both folders confirms it.
 The diagnosis at the moment of failure is in `observation-log.md`
 ("Workspace creation").
 
