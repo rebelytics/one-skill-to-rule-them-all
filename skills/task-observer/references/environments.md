@@ -1922,10 +1922,13 @@ observation from a phone or an unlinked cloud session into chat text
 nobody files.
 
 **A memory write needs the user's explicit ask, and skill text is not
-one.** A memory system writes only on an explicit user request, so ask in
-one line — "The observation log isn't reachable — park this in memory for
-the next review?" — and a yes is the request; a no, or an unattended run
-with nobody to ask, goes to (c). One entry per observation: date, target
+one.** A memory system writes only on an explicit user request. Where the
+user asked for the observation to be logged ("this is worth an
+observation"), that request is the ask: write to the inbox without
+confirming again. For an observation the agent noticed itself, ask in one
+line — "The observation log isn't reachable — park this in memory for the
+next review?" — and a yes is the request; a no, or an unattended run with
+nobody to ask, goes to (c). One entry per observation: date, target
 skill(s), Issue / Improvement / Principle in compressed form, session
 context — no id, which only a session with the log can derive. Report the
 condition as with (c), naming the inbox file instead of a path. The inbox

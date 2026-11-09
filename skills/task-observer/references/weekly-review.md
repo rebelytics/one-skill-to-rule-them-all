@@ -1337,6 +1337,14 @@ verification"), because a dated first-party claim is forbidden there
 (`references/skill-authoring.md`, Timelessness).
 The cost is one query; the alternative is a rule that is wrong in exactly
 the cases nobody sampled.
+
+**An example a published skill takes from an observation is invented,
+never quoted.** Before staging, rewrite it into an example from an
+unrelated vertical whose vertical, market shape and figures trace back to
+no session, and name each such example's source as "invented" in the
+manifest entry's per-change summary. A tripwire scan matches names, and
+recognisability comes from combinations: two real search terms with their
+volumes can point at one client with no listed term in them.
 A command the entry quotes is a claim of this kind; its `commands_verified:`
 clause (`observation-log.md`) says whether anyone has run it. A predicate
 the entry proposes — a regex, a hook condition — is one too, and a
