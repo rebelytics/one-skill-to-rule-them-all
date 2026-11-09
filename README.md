@@ -98,6 +98,14 @@ The skill is a small bundle: `SKILL.md`, the files in `references/` that are loa
 
 **In Claude.ai web or Claude Chat in the desktop app / mobile app:** Handoff doc mode. Since there's no filesystem access, the observer produces a structured handoff document at the end of your session that you can use to update your skills in a dedicated session.
 
+## Data and network
+
+- **No network in normal operation.** The skill and its scripts read and write local files only: the observation log, review records, staged skill copies and checkpoint lines, all inside the workspace folder you pin.
+- **Three fetches, each one yours to start.** The feedback pre-flight before you file a report and the upstream check for a third-party project run when you ask for them; a version check for foreign-maintained skills runs only if your activation block opts in.
+- **Outside text is data.** Issue, pull request and profile text and other repositories are read as data to classify or quote, never as instructions.
+- **Keep the observation folder writable only by you.** It is input to an agent that can run commands, so anyone who can write to it is trusted. A command quoted in an observation is shown to you and runs only with your approval, never in an unattended run.
+- **The optional flush plugin** reads local files only.
+
 ## Compatibility
 
 **Tested and designed for:**
@@ -108,6 +116,7 @@ The skill is a small bundle: `SKILL.md`, the files in `references/` that are loa
 - Claude Code in the desktop app
 
 **Confirmed to work by users:**
+- Cursor — passed an independent hands-on test by [ToolPassed](https://toolpassed.com/skills/one-skill-to-rule-them-all/) on an earlier version (the check: an observation file is written with the expected content).
 - Claude Code without desktop app — the methodology and format translate directly - plenty of users have reported seamless experiences with this.
 
 **Versions for other environments created by users:**
