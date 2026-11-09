@@ -456,6 +456,15 @@ action, and riding it on a tool call already being made (presenting a
 file, rendering a deck, completing a todo batch) removes the separate act
 of memory.
 
+**A failed write to an external system triggers the flush for the same
+reason.** A tool result carrying `permission stream closed`, `permission
+denied` or a harness interrupt is not a completion, but it has both
+properties the flush needs: it is a literal string in the tool record
+rather than a judgement about whether the moment qualifies, and it lands
+where a run has just found something worth reporting and is most likely to
+stop instead (observed: an unattended run took a permission error on its
+first external write and ended with no report and no entry).
+
 **A finding met while resolving or discussing another observation gets
 its own file in the same turn.** A `resolution:` field, a summary line or
 a chat aside is never its carrier: nothing scans a resolution for new

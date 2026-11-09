@@ -150,8 +150,10 @@ proposing a plan, invoke the task-observer skill AND run its Session
 Start Protocol: loading the skill without running the protocol activates
 nothing. Any turn that will involve a tool call counts; do not classify
 the session as "too simple" from its opening message. A step you did not
-run is reported before the answer, in one line — never after it, where it
-reads as a suggestion. If the skill does not resolve on this turn, tell
+run goes to session-starts.log; the reply carries it, in one line before
+the answer, only when the user can act on it (a failed probe, a review or
+staged update due, an activation gap). If the skill does not resolve on
+this turn, tell
 the user in your first reply, never only in a log; say which probe told
 you so (the skill listing, or the skill directory on disk), re-check the listing on every later turn that makes a tool call,
 and run the protocol the first time it resolves — a "not installed"
@@ -159,12 +161,12 @@ verdict holds for one turn. Listed on disk but refused by the Skill tool
 ("Unknown skill"): read its SKILL.md directly and run the protocol.
 
 After completing each task, list the observation records written this
-session in the same turn and report a one-line summary from that listing
-(ids and titles, or "none logged" followed by one line per user correction
-and per incident in the task, each with why it is not an observation —
-one-off, already captured in <skill>) — never from memory of writing
-them. This is the backstop: it catches a session in which the skill
-never ran at its first task boundary.
+session in the same turn and append a one-line summary from that listing
+to checkpoints.log (ids and titles, or "none logged" followed by one line
+per user correction and per incident in the task, each with why it is not
+an observation) — never from memory of writing them. The reply names only
+what was logged, in one line; "none logged" stays in the file. This is the
+backstop: it catches a session in which the skill never ran.
 
 The task-observer workspace for this project is:
   [ABSOLUTE PATH]
@@ -258,6 +260,11 @@ start WSL's bash instead; name Git's `bash.exe` by its full path there.
 SKILL.md's `[workspace folder]` definition states the rule; this is where
 to pin it, how a stable anchor still goes plural, and which plural case is
 legitimate.
+
+A workspace under any `.claude/` folder — the config home or a project's
+own — that a headless run will write is proved by one write on the first
+firing: headless Edit and Write refuse it as a sensitive file ("The access
+grant is part of the task definition, not of the path", below).
 
 Fill in the path when installing. Pinning turns anchoring into a one-time
 decision instead of one the agent re-litigates every session with a fresh
@@ -363,7 +370,9 @@ legitimate (see the multi-log block in `weekly-review.md`).
 
 **The session-start scan lists the neighbours on every run.** One line of
 the scan (`scripts/session-start-scan.sh`) searches the anchors named here:
-the pinned root's parent to five levels, and to a workspace two folders
+the pinned root's parent to five levels (four where the parent is the
+home folder, as for a `~/.claude` workspace, with `Library` and `.Trash`
+pruned and other users' homes skipped), and to a workspace two folders
 below each the parent's siblings, the user-scope config home and its
 `projects/` (identity roots, `memory/`), `.git`, `node_modules` and
 `skill-updates` pruned — a search keyed on one directory's ancestry never
@@ -375,6 +384,14 @@ SPLIT STORE line naming that root. One entry is the ordinary case; several
 are shards or the legitimate plural case: report them in one line, route to
 "Several observation logs on one machine" in `weekly-review.md`, and never
 consolidate from the scan. An empty line means the probe could not read the parent.
+The search runs after the entries print and stops at a time limit
+(`TASK_OBSERVER_SEARCH_SECONDS`, default 10): a cut search is a `NOTE:
+sibling-log search stopped at its N-second limit …` line, and its listing is
+partial, never "no other log". The scan also tests the working directory
+and the folders around the skill's resolved install (its parent and that
+parent's parent) for a `skill-observations/observation-log/`; one that is
+not the pinned root is a `SPLIT STORE — a second observation log at …`
+line: report both roots and ask.
 
 **Before creating a log, search for one.** Check the plausible anchor
 candidates — the pinned path, the project identity root, the
@@ -619,6 +636,26 @@ Microsoft Store stub under `WindowsApps`, and neither runs the hook.
 Register the hook with the interpreter's full path (for Python, `py -0p`
 lists the real installs; skip any `WindowsApps` path).
 
+**Scan in the hook — the optional variant that keeps the scan out of the
+model.** Where the per-session cost of the in-model scan matters (it grows
+with the backlog), the hook runs the scan itself and injects only its
+findings and its end line; the full output stays on disk:
+
+```bash
+out="$d/last-session-scan.txt"
+bash "$s/scripts/session-start-scan.sh" "$OBS_WORKSPACE" > "$out" 2>&1; rc=$?
+sum="task-observer SessionStart hook: probe ok; scan exit $rc; full output $out."
+[ "$rc" -eq 0 ] && sum="$sum $(cat "$d/last-scan-findings.txt" 2>/dev/null) $(tail -n 1 "$out")"
+msg="$msg $sum"
+```
+
+The lines go before the final escape-and-print, so they reach the model in
+the same message. Session Start step 2 treats a summary reporting `probe ok`
+and `scan exit 0` as the scan; an absent summary, a non-zero exit or a
+failed probe runs the in-model scan as before. The skill's description is
+unchanged: it is the activation layer for every install, and an install with
+no hook still needs it.
+
 The count is of files whose `status` field reads `open` — not of files
 in the directory. Resolved entries deliberately stay in `observation-log/`
 until the day after they were resolved (the grace period lives in the
@@ -679,7 +716,7 @@ if (toolUses < MIN_TOOL_USES) process.exit(0);
 
 if (!(started > 0)) block('task-observer backstop: cannot tell when this session started (no birth time, no ' +
   'transcript timestamp), so it cannot check the log. Check by hand that this session wrote an observation ' +
-  'or a checkpoints.log line, and report the one-line summary. Fires once per session.');
+  'or a checkpoints.log line, and write the one-line summary to checkpoints.log (the reply names only what was logged). Fires once per session.');
 
 const files = [path.join(base, 'checkpoints.log')];
 try {
@@ -700,7 +737,7 @@ if (touched.length) process.exit(0);
 block('task-observer backstop: this session used tools but wrote no observation file and no checkpoint line. ' +
   'If the skill was never invoked, invoke it now; then write pending observations, or append a ' +
   '"no observations" line to checkpoints.log naming each user correction and incident of the session and why it ' +
-  'is not an observation, and report the one-line summary. Fires once per session.');
+  'is not an observation, and write the one-line summary to checkpoints.log (the reply names only what was logged). Fires once per session.');
 ```
 
 **The session's start time is the fragile input.** A transcript's birth
@@ -1549,12 +1586,13 @@ creates, a task the scheduler lists is not a run that succeeded, and a
 firing whose report says a write was refused is a failed setup, not a
 review that ran. Claude Code headless (`claude -p`) can refuse writes
 under `~/.claude/` through the Edit and Write tools as a sensitive file,
-with nobody present to approve, while Bash writes pass (reported on one
-install; whether a settings allow-rule lifts it is untested): for a
-scheduled review, anchor the workspace outside `~/.claude/` or prove the
-write on the first firing.
-(The run-time skip note: `references/weekly-review.md`, offline-workspace
-policy.)
+with nobody present to approve, while Bash writes pass; a Write under a
+project's own `.claude/` folder is refused too, and an `Edit(path)` allow
+rule did not lift it, while `Write(...)` rules are not matched at all
+(reported on one install, tested): for a scheduled
+review, anchor the workspace outside any `.claude/` folder or prove the
+write on the first firing. (The run-time skip note:
+`references/weekly-review.md`, offline-workspace policy.)
 
 **Managed skills directories (dotfile managers, sync tools).** Where the
 skills directory is generated by chezmoi, GNU Stow, yadm, a symlinked

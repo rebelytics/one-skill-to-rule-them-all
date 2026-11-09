@@ -32,8 +32,9 @@
 # header key occurs twice; a named key holds a one-line value (a block value
 # is edited with the editing tool); the new text differs from the old ONLY on
 # the named keys' lines — every other line in place, byte for byte — plus the
-# renumber line a rename appends; and no new header line trips the scan's
-# suspect-YAML rules. A plan that sets `status: actioned` is refused unless
+# renumber line a rename appends; a `title:` the plan sets holds at most 200
+# characters (its quotes aside; the creation helper's limit); and no new
+# header line trips the scan's suspect-YAML rules. A plan that sets `status: actioned` is refused unless
 # the new `resolution:` gives every `skill:` member a disposition
 # (`<member>: applied|added|excluded|carried …`, bare name), and, when it
 # closes the entry as partially applied ("partially applied" or "carried")
@@ -168,6 +169,10 @@ pts='FNR==1 {fm = 1; next}
     miss = ""; for (k = 1; k <= n; k++) if (res !~ ("\\(" k "\\)[[:space:]]*(landed at [^[:space:];,]+:[0-9]+|carried by #[0-9]+|not a point)")) miss = miss (miss == "" ? "" : ",") k
     print n " " (miss == "" ? "-" : miss)}'
 
+# title: is measured in characters, its enclosing quotes aside (UTF-8
+# continuation bytes dropped before an LC_ALL=C count) — the creation
+# helper's limit, so an edit cannot grow a title the create would refuse.
+title_max=200
 t=$(mktemp -d 2>/dev/null) || { echo "cannot create a scratch directory (mktemp -d)" >&2; exit 1; }
 trap 'rm -rf "$t"' EXIT   # the scratch directory this run created, nothing else
 refuse=
@@ -233,6 +238,12 @@ while IFS= read -r f; do
     ln=$(sed -n "s/^K \([0-9]*\) $k\$/\1/p" "$t/map.$i")
     grep -q "^C $((ln + 1))\$" "$t/map.$i" && { bad=1; no "$f: $k holds a block value on the lines below it — edit it with the editing tool"; }
     case $v in (*$'\r'*|*$'\n'*) bad=1; no "$f: the value for $k spans lines" ;; esac
+    if [ "$k" = title ]; then
+      tl=$(printf '%s\n' "$v" | LC_ALL=C awk '{t = $0; sub(/^[[:space:]]+/, "", t); sub(/[[:space:]]+$/, "", t)
+        if (t ~ /^".*"$/ || t ~ /^\047.*\047$/) t = substr(t, 2, length(t) - 2)
+        gsub(/[\200-\277]/, "", t); print length(t); exit}')
+      [ "${tl:-0}" -gt "$title_max" ] && { bad=1; no "$f: title: is $tl characters, over the $title_max-character limit — shorten it to one line that names the defect (the detail belongs in the body)"; }
+    fi
   done < "$t/kv.$i"
   [ -n "$bad" ] && continue
   # the new text: the named lines replaced, nothing else touched

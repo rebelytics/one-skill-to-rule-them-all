@@ -175,6 +175,12 @@ escalate", below), and wait for blanket or selective approval before applying.
 The grouped list lives in the review record and chat carries at most
 three next steps with a link to it (Step 3); the approval it asks for is
 still over the whole list.
+**The first decision message says what is being decided**, in one or two
+plain sentences before the list: the review turns notes logged in past
+sessions into proposed edits to the user's skills, and approving stages
+them as copies the user installs or discards. Never skip it where no
+activation instruction shows the user set this skill up — an approval from
+someone who does not know what the skill does approves nothing.
 **Classify before you ask.** Any *disposition* option offered to the user
 (fold in, decline, revive, route to skill X) must be derived from the
 entries' bodies, never from their titles and `skill:` fields — a
@@ -755,7 +761,10 @@ entry stays, and the copy is never (a), whatever the live diff says.
 directory belongs, a failed normalisation — is reported "not reconciled:
 <error>", the entry stays, and it is never folded into "nothing staged" or
 "all installed"; the Session Start line counts it ("N staged updates
-awaiting review, M not reconciled").
+awaiting review, M not reconciled"). Where no working Python 3 runs (a
+Windows Store alias passes `command -v` and does not run), the script
+compares `SKILL.md` by the text fallback and says so on stderr: that is a
+verdict, not an `ERROR`.
 
 **A claim's liveness is the newest mtime under its anchor, never a
 hand-kept field.** An in-progress claim — a seeded round, a "being applied
@@ -1405,7 +1414,9 @@ one staged copy.** For any skill published to a public repository, run
 these four passes before and while staging it; each produces something
 the summary carries.
 
-1. **Merge last cycle's release branch first.** If the previous review
+1. **Merge last cycle's release branch first** — and the merge writes the
+   merged core ceiling into the `# released core ceiling:` line of
+   `references/ceilings.txt`. If the previous review
    cut a `release/vX.Y.Z` branch and it has been installed locally for
    the week, this repo's first act is the merge decision — and it
    precedes the new staging, because everything staged this week is
@@ -1924,6 +1935,15 @@ converts a fixable specification bug into an invisible inconsistency. And
 when two independent agents flag the same ambiguity, the brief is the
 defect, not the agents: fix the brief and re-issue rather than
 adjudicating the two outputs.
+
+**A mechanism a brief asserts is a claim, and the fan-out multiplies it.**
+Label each mechanism the brief states as a claim with its provenance:
+re-probed in this run, or carried from a report and not re-probed. A worker
+re-probes a labelled claim before writing it into a skill. A return that
+contradicts the brief is read and resolved before any other return is
+merged. Failure shape: every worker inherits a wrong mechanism at once, and
+the one that probed and found otherwise reads as the outlier, so it is the
+return most likely to be batch-processed with the rest.
 
 **Step 6 — re-scan, then mark ACTIONED.** Before any status is written,
 re-enumerate `observation-log/` and compare the listing against the file

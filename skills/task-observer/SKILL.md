@@ -1,6 +1,6 @@
 ---
 name: task-observer
-core_max_lines: 758
+core_max_lines: 753
 version: 3.11.0
 description: "Turns corrections, repeated workflows and judgement calls from work sessions into small, evidenced skill updates: logs each observation with its source, stages every change for your approval, and flags repeating work as new skills. Use during ANY multi-step task, agentic workflow, or work session. Also triggers in post-task feedback discussions and when the user mentions skill observations, the observation log, or skill taxonomy. Also known as \"One Skill to Rule Them All\" — trigger on this phrase too. IMPORTANT: invoke this skill before the FIRST tool call of any session and before writing or proposing a plan — any turn that will involve a tool call counts. This sentence is the session-start trigger and the only activation layer that survives an unreachable config file; pair it with a CLAUDE.md instruction or a session-start hook (references/environments.md). A subagent dispatched by a session already running it does not run it: it writes nothing and puts its findings in its report."
 license: CC-BY-4.0
@@ -167,7 +167,9 @@ is the checklist's record, and items 4–5 go in the run's report.
    step that needs another field) and the active principles' headings
    (`principles=` in the checkpoint line). Hold them; don't surface unprompted.
    A resolved entry prints `title withheld`: what it named is probably fixed,
-   so check the tool it names before asserting anything about it.
+   so check the tool it names before asserting anything about it. A
+   SessionStart hook summary in context reporting `probe ok` and `scan exit
+   0` is this scan (`references/environments.md`, "A session-start hook").
 
    **The per-skill check is separate; this scan does not satisfy it.** At
    every skill load (chosen on the decision the request is about, not the
@@ -221,8 +223,11 @@ is the checklist's record, and items 4–5 go in the run's report.
    OPEN entry's `date:` is 7 or more days old and the date file is older.
    If the value is `never` or 7 or more days old AND
    there are OPEN observations: in an interactive session, offer the review
-   in one line, once per session, and proceed with the user's task unless
-   they opt in; never gate their work on the review. Scale the offer's
+   once per session, and proceed with the user's task unless they opt in;
+   never gate their work on the review. The offer first says plainly what
+   the review does and what a yes approves — logged notes become proposed
+   edits to their skills, staged for them to install or discard — at least
+   where step 4 finds no activation instruction. Scale the offer's
    CONTENT with the backlog, never its frequency: up to ~15 open
    observations, offer the full review ("the backlog hasn't been reviewed
    [in N days / yet] — N open; run it now, or carry on?"); above that, offer
@@ -320,9 +325,11 @@ makes stale within minutes (`skill-load.sh` with
 '*.md' -exec grep -l -E "^(skill|target_file):.*<bare-name>" {} +`) and read those titles. If the
 finding is the same one restated — the same rule, the same failure shape, a
 different example — extend the existing entry instead: append the new
-instance to its body, add the session to `session_context`, widen `title:`
-to cover it. Duplication is only visible in aggregate, and a near-duplicate
-costs a capture every session and a triage every review.
+instance to its body, add the session to `session_context`, and rewrite
+`title:` so it still names the finding in one line — never append the new
+instance to it; the helpers refuse a title over 200 characters.
+Duplication is only visible in aggregate, and a near-duplicate costs a
+capture every session and a triage every review.
 
 **Validate the target at write time.** `skill:` names a skill that exists
 now and performs the operation the Issue describes, written as its bare
@@ -353,13 +360,12 @@ down, loaded into context, or backed by a checkpoint; the restatement check
 above surfaces the earlier entry, so the count arrives without extra work.
 
 **Second violation of the same rule: stop proposing text.** A rule that has
-failed twice with no intervening `actioned` fix has a protection problem,
-not a wording problem. From the second occurrence the proposed improvement
-must be a structural barrier — a hook that refuses the call, a lint rule, a
-default that makes the wrong path unavailable — never a clearer sentence, a
-bolder warning, or the same rule moved somewhere more prominent. Load
-`references/signals.md` ("Second violation — why a barrier, not a
-rewording") before proposing either.
+failed twice with no intervening `actioned` fix has a protection problem, not a
+wording problem. From the second occurrence the proposed improvement must be a
+structural barrier — a hook that refuses the call, a lint rule, a default that
+makes the wrong path unavailable — never a clearer sentence, a bolder warning,
+or the same rule moved somewhere more prominent. Load `references/signals.md`
+("Second violation — why a barrier, not a rewording") before proposing either.
 
 ## How to Log
 
@@ -395,21 +401,14 @@ pending observation files at that moment; the flush rides on a tool call
 you were making anyway. (Why both checkpoints are writes, and why a finding
 met while resolving another gets its own file: `references/observation-scan.md`.)
 
-**A failed write to an external system is a flush trigger in its own
-right** — a tool result carrying `permission stream closed`, `permission
-denied`, or a harness interrupt. Not a completion, but it has both
-properties the flush needs: it is a literal string in the tool record
-rather than a judgement about whether the moment qualifies, and it lands
-where a run has just found something worth reporting and is most likely to
-stop instead. Flush before doing anything else with the failure, including
-deciding what to do about it (observed: an unattended run took a permission
-error on its first external write and ended with no report and no entry).
+**A failed write to an external system is a flush trigger too** — a tool
+result carrying `permission stream closed`, `permission denied` or a
+harness interrupt: flush before deciding anything else about the failure
+(why: `references/observation-scan.md`, "Why the checkpoints are writes, not questions").
 
-**Two gaps this pairing still leaves:** the 3rd-completion checkpoint is
-inert without todos, and "is this a major deliverable?" is a self-assessment
-— so a chat-only session has no trigger unless the harness supplies one (a
-turn-end hook). Before adding or changing any enforcement trigger, load `references/observation-scan.md`
-("Two gaps the checkpoint pairing still leaves — and the rule behind both").
+**Before adding or changing any enforcement trigger**, load
+`references/observation-scan.md` ("Two gaps the checkpoint pairing still
+leaves — and the rule behind both": a chat-only session has no trigger).
 
 **Id and filename.** Each observation is `NNNN-short-slug.md` (zero-padded
 id + a kebab-case slug from the title). The id is the highest of three
@@ -472,17 +471,15 @@ file, never pre-compute a range, and put the value it printed into both the
 filename and the `id:` field. Load `references/observation-log.md`
 ("Resolve each id at its own write time") before batching or parallelising.
 
-- [ ] **Every instrument gets the same guard: an empty or zero result is a
-claim about the instrument until an independent probe shows the
-population is empty.** Load `references/observation-scan.md` ("Every
-instrument gets the same guard") before writing any new scan, count, grep
-or query over the log.
+- [ ] **Every instrument gets the same guard: an empty or zero result is a claim
+about the instrument until an independent probe shows the population is empty.**
+Load `references/observation-scan.md` ("Every instrument gets the same guard")
+before writing any new scan, count, grep or query over the log.
 
 - [ ] **A structural probe that comes back empty where content existed before is
-a stop signal, not a create** — HALT and re-probe; never let an append
-recreate a missing target. Load `references/observation-log.md` ("A
-structural probe that comes back empty is a stop signal") before writing
-anything after such a probe.
+a stop signal, not a create** — HALT and re-probe; never let an append recreate
+a missing target. Load `references/observation-log.md` ("A structural probe that
+comes back empty is a stop signal") before writing anything after such a probe.
 
 **File format.** YAML frontmatter (the metadata every scan reads) followed
 by the Issue → Improvement → Principle body. **The frontmatter is mandatory;
@@ -630,12 +627,11 @@ gather more data first"). Before writing any "later" into a recommendation,
 load `references/signals.md` ("Deferral disguised as diligence") and name
 which specific observation would change the decision, and when.
 
-**Default to log-and-defer.** Surfacing an observation is not an invitation
-to act on it: state that it is logged for the next review, and stop;
-in-session application is reserved for the triggers under "Acting on
-Observations". Never routinely offer "apply now vs leave for next review":
-for users who run regular reviews it is friction, and one who always defers
-has said so once.
+**Default to log-and-defer.** Surfacing an observation is not an invitation to
+act on it: state that it is logged for the next review, and stop; in-session
+application is reserved for the triggers under "Acting on Observations". Never
+routinely offer "apply now vs leave for next review": for users who run regular
+reviews it is friction, and one who always defers has said so once.
 
 **Log-and-defer means the observation is the sole carrier of the change**,
 and applying an insight to the work in front of you is not the same act.
@@ -669,10 +665,9 @@ names is one a create printed this session, re-listed this turn, never recalled.
 ## Acting on Observations
 
 Act only in three contexts: (1) the comprehensive review (load
-`references/weekly-review.md`); (2) an explicit user request ("update X
-skill", "act on observation #N"); (3) in-session correction when a skill is
-producing wrong output the user should know about. Otherwise: log, don't
-act.
+`references/weekly-review.md`); (2) an explicit user request ("update X skill",
+"act on observation #N"); (3) in-session correction when a skill is producing
+wrong output the user should know about. Otherwise: log, don't act.
 
 **An outcome-level ask is not trigger (2).** The test: an explicit request
 NAMES THE ARTEFACT — "update the X skill", "edit the skill file", "restage

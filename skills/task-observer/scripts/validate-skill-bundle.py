@@ -62,6 +62,8 @@ the check is implementable without guessing and can be updated when the
 consumer changes them.
 """
 
+import contextlib as _ctx
+import io as _io
 import pathlib
 import re
 import struct
@@ -106,6 +108,15 @@ CORE_CEILING_FILE = ".core-ceiling"
 CORE_CEILING_KEY = "core_max_lines"
 CEILING_SLACK_TOLERANCE = 3
 TARGET_CORE_LINES = 500
+# No net growth across releases. A ceiling that may be raised with a reason
+# records growth instead of preventing it: every raise is locally justified,
+# and the sum only goes up. So a skill may also declare the ceiling its last
+# RELEASE shipped, as `# released core ceiling: N (<version>)` in
+# references/ceilings.txt; a declared ceiling above it fails until the core is
+# paid back by moving text out to a reference file in the same release. The
+# release that merges writes its own ceiling into that line. Absent line: not
+# gated, as for a skill that declares no ceiling at all.
+RELEASED_CEILING_RE = re.compile(r"^#\s*released core ceiling:\s*(\d+)", re.M)
 PATH_RE = re.compile(r"`((?:references|scripts|assets)/[^`\s*?]+\.[A-Za-z0-9]+)`")
 # A path the agent EXECUTES rarely fills a whole backtick span: it sits after
 # an interpreter, with arguments behind it, inline or in a fenced block, and
@@ -510,6 +521,14 @@ CORE_CEILING_FIXTURES = [
 ]
 
 
+RELEASED_CEILING_FIXTURES = [
+    ("a ceiling above the released one fails", 12, 10, True),
+    ("a ceiling equal to the released one passes", 10, 10, False),
+    ("a ceiling below the released one passes", 9, 10, False),
+    ("no released line: not gated", 12, None, False),
+]
+
+
 def core_ceiling_case(fm):
     """read_core_ceiling over a fixture SKILL.md; returns (ceiling, notes)."""
     import contextlib
@@ -521,6 +540,15 @@ def core_ceiling_case(fm):
         with contextlib.redirect_stdout(buf):
             got = read_core_ceiling(p)
         return got, buf.getvalue()
+
+
+def read_released_ceiling(skill_md):
+    """The core ceiling the skill's last release shipped, or None."""
+    f = skill_md.parent / "references" / REF_CEILINGS_FILE
+    if not f.exists():
+        return None
+    m = RELEASED_CEILING_RE.search(f.read_text(encoding="utf-8"))
+    return int(m.group(1)) if m else None
 
 
 def check_core_size(skill_md, fails):
@@ -546,6 +574,15 @@ def check_core_size(skill_md, fails):
               f"the folded description counts as one")
     slack = ceiling - lines
     print(f"core {lines} / ceiling {ceiling} / slack {slack}{target_note}")
+    released = read_released_ceiling(skill_md)
+    if released is not None:
+        print(f"released core ceiling {released}")
+        if ceiling > released:
+            fails.append(
+                f"core ceiling {ceiling} > the released core ceiling {released} "
+                f"(references/{REF_CEILINGS_FILE}): no net growth across releases. "
+                f"Move rationale out of the core into a reference file until the "
+                f"core is at most {released} lines, then lower {CORE_CEILING_KEY}.")
     if lines > ceiling:
         fails.append(
             f"core SKILL.md {lines} lines > this skill's declared ceiling "
@@ -2094,6 +2131,140 @@ def scan_disp_ok():
         return ok, f"exit {r.returncode}, lines {lines!r}"
 
 
+def _scan_ws(root):
+    """A step-1-complete workspace at `root` holding one entry, 0001-a.md."""
+    so = root / "skill-observations"
+    (so / "observation-log" / "archive").mkdir(parents=True)
+    (so / "last-review-date.txt").write_text("never\n", encoding="utf-8")
+    (so / "cross-cutting-principles.md").write_text("# P\n\n## Active Principles\n", encoding="utf-8")
+    (so / "starter-principles-reviewed.txt").write_text("5\n", encoding="utf-8")
+    (so / "observation-log" / "0001-a.md").write_text('---\nid: 1\ntitle: "ok"\n---\nbody\n', encoding="utf-8")
+
+
+def _scan_run(args, cwd, home, extra_env=None, path_prefix=None):
+    import os
+    import subprocess
+    import time
+    env = {k: v for k, v in os.environ.items() if k not in ("TASK_OBSERVER_WORKSPACE", "CLAUDE_CONFIG_DIR",
+                                                            "TASK_OBSERVER_SEARCH_SECONDS")}
+    env["HOME"] = str(home)
+    env.update(extra_env or {})
+    if path_prefix:
+        env["PATH"] = str(path_prefix) + os.pathsep + env.get("PATH", "")
+    t0 = time.monotonic()
+    r = subprocess.run(["bash", str(SCAN_SCRIPT), *map(str, args)], cwd=str(cwd), env=env, capture_output=True,
+                       text=True, encoding="utf-8", errors="replace", timeout=120)
+    return r.returncode, r.stdout, r.stderr, time.monotonic() - t0
+
+
+def scan_order_ok():
+    """The entries print BEFORE the sibling-log search's listing: a
+    stalled search can no longer hold them back."""
+    rc, out, *_ = scan_case("healthy", True)
+    e, l, end = out.find('1 | - | - | - | "ok"'), out.find("logs at the plausible anchors"), out.rfind("end of scan")
+    return rc == 0 and -1 < e < l < end, f"exit {rc}, entry at {e}, logs line at {l}, end at {end}"
+
+
+def scan_stall_ok():
+    """A sibling-log search that stalls (a `find` stub that sleeps on the
+    parent anchor) is cut at TASK_OBSERVER_SEARCH_SECONDS=1: exit 0 well
+    inside 10 seconds, the entries printed, a NOTE naming the limit and the
+    anchor printed and repeated, the sidecar carrying it, the end line last."""
+    import shutil
+    with tempfile.TemporaryDirectory() as tmp:
+        t = pathlib.Path(tmp)
+        root, home, stub = t / "work space", t / "home dir", t / "stub bin"
+        _scan_ws(root)
+        home.mkdir()
+        stub.mkdir()
+        real = shutil.which("find") or "/usr/bin/find"
+        (stub / "find").write_text(f'#!/bin/bash\n[ "$1" = "${{STALL_ON:-}}" ] && exec sleep 30\nexec "{real}" "$@"\n',
+                                   encoding="utf-8")
+        (stub / "find").chmod(0o755)
+        rc, out, err, secs = _scan_run([root], t, home, {"STALL_ON": str(t), "TASK_OBSERVER_SEARCH_SECONDS": "1"}, stub)
+        want = f"NOTE: sibling-log search stopped at its 1-second limit while searching {t} ("
+        side = root / "skill-observations" / "last-scan-findings.txt"
+        side = side.read_text(encoding="utf-8") if side.is_file() else ""
+        ok = (rc == 0 and secs < 10 and '1 | - | - | - | "ok"' in out and out.count(want) == 2 and want in side
+              and out.rstrip("\n").splitlines()[-1].startswith("end of scan") and out.find('| "ok"') < out.find(want))
+        return ok, f"exit {rc}, {secs:.1f}s, out tail {out[-400:]!r}, err {err[-200:]!r}"
+
+
+def scan_home_parent_ok():
+    """A root whose parent is HOME (a ~/.claude workspace) searches the home
+    folder four levels deep, Library pruned, other users' homes skipped, and
+    the listing says so: ~/a/p2 is listed, ~/a/b/p3 (five), ~/Library/p4 and
+    a log under a sibling of HOME are not."""
+    with tempfile.TemporaryDirectory() as tmp:
+        t = pathlib.Path(tmp)
+        home = t / "home dir"
+        root = home / ".claude"
+        _scan_ws(root)
+        for rel in ("home dir/a/p2", "home dir/a/b/p3", "home dir/Library/p4", "other user/q"):
+            (t / rel / "skill-observations" / "observation-log").mkdir(parents=True)
+        rc, out, err, _ = _scan_run([root], t, home)
+        line = next((l for l in out.splitlines() if l.startswith("logs at the plausible anchors")), "")
+        ok = (rc == 0 and "the home folder as parent: searched 4 levels, Library and .Trash pruned" in line
+              and f"{home}/a/p2=0 last=none" in line and "/p3=" not in line and "/p4=" not in line
+              and "/other user/" not in line)
+        return ok, f"exit {rc}, line {line!r}"
+
+
+def scan_anchor_case(where):
+    """The scan with a second log at the working directory ("cwd"), beside
+    the skill's install reached through a symlink ("install"), or the cwd a
+    symlink to the pinned root itself ("self"). Returns (status, stdout,
+    the second log's directory)."""
+    import os
+    with tempfile.TemporaryDirectory() as tmp:
+        t = pathlib.Path(tmp)
+        root, home = t / "work space", t / "home dir"
+        _scan_ws(root)
+        home.mkdir()
+        repo = t / "repo dir"
+        (repo / "skill-observations" / "observation-log").mkdir(parents=True)
+        for j in (1, 2):
+            (repo / "skill-observations" / "observation-log" / f"000{j}-x.md").write_text(f"---\nid: {j}\n---\n", encoding="utf-8")
+        agents = t / "agents home"
+        inst = agents / "skills" / "task-observer"
+        (inst / "references").mkdir(parents=True)
+        (inst / "SKILL.md").write_text("---\nname: task-observer\n---\n", encoding="utf-8")
+        (inst / "references" / "starter-principles.md").write_text("Starter set version: 5\n", encoding="utf-8")
+        (agents / "skill-observations" / "observation-log").mkdir(parents=True)
+        os.symlink(inst, t / "skill link")
+        os.symlink(root, t / "root link")
+        args, cwd, second = [root], t, None
+        if where == "cwd":
+            cwd, second = repo, repo
+        elif where == "install":
+            args, second = ["--skill-dir", t / "skill link", root], agents
+        elif where == "self":
+            cwd = t / "root link"
+        rc, out, err, _ = _scan_run(args, cwd, home)
+        return rc, out, str(second.resolve()) if second else None
+
+
+# (name, scenario, substring the SPLIT STORE line must hold after its path, or None for no such line)
+SCAN_ANCHOR_FIXTURES = [
+    ("a log at the working directory that is not the pinned root: SPLIT STORE names it, above the entries",
+     "cwd", " (2 entries, last scan none), at the working directory, not the pinned root "),
+    ("a log beside the skill's resolved install: SPLIT STORE names it and the install",
+     "install", " (0 entries, last scan none), beside the skill's install ("),
+    ("the working directory a symlink to the pinned root: no SPLIT STORE line", "self", None),
+]
+
+
+def scan_anchor_ok(scenario, want):
+    rc, out, second = scan_anchor_case(scenario)
+    lines = [l for l in out.splitlines() if l.startswith("SPLIT STORE — a second observation log at ")]
+    if want is None:
+        return rc == 0 and not lines and "files: 1" in out, f"exit {rc}, lines {lines!r}"
+    head = f"SPLIT STORE — a second observation log at {second}{want}"
+    ok = (rc == 0 and len(lines) == 2 and lines[0] == lines[1] and lines[0].startswith(head)
+          and out.find(lines[0]) < out.find('1 | - | - | - | "ok"') < out.rfind(lines[0]))
+    return ok, f"exit {rc}, lines {lines!r}"
+
+
 def scan_entries_refused_ok():
     """--entries-to onto an existing non-empty file is refused before anything
     runs: exit 2, no checkpoint line, the file untouched."""
@@ -2347,6 +2518,74 @@ def bincheck_case(scenario):
         return r.returncode, r.stdout, r.stderr
 
 
+def _py_stubs(tmp, python_works):
+    """A directory to put first on PATH: `python3` (and, unless python_works,
+    `python`) is a Windows Store alias stand-in that prints the install hint
+    and exits 9009; with python_works, `python` runs this interpreter."""
+    import os
+    d = pathlib.Path(tmp) / "stub bin"
+    d.mkdir()
+    alias = '#!/bin/sh\necho "Python was not found; run without arguments to install from the Microsoft Store" >&2\nexit 9009\n'
+    (d / "python3").write_text(alias, encoding="utf-8")
+    (d / "python").write_text(f'#!/bin/sh\nexec "{sys.executable}" "$@"\n' if python_works else alias, encoding="utf-8")
+    for f in d.iterdir():
+        f.chmod(0o755)
+    env = {k: v for k, v in os.environ.items()}
+    env["PATH"] = str(d) + os.pathsep + env.get("PATH", "")
+    return env
+
+
+def diffstaged_nopy_case(python_works):
+    """diff-staged.sh with python3 a Store-alias stub: the live name: quoted,
+    the staged one bare (the installer's quoting), and with python_works a
+    changed body line too. Returns (status, stdout, stderr)."""
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        live, staged = pathlib.Path(tmp) / "live dir" / "sk", pathlib.Path(tmp) / "staged dir" / "sk"
+        for d, name, body in ((live, '"sk"', "body"), (staged, "sk", "body2" if python_works else "body")):
+            d.mkdir(parents=True)
+            (d / "SKILL.md").write_text(f"---\nname: {name}\ndescription: d\n---\n{body}\n", encoding="utf-8")
+        r = subprocess.run(["bash", str(DIFFSTAGED_SCRIPT), str(staged), str(live)], cwd=tmp, env=_py_stubs(tmp, python_works),
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+        return r.returncode, r.stdout, r.stderr
+
+
+# (name, python works as `python`?, exit status, stdout prefix, stderr substring or "", stderr must lack)
+DIFFSTAGED_NOPY_FIXTURES = [
+    ("python3 and python Store-alias stubs: an identical copy is IDENTICAL by the text fallback, stderr says no working Python 3",
+     False, 0, "IDENTICAL", "diff-staged: no working Python 3", "compare failed"),
+    ("python3 a stub, python a working Python 3: the parsed compare runs (a body difference named as body:)",
+     True, 1, "DIFFERS 1 path(s): SKILL.md (body: DIFFERS", "", "no working Python 3"),
+]
+
+
+def bincheck_py_case(python_works):
+    """bin-check.sh asked to run a .py whose digests match, with python3 a
+    Store-alias stub. Returns (status, stdout, stderr)."""
+    import hashlib
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / "work space"
+        bin_dir = root / "skill-observations" / ".bin"
+        bin_dir.mkdir(parents=True)
+        src = 'import sys\nprint("hello py", *sys.argv[1:])\n'
+        (bin_dir / "hello.py").write_text(src, encoding="utf-8")
+        dig = pathlib.Path(tmp) / "installed.sha256"
+        dig.write_text(f"{hashlib.sha256(src.encode()).hexdigest()}  /installed/scripts/hello.py\n", encoding="utf-8")
+        r = subprocess.run(["bash", str(BINCHECK_SCRIPT), str(root), str(dig), "hello.py", "a", "b"], cwd=tmp,
+                           env=_py_stubs(tmp, python_works), capture_output=True, text=True, encoding="utf-8", errors="replace")
+        return r.returncode, r.stdout, r.stderr
+
+
+# (name, python works as `python`?, exit status, stdout substring or "", stderr substring or "")
+BINCHECK_PY_FIXTURES = [
+    ("a .py with only Store-alias stubs on PATH: BIN REFUSED — no working Python 3, exit 3, nothing ran",
+     False, 3, "", "BIN REFUSED — no working Python 3 to run 'hello.py'"),
+    ("a .py with python3 a stub and python a working Python 3: it runs under python",
+     True, 0, "hello py a b", ""),
+]
+
+
 # scripts/migrate-log.py, the pre-3.0 log converter: (name, legacy entry's
 # **Skill:** line, overrides for entry 88 or None, exit status, substring the
 # written file 0088-*.md must hold, substring it must NOT hold). The known
@@ -2473,6 +2712,12 @@ NEWOBS_FIXTURES = [
     ("--body with text after a closing quote: refused",
      "empty", "slug", GOOD_BODY.replace('title: "t"', 'title: "t" extra'), 1, "",
      "title: has text after its closing quote", [], None),
+    ("--body with a 201-character title: refused naming the length and the limit, nothing created",
+     "empty", "slug", GOOD_BODY.replace('title: "t"', 'title: "' + "x" * 201 + '"'), 1, "",
+     "title: is 201 characters, over the 200-character limit", [], None),
+    ("--body with a 200-character title of two-byte letters: counted in characters, created",
+     "empty", "long-title", GOOD_BODY.replace('title: "t"', 'title: "' + "\u00e9" * 200 + '"'), 0,
+     "/0001-long-title.md", "", ["0001-long-title.md"], "1"),
 ]
 
 
@@ -2549,6 +2794,12 @@ SETFIELDS_FIXTURES = [
      [_T.join(["set", "0001-a.md", "status", "actioned"]),
       _T.join(["set", "0001-a.md", "resolution", '"a: applied; p:b: carried by #9; (1) landed at x.md:3"'])],
      True, 1, "accounts for no numbered point(s) 2,3 of 3", None),
+    ("a title: over 200 characters is refused naming the length and the limit, nothing written", "plain",
+     [_T.join(["set", "0001-a.md", "title", '"' + "x" * 201 + '"'])], False, 1,
+     "0001-a.md: title: is 201 characters, over the 200-character limit", None),
+    ("a 200-character title: of two-byte letters is counted in characters and written", "plain",
+     [_T.join(["set", "0001-a.md", "title", '"' + "\u00e9" * 200 + '"'])], False, 0,
+     "done — 1 file(s) written", {"0001-a.md": 1}),
 ]
 
 
@@ -2975,6 +3226,19 @@ def selftest():
         ok = bool(NAME_RE.match(fallback_name(f"name: {value}\n"))) == kebab
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} fallback name: {value!r}")
+    for name, ceiling, released, must_fail in RELEASED_CEILING_FIXTURES:
+        with tempfile.TemporaryDirectory() as td:
+            sk = pathlib.Path(td) / "x-y"; (sk / "references").mkdir(parents=True)
+            (sk / "SKILL.md").write_text(f"---\nname: x-y\ncore_max_lines: {ceiling}\n---\n" + "l\n" * (ceiling - 4), encoding="utf-8")
+            if released is not None:
+                (sk / "references" / REF_CEILINGS_FILE).write_text(f"# released core ceiling: {released} (v1.0.0)\n", encoding="utf-8")
+            fs = []
+            with _ctx.redirect_stdout(_io.StringIO()):
+                check_core_size(sk / "SKILL.md", fs)
+            got = any("released core ceiling" in x for x in fs)
+        ok = got == must_fail
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} released core ceiling: {name}" + ("" if ok else f" (fails {fs})"))
     for name, fm, want, note in CORE_CEILING_FIXTURES:
         got, notes = core_ceiling_case(fm)
         ok = got == want and (note is None or (note in notes if note else notes == ""))
@@ -3103,8 +3367,16 @@ def selftest():
                          ("the scan's commands off PATH: SCAN TOOLS MISSING, no checkpoint line", scan_tools_missing_ok),
                          ("forty populated entries print under 30,000 characters", scan_size_ok),
                          ("the end line names the bytes above it; a halted run still prints", scan_bytes_ok),
-                         ("an actioned entry lacking a skill: member's disposition is named", scan_disp_ok)):
+                         ("an actioned entry lacking a skill: member's disposition is named", scan_disp_ok),
+                         ("the entries print before the sibling-log search's listing", scan_order_ok),
+                         ("a stalled sibling-log search is cut at its time limit with a NOTE; the scan completes", scan_stall_ok),
+                         ("a root whose parent is HOME: the home folder searched 4 levels, Library pruned, said on the line",
+                          scan_home_parent_ok)):
             ok, detail = fn()
+            bad += not ok; total += 1
+            print(f"{'ok  ' if ok else 'FAIL'} scan script: {name}" + ("" if ok else f" ({detail})"))
+        for name, scenario, want in SCAN_ANCHOR_FIXTURES:
+            ok, detail = scan_anchor_ok(scenario, want)
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} scan script: {name}" + ("" if ok else f" ({detail})"))
         rc, _, _, side = scan_case("broken", True)   # the halted run leaves its guard line, not an older finding
@@ -3159,6 +3431,13 @@ def selftest():
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} diff-staged script: {name}"
                   + ("" if ok else f" (exit {rc}, out {out!r})"))
+        for name, works, want_rc, want, want_err, lacks in DIFFSTAGED_NOPY_FIXTURES:
+            rc, out, err = diffstaged_nopy_case(works)
+            ok = (rc == want_rc and out.startswith(want) and out.count("\n") == 1
+                  and want_err in err and lacks not in out + err)
+            bad += not ok; total += 1
+            print(f"{'ok  ' if ok else 'FAIL'} diff-staged script: {name}"
+                  + ("" if ok else f" (exit {rc}, out {out!r}, err {err.strip()!r})"))
     elif shutil.which("bash"):
         bad += 1; total += 1
         print(f"FAIL diff-staged script: {DIFFSTAGED_SCRIPT.name} missing beside this file")
@@ -3248,6 +3527,12 @@ def selftest():
         print(f"{'ok  ' if ok else 'FAIL'} bin-check script: bash -n passes")
         for name, scenario, want_rc, want_out, want_err in BINCHECK_FIXTURES:
             rc, out, err = bincheck_case(scenario)
+            ok = rc == want_rc and want_out in out and want_err in err and (want_out or not out.strip())
+            bad += not ok; total += 1
+            print(f"{'ok  ' if ok else 'FAIL'} bin-check script: {name}"
+                  + ("" if ok else f" (exit {rc}, out {out!r}, err {err.strip()!r})"))
+        for name, works, want_rc, want_out, want_err in BINCHECK_PY_FIXTURES:
+            rc, out, err = bincheck_py_case(works)
             ok = rc == want_rc and want_out in out and want_err in err and (want_out or not out.strip())
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} bin-check script: {name}"

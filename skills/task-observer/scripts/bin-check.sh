@@ -19,7 +19,10 @@
 #   --installed-version <v>  the installed skill's frontmatter `version:`,
 #                   where the digests file does not carry it.
 #   <script>        the file name under .bin/ to run (session-start-scan.sh,
-#                   skill-load.sh, new-observation.sh, …); a .py runs under python3
+#                   skill-load.sh, new-observation.sh, …); a .py runs under
+#                   the first of python3, python that RUNS and reports major
+#                   version 3 — `command -v` alone finds a Windows Store
+#                   alias, a stub that only prints an install hint
 #
 # Version gate: .bin/MANIFEST carries `verified_against: <version>`, the
 # installed version .bin/ was last refreshed from. With the installed version
@@ -31,7 +34,9 @@
 # Exit status: the script's own once it runs; 3 = refused, nothing ran — a
 # .bin/ file whose digest differs from, or is missing from, the installed set,
 # or a failed version gate (refresh .bin/ from the installed scripts:
-# references/weekly-review.md, Step 1 gate); 2 = usage. bash 3.2-compatible;
+# references/weekly-review.md, Step 1 gate), or a .py with no working Python 3
+# to run it (its own line, `BIN REFUSED — no working Python 3`, never a digest
+# failure); 2 = usage. bash 3.2-compatible;
 # paths may contain spaces.
 
 set -u
@@ -72,6 +77,15 @@ for f in "$bin"/*.sh "$bin"/*.py; do
   [ "$want" = "$(digest_of "$f")" ] || { echo "BIN REFUSED — $n differs from the installed script: refresh .bin/ from the installed scripts (weekly-review.md, Step 1 gate), then re-run" >&2; exit 3; }
 done
 case $script in
-  (*.py) exec python3 "$bin/$script" "$@" ;;
+  (*.py)
+    py=
+    for c in python3 python; do
+      if command -v "$c" >/dev/null 2>&1 \
+         && "$c" -c 'import sys; sys.exit(0 if sys.version_info[0] == 3 else 1)' </dev/null >/dev/null 2>&1; then
+        py=$c; break
+      fi
+    done
+    [ -n "$py" ] || { echo "BIN REFUSED — no working Python 3 to run '$script' (python3 and python are absent, or neither runs and reports version 3 — a Windows Store alias is the usual cause); the digests matched, nothing ran: install Python 3 or put a working one first on PATH" >&2; exit 3; }
+    exec "$py" "$bin/$script" "$@" ;;
   (*)    exec bash "$bin/$script" "$@" ;;
 esac
