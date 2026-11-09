@@ -15,7 +15,7 @@ This meta-skill is a practical application of the [Augmented Expertise](https://
 ## Quick install
 
 1. **Install it, by either route:**
-   - **From a terminal (Vercel's skills CLI, needs Node.js):** `npx skills add rebelytics/one-skill-to-rule-them-all --skill task-observer` — add `-g` to install it for all your projects. This is the most-used route: the skills.sh listing reports over 13,000 installs.
+   - **From a terminal (Vercel's skills CLI, needs Node.js):** `npx skills add rebelytics/one-skill-to-rule-them-all --skill task-observer` — add `-g` to install it for all your projects. This is the most-used route: the skills.sh listing reports over 17,000 installs.
    - **In the Claude apps (web, desktop, mobile, Cowork):** upload the `.skill` bundle from the latest release via Settings → Customize.
 2. **Activate it, whichever route you used.** In Claude Code, start with the session-start hook in `references/environments.md` ("A session-start hook"): it injects the activation into every session, and it is the only layer the harness enforces. Then, in Claude Code as everywhere else, paste the activation block from the same file into your CLAUDE.md (or your platform's equivalent): 29 lines, plus up to five optional configuration lines beside it. Check that it runs (see "Check that it actually runs" below). Installing alone is not enough, because description matching under-triggers.
 
