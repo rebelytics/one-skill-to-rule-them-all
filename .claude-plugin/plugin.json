@@ -11,6 +11,7 @@
   "homepage": "https://github.com/rebelytics/one-skill-to-rule-them-all",
   "repository": "https://github.com/rebelytics/one-skill-to-rule-them-all",
   "license": "CC-BY-4.0",
+  "icon": "./.claude-plugin/icon.png",
   "keywords": [
     "agent-skills",
     "skill-improvement",
