@@ -1632,6 +1632,8 @@ find "$live" \( -name .git -o -name .hg -o -name .svn -o -name .claude-plugin \)
 find "$live" \( -name .git -o -name .hg -o -name .svn -o -name .claude-plugin \) -prune -o -type f -print | while IFS= read -r f; do cp    "$f" "$s/${f#$live}"; done
 chmod -R u+w "$s"
 diff -rq -x .git -x .hg -x .svn -x .claude-plugin "$live" "$s"      # must be identical before any edit
+# quote an unquoted name now, so --pack has nothing to rewrite after the review diff (temp file and move: no delete needed)
+sed -E '1,/^---[[:space:]]*$/s/^name:[[:space:]]*([a-z0-9][a-z0-9-]*)[[:space:]]*$/name: "\1"/' "$s/SKILL.md" > "$s/SKILL.md.new" && mv "$s/SKILL.md.new" "$s/SKILL.md"
 mkdir -p "$s/../.seed"; (cd "$s" && find . -type f -exec sha256sum {} + | LC_ALL=C sort) > "$s/../.seed/[skill-name].sha256"   # shasum -a 256 on macOS; the gate's seed check reads it
 [ ! -L "$s" ] && [ "$(stat -c %i "$live/SKILL.md" 2>/dev/null || stat -f %i "$live/SKILL.md")" != "$(stat -c %i "$s/SKILL.md" 2>/dev/null || stat -f %i "$s/SKILL.md")" ] || { echo "staged path is live under another name — not a copy"; exit 1; }
 # then make EVERY edit against the staged path
