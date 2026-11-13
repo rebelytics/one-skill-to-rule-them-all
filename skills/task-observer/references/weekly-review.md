@@ -608,8 +608,8 @@ find "$d" "$d/archive" -maxdepth 1 -name '[0-9]*.md' | sed 's|.*/||' | grep -oE 
 **Per-entry header conformance — a count, not a gate.** The scan's
 suspect count catches YAML that will not parse; it cannot see a header
 that parses and is still wrong: an `id` that disagrees with the filename
-prefix, a `status` outside the five values, a missing or blank
-`siblings_checked`, a near-miss field name (`skills:`,
+prefix, a `status` outside the five values, a `type` outside
+`open-source | internal`, a missing or blank `siblings_checked`, a near-miss field name (`skills:`,
 `proposed_skill:`, `sibling_checked:`) that every consumer silently
 ignores, or a `use_evidence:` item whose context holds `: ` — a parser
 reads that item as a one-key mapping, the scan's suspect rules read only
@@ -620,15 +620,17 @@ active directory:
 ```bash
 d="[ABSOLUTE PATH]/skill-observations/observation-log"
 nonconf=$(LC_ALL=C find "$d" -maxdepth 1 -name '*.md' -exec awk '
-  FNR==1 { sub(/^\357\273\277/, ""); fm=0; bad=""; idv=""; st=""; sc=""; ue=0; f=FILENAME; sub(/.*\//,"",f); pre=(match(f,/^[0-9]+/) ? substr(f,1,RLENGTH)+0 : -1) }
+  FNR==1 { sub(/^\357\273\277/, ""); fm=0; bad=""; idv=""; st=""; ty=""; sc=""; ue=0; f=FILENAME; sub(/.*\//,"",f); pre=(match(f,/^[0-9]+/) ? substr(f,1,RLENGTH)+0 : -1) }
   FNR==1 && /^---[[:space:]]*$/ { fm=1; next }
   fm && /^---[[:space:]]*$/ { fm=0
     if (idv !~ /^0*[1-9][0-9]*$/ || idv+0 != pre) bad=bad " id"
     if (st !~ /^(open|actioned|declined|superseded|parked)$/) bad=bad " status"
+    if (ty !~ /^(open-source|internal)$/) bad=bad " type:" ty
     if (sc == "") bad=bad " siblings_checked"
     if (bad != "") print FILENAME ":" bad; nextfile }
   fm && /^id:/ { idv=$2 }
   fm && /^status:/ { st=$2 }
+  fm && /^type:/ { ty=$2 }
   fm && /^siblings_checked:/ { sc=$0; sub(/^siblings_checked:[[:space:]]*/, "", sc) }
   fm && /^(skills|proposed_skill|proposed_skills|proposes_skills|sibling_checked|siblings_check|target_files|skill_qualifier):/ { bad=bad " near-miss:" $1 }
   fm && /^use_evidence:/ { ue=1; next }
@@ -636,7 +638,7 @@ nonconf=$(LC_ALL=C find "$d" -maxdepth 1 -name '*.md' -exec awk '
   fm && /^[a-z_]+:/ { ue=0 }
 ' {} +)
 n_nc=$(printf '%s' "$nonconf" | grep -c .)
-if [ "$n_nc" -gt 0 ]; then printf 'NOTE: %s non-conforming headers (id / status / siblings_checked / near-miss field / use_evidence item holding ": "):\n%s\n' "$n_nc" "$nonconf"; fi
+if [ "$n_nc" -gt 0 ]; then printf 'NOTE: %s non-conforming headers (id / status / type / siblings_checked / near-miss field / use_evidence item holding ": "):\n%s\n' "$n_nc" "$nonconf"; fi
 ```
 
 It reports; it does not block the review. Its false-positive rate on a
@@ -869,8 +871,10 @@ over the link", whatever the hash says. Hash changed → the
 gate reports "staged patch, live file has moved — apply the N changed
 lines, do not copy", with N counted from the patch, and
 rewrites the entry's instruction to say so. Every added line of the patch
-already present in live, and every removed line already gone → installed;
-remove the entry. An install instruction is re-derived each time it is
+already present in live, every removed line already gone, and the whole
+file equal to the recorded expected result (Delivery) → installed; remove
+the entry. Without a recorded result, the whole file is compared with the
+pre-install backup, and differences outside the hunks' lines fail it. An install instruction is re-derived each time it is
 repeated, never carried forward verbatim: nothing in a ledger expires on
 its own, so a line that was correct at staging turns destructive without
 changing a word once the live file moves on.
@@ -2148,8 +2152,16 @@ Session Start step 3 makes above ~15 open — and it runs as a review, not a
 glance. **Selection:** the N oldest by `date:`, then id, leaving out parked
 entries and those asked and unanswered (Approval policy, "An escalation is
 recorded on the entry"), which the record lists once under "Waiting for
-the user". **Run for the slice:** Steps 3, 5 and 6 over its entries, and
-the gate for the skills it stages. **Run for the whole log whatever the
+the user" — and re-asks, as a yes-or-no with the recommendation, each
+such entry whose last ask was in the previous review, appending the
+re-ask to its `escalated:` field; one re-asked and still unanswered is
+parked (Approval policy). **Run for the slice:** Steps 3, 5 and 6 over its
+entries, and the gate for the skills it stages. For each skill the slice
+stages, also list the open entries naming it (`bash scripts/skill-load.sh
+"[ABSOLUTE PATH]" <skill-name> --query-only`) and read the titles of
+those outside the slice: the staged text stays consistent with them, or
+the record names the conflict. They are checked for contradiction only,
+never reported as reviewed. **Run for the whole log whatever the
 slice:** Step 1's integrity checks (duplicate id, contiguity, header
 conformance, the inbox drain) and Step 6's re-scan against the Step 1 list
 — a slice that skips them leaves the log unchecked for as long as slices
@@ -2362,7 +2374,12 @@ path (`realpath`; `readlink -f` on GNU) — a content match proves nothing
 about whether the path still means what it meant,
 which the reconciliation gate re-checks before repeating any install
 instruction (Step 1, "A staged state file is reconciled by its recorded
-hash"). The failure shape: every run writes a state file, so a snapshot
+hash"). The entry also records the **expected result** — the patched
+file's size and sha256, or the whole patched file beside the patch as
+`<file>.expected` — and the install check compares the installed file
+with it byte for byte, line endings, encoding and final newline included.
+A check of the changed lines alone passes a patch tool that applied every
+hunk and rewrote the line endings of the rest. The failure shape: every run writes a state file, so a snapshot
 goes stale with the next run, and its "copy it over" instruction becomes
 an overwrite that deletes everything written since staging; a stale
 patch degrades into a conflict someone has to resolve instead. **A state

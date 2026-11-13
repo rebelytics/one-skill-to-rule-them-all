@@ -1168,13 +1168,16 @@ MANIFEST_FIXTURES = [
     ("a listed file that does not ship",
      "`a.md`, `b.md` and `scripts/x.sh`.\n",
      ["references/a.md", "scripts/x.sh"], ([], ["b.md"])),
+    ("Windows backslash paths match the forward-slash list",
+     "`a.md` and `scripts/x.sh`.\n",
+     ["references\\a.md", "scripts\\x.sh", "scripts\\y.py"], (["scripts/y.py"], [])),
 ]
 
 
 def manifest_misses(section, files):
     """(unlisted, missing) for a manifest section and the bundle's relative paths."""
     named = set(MANIFEST_FILE_RE.findall(section))
-    have = set(files)
+    have = {f.replace("\\", "/") for f in files}   # a Windows relative path arrives with backslashes
     unlisted = [f for f in sorted(have) if f.split("/")[0] in ("scripts", "references")
                 and f not in named and f.rsplit("/", 1)[-1] not in named]
     missing = [n for n in sorted(named) if not ({n} if "/" in n else
@@ -1189,7 +1192,7 @@ def check_bundle_manifest(skill_dir, fails):
         m = re.search(r"(?ms)^## Bundle manifest[ \t]*\n(.*?)(?=^## |\Z)", text)
         if not m:
             continue
-        files = [str(p.relative_to(skill_dir)) for p in skill_dir.rglob("*")
+        files = [p.relative_to(skill_dir).as_posix() for p in skill_dir.rglob("*")
                  if p.is_file() and not any(x.startswith(".") or x in BUILD_JUNK
                                             for x in p.relative_to(skill_dir).parts)
                  and p.suffix != ".pyc"]
