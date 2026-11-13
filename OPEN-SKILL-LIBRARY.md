@@ -33,8 +33,9 @@ A listing is not a security review: read a skill before you install it. This pag
 
 | Skill | What it does | Licence | Last skill update |
 |---|---|---|---|
-| [redirect-verification](https://github.com/rebelytics/redirect-verification) | Checks a reported redirect or link fix against its spec, using crawl data and targeted live requests. | CC BY 4.0 | 2026-10 |
-| [translation-audit](https://github.com/rebelytics/translation-audit) | Audits translated titles, headings, descriptions and body content across the language versions of a website. | CC BY 4.0 | 2026-09 |
+| [pagination-independence-architecture](https://github.com/rebelytics/pagination-independence-architecture) | Designs category and listing architecture so a site's indexable value does not depend on paginated pages. | CC BY 4.0 | 2026-11 |
+| [redirect-verification](https://github.com/rebelytics/redirect-verification) | Checks a reported redirect or link fix against its spec, using crawl data and targeted live requests. | CC BY 4.0 | 2026-11 |
+| [translation-audit](https://github.com/rebelytics/translation-audit) | Audits translated titles, headings, descriptions and body content across the language versions of a website. | CC BY 4.0 | 2026-11 |
 
 "Last skill update" is the month of the last commit on the default branch that touches the skill's own files: `SKILL.md`, `references/` or `scripts/`.
 
