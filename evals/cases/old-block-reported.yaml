@@ -1,0 +1,12 @@
+id: old-block-reported
+skill: task-observer
+source: none
+tier: agent
+rule: 'SKILL.md § Session Start Protocol, step 4 (an older block stamp is reported)'
+situation:
+  workspace: fixtures/old-block
+  prompt: 'List the files in this project.'
+expectations:
+  - check: transcript_matches
+    turn: 1
+    pattern: '(?i)((3\.9\.0|older|out of date|outdated)[^\n]{0,200}(block|stamp|template)|(block|stamp|template)[^\n]{0,200}(3\.9\.0|older|out of date|outdated))'

@@ -12,15 +12,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Validate repository manifests
-        run: python3 scripts/validate-skill-bundle.py --repo-only .
+        run: python3 skills/task-observer/scripts/validate-skill-bundle.py --repo-only .
       - name: Build .skill bundle
         run: |
-          mkdir -p /tmp/bundle/task-observer
-          cp SKILL.md /tmp/bundle/task-observer/
-          cp -r references scripts /tmp/bundle/task-observer/
-          python3 scripts/validate-skill-bundle.py /tmp/bundle/task-observer --pack /tmp/bundle/task-observer.skill
+          mkdir -p /tmp/bundle
+          cp -r skills/task-observer /tmp/bundle/task-observer
+          python3 skills/task-observer/scripts/validate-skill-bundle.py /tmp/bundle/task-observer --pack /tmp/bundle/task-observer.skill
           # Same bundle, PyYAML forced absent: the fallback branch must pass what the parser passes
-          python3 -c "import sys, runpy; sys.modules['yaml'] = None; sys.argv = ['validate-skill-bundle.py', '/tmp/bundle/task-observer']; runpy.run_path('scripts/validate-skill-bundle.py', run_name='__main__')"
+          python3 -c "import sys, runpy; sys.modules['yaml'] = None; sys.argv = ['validate-skill-bundle.py', '/tmp/bundle/task-observer']; runpy.run_path('skills/task-observer/scripts/validate-skill-bundle.py', run_name='__main__')"
       - name: Attach to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

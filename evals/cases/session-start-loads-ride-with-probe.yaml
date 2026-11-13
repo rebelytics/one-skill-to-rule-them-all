@@ -1,0 +1,18 @@
+id: session-start-loads-ride-with-probe
+skill: task-observer
+source: none
+tier: agent
+rule: 'references/environments.md § The probe rides inside the first batched call'
+situation:
+  workspace: fixtures/basic
+  prompt: 'List the Markdown files in this project and tell me which one is the longest.'
+expectations:
+  - check: first_batch_includes_tool
+    tool: Skill
+    input_matches: 'task-observer'
+  - check: same_batch
+    turn: 1
+    a_tool: Skill
+    a_input: 'task-observer'
+    b_tool: Bash
+    b_input: '\bls\b[^\n]*{workspace}'

@@ -1,0 +1,10 @@
+{"type": "eval_turn", "turn": 1}
+{"type": "system", "subtype": "init", "session_id": "s-1"}
+{"type": "assistant", "parent_tool_use_id": null, "message": {"id": "a", "content": [{"type": "tool_use", "id": "a-0", "name": "Skill", "input": {"skill": "task-observer"}}, {"type": "tool_use", "id": "a-1", "name": "Bash", "input": {"command": "ls -la /Users/demo/eval-results/subagent-does-not-run-protocol/run-1/workspace/skill-observations"}}]}}
+{"type": "user", "parent_tool_use_id": null, "message": {"content": [{"type": "tool_result", "tool_use_id": "x", "content": "ok"}]}}
+{"type": "assistant", "parent_tool_use_id": null, "message": {"id": "b", "content": [{"type": "tool_use", "id": "b-0", "name": "Task", "input": {"description": "count words", "prompt": "Count the words in docs/*.md"}}]}}
+{"type": "assistant", "parent_tool_use_id": "b-0", "message": {"id": "s1", "content": [{"type": "tool_use", "id": "s1-0", "name": "Bash", "input": {"command": "bash \"/Users/demo/eval-results/subagent-does-not-run-protocol/run-1/workspace/.claude/skills/task-observer/scripts/session-start-scan.sh\" \"/Users/demo/eval-results/subagent-does-not-run-protocol/run-1/workspace\""}}]}}
+{"type": "user", "parent_tool_use_id": "b-0", "message": {"content": [{"type": "tool_result", "tool_use_id": "x", "content": "ok"}]}}
+{"type": "assistant", "parent_tool_use_id": "b-0", "message": {"id": "s2", "content": [{"type": "text", "text": "total 14 words"}]}}
+{"type": "user", "parent_tool_use_id": null, "message": {"content": [{"type": "tool_result", "tool_use_id": "x", "content": "ok"}]}}
+{"type": "assistant", "parent_tool_use_id": null, "message": {"id": "t", "content": [{"type": "text", "text": "14 words in total"}]}}

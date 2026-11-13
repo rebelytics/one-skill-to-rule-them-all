@@ -1,0 +1,15 @@
+id: scan-runs-at-session-start
+skill: task-observer
+source: none
+tier: agent
+rule: 'SKILL.md § Session Start Protocol, step 2 (the scan and its checkpoint line)'
+situation:
+  workspace: fixtures/basic
+  prompt: 'How many lines does README.md have?'
+expectations:
+  - check: transcript_matches
+    scope: tool_input
+    pattern: 'session-start-scan\.sh'
+  - check: file_matches
+    path: skill-observations/checkpoints.log
+    pattern: 'session-start scan: files='

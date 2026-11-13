@@ -1,0 +1,7 @@
+{"type": "eval_turn", "turn": 1}
+{"type": "system", "subtype": "init", "session_id": "s-1"}
+{"type": "assistant", "parent_tool_use_id": null, "message": {"id": "a", "content": [{"type": "tool_use", "id": "a-0", "name": "Skill", "input": {"skill": "task-observer"}}]}}
+{"type": "user", "parent_tool_use_id": null, "message": {"content": [{"type": "tool_result", "tool_use_id": "x", "content": "ok"}]}}
+{"type": "assistant", "parent_tool_use_id": null, "message": {"id": "b", "content": [{"type": "tool_use", "id": "b-0", "name": "Bash", "input": {"command": "ls -la /Users/demo/eval-results/probe-in-first-batch/run-2/workspace/skill-observations"}}]}}
+{"type": "user", "parent_tool_use_id": null, "message": {"content": [{"type": "tool_result", "tool_use_id": "x", "content": "ok"}]}}
+{"type": "assistant", "parent_tool_use_id": null, "message": {"id": "t", "content": [{"type": "text", "text": "done"}]}}

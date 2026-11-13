@@ -1,0 +1,17 @@
+id: per-skill-lookup-at-skill-load
+skill: task-observer
+source: none
+tier: agent
+rule: 'references/observation-scan.md § The per-skill lookup at every skill load'
+situation:
+  workspace: fixtures/basic
+  prompt: 'Add a line to docs/notes.md recording that the demo project was reviewed today.'
+expectations:
+  - check: same_batch
+    a_tool: Skill
+    a_input: 'fixture-notes'
+    b_tool: Bash
+    b_input: 'skill-load\.sh[^\n]*fixture-notes'
+  - check: file_matches
+    path: skill-observations/checkpoints.log
+    pattern: 'loaded fixture-notes'

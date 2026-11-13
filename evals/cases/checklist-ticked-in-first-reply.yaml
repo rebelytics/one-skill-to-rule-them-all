@@ -1,0 +1,18 @@
+id: checklist-ticked-in-first-reply
+skill: task-observer
+source: none
+tier: agent
+rule: 'SKILL.md § Session Start Protocol (the seven items copied and ticked)'
+situation:
+  workspace: fixtures/basic
+  prompt: 'How many lines does README.md have?'
+expectations:
+  - check: transcript_matches
+    turn: 1
+    pattern: '(?i)- \[x\][^\n]*storage'
+  - check: transcript_matches
+    turn: 1
+    pattern: '(?i)- \[x\][^\n]*scan'
+  - check: transcript_matches
+    turn: 1
+    pattern: '(?i)- \[x\][^\n]*review trigger'

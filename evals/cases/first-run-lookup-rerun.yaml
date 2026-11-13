@@ -1,0 +1,12 @@
+id: first-run-lookup-rerun
+skill: task-observer
+source: none
+tier: agent
+rule: 'SKILL.md § Session Start Protocol, step 1 (re-run the lookup after Workspace creation)'
+situation:
+  workspace: fixtures/first-run
+  prompt: 'Summarise README.md in one sentence.'
+expectations:
+  - check: file_matches
+    path: skill-observations/checkpoints.log
+    pattern: 'loaded task-observer'

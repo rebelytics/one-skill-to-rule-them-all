@@ -1,0 +1,110 @@
+{
+  "runs": {
+    "results-old/probe-in-first-batch/run-1": {
+      "pass": true,
+      "assertions": [
+        true
+      ]
+    },
+    "results-old/probe-in-first-batch/run-2": {
+      "pass": false,
+      "assertions": [
+        false
+      ]
+    },
+    "results-new/probe-in-first-batch/run-1": {
+      "pass": true,
+      "assertions": [
+        true
+      ]
+    },
+    "results-new/probe-in-first-batch/run-2": {
+      "pass": true,
+      "assertions": [
+        true
+      ]
+    },
+    "results-old/per-skill-lookup-at-skill-load/run-1": {
+      "pass": true,
+      "assertions": [
+        true,
+        true
+      ]
+    },
+    "results-new/per-skill-lookup-at-skill-load/run-1": {
+      "pass": false,
+      "assertions": [
+        false,
+        true
+      ]
+    },
+    "results-old/subagent-does-not-run-protocol/run-1": {
+      "pass": true,
+      "assertions": [
+        true,
+        true
+      ]
+    },
+    "results-new/subagent-does-not-run-protocol/run-1": {
+      "pass": false,
+      "assertions": [
+        true,
+        false
+      ]
+    },
+    "results-old/unresolved-skill-rechecked-next-turn/run-1": {
+      "pass": true,
+      "assertions": [
+        true,
+        true
+      ]
+    },
+    "results-new/unresolved-skill-rechecked-next-turn/run-1": {
+      "pass": true,
+      "assertions": [
+        true,
+        true
+      ]
+    },
+    "results-old/first-run-creates-workspace/run-1": {
+      "pass": false,
+      "assertions": [
+        false,
+        true,
+        true,
+        true
+      ]
+    },
+    "results-new/first-run-creates-workspace/run-1": {
+      "pass": true,
+      "assertions": [
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    "results-new/activation-precedes-plan/run-1": {
+      "pass": false,
+      "assertions": [
+        false
+      ]
+    },
+    "results-new/grader-example/run-1": {
+      "pass": null,
+      "assertions": [
+        true,
+        null
+      ]
+    }
+  },
+  "drift": {
+    "probe-in-first-batch": "improved",
+    "per-skill-lookup-at-skill-load": "REGRESSION",
+    "subagent-does-not-run-protocol": "REGRESSION",
+    "unresolved-skill-rechecked-next-turn": "same",
+    "first-run-creates-workspace": "improved",
+    "activation-precedes-plan": "new case",
+    "grader-example": "new case"
+  }
+}
