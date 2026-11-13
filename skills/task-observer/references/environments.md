@@ -225,8 +225,8 @@ signal. The stamp is bumped whenever the block's text changes, with the
 version at release: text edited on a test branch ships under the stamp of
 the version that releases it, never under the released one, since two
 texts under one stamp read as the same block to step 4. Session Start
-step 4 compares the stamp with this version's: a block whose stamp
-is older, or has none, is reported in one line with how it differs — the
+step 4 compares the stamp with the template's above (`template of vX.Y.Z`), never with
+the `version:`, so equal stamps mean current: a block whose stamp is older, or has none, is reported in one line with how it differs — the
 paragraphs it lacks, or, for a block from before v3.11.0, the paragraphs
 that now live in the skill — and the current block is offered whole, the
 configuration lines beside it kept; the file is never rewritten unasked. On every upgrade, list every config home that holds a

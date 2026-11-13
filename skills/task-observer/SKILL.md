@@ -243,8 +243,8 @@ is the checklist's record, and items 4–5 go in the run's report.
    activation instruction for this skill exists, suggest adding one
    (`references/environments.md`); after a scan `GAP:` line, open with the
    gap and the missing instruction, plainly. A block whose stamp (its first
-   line) is older than this version's, or absent, is reported in one line
-   with how it differs, and the current block is offered whole — never
+   line) is older than the template's (never the `version:`), or absent, is
+   reported in one line with how it differs, the current block offered whole — never
    written unasked. Run only once the skill is invoked, this step cannot
    detect a never-activated install; outside checks: that reference.
 - [ ] **5. Concurrency.** No shared log file to guard: each observation is its
