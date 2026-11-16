@@ -686,7 +686,10 @@ not a staging path.** Where the environment offers to save or propose a
 skill from inside the conversation — and its tool description may well say
 that is how a skill change is delivered — that control writes the installed
 copy; it produces nothing under `skill-updates/`. Never use it in a
-workspace that stages there. And before any in-session skill change, check
+workspace that stages there, unless the harness's own instructions name it
+as the install route and forbid handing over a package: then stage first and
+follow `references/skill-authoring.md` (editing rule 5, "the skill-card
+route"). And before any in-session skill change, check
 the staging manifest (`skill-updates/PENDING.md`) and today's
 `skill-updates/<date>/` for the same skill: a review running in parallel
 may already have staged it, built on the live file plus other changes.

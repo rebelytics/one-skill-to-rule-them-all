@@ -1562,7 +1562,7 @@ needs the entries. Stdout then carries the findings, the counts and the end line
 |---|---|---|---|
 | Persistent workspace | the shared folder | pinned absolute path (see activation block) | none — handoff-doc mode below |
 | Live skill files | `.claude/skills/{skill}/` on a read-only mount (writes fail with EROFS) | `~/.claude/skills/{skill}/`, ordinary writable files — no guard | n/a |
-| Present a staged file for install | the file-presentation tool (`present_files`) with its upload button | none — report the staged path and a change summary in chat | paste into the handoff doc |
+| Present a staged file for install | the file-presentation tool (`present_files`) with its upload button; where the harness's own instructions name its skill card as the install route instead, the card (SKILL.md, "Acting on Observations") | none — report the staged path and a change summary in chat | paste into the handoff doc |
 | Scheduled review | the app's scheduled tasks (cloud-default: run remotely; legacy local mode: run on the user's machine, only while it is on — see the execution-mode note above) | cron / an account-level scheduler that can reach the workspace — headless invocations carry the workspace grant (`--add-dir`) in the task definition; a `SessionStart` hook reports the review state, it does not run the review | calendar reminder + manual trigger |
 | Session-start hook | none | `SessionStart` hook (`hookSpecificOutput.additionalContext`) | none |
 | Local-vs-cloud tell | `allow_cowork_file_delete` present ⇒ local session | n/a | n/a |

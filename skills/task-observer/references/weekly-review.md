@@ -2052,7 +2052,8 @@ over the whole `skill-updates/` tree rather than only this round's skills,
 and a review that skipped it cannot write the line. Both are measured:
 staged from the bundles this run packed, presented from the delivered-file
 list the presentation call returns (where the environment has no such
-call, from the staged paths listed in chat) — never from memory of having
+call, from the staged paths listed in chat; on the skill-card route, a
+staged copy counts as a bundle and its card as one presented) — never from memory of having
 presented them. A difference is closed by presenting the missing bundles
 in one call and counting again. Present at most 20 bundles per call,
 highest priority first: one 21-file call listed 21 delivered and showed
@@ -2273,7 +2274,8 @@ its file in the staged set — another skill's file is cited as
 `./<path>`, both exempt and neither a disguise; re-wording a genuine
 cross-reference until the backtick no longer starts with the prefix is
 disguising a reference to satisfy a linter; (2) the artefact presented
-is the bundle — bare file links fail this gate — and every staged bundle
+is the bundle, or the card on the skill-card route (`references/skill-authoring.md`,
+editing rule 5) — bare file links fail this gate — and every staged bundle
 is presented (Step 7's staged/presented count); the number of cards is
 never a reason to present fewer, since each card is an install decision
 the user makes either way; (3) each staged skill's folded frontmatter
@@ -2503,8 +2505,9 @@ Two optional fields mark staged work whose wait costs something:
 `runs_on: <scheduled task name, cadence>` where Step 0's scheduler query
 shows a task that invokes the skill, and `needed_by: <date> (<id>)`, the
 earliest dated loss any applied observation forecasts. The install
-artefact is always the `.skill` bundle, so the entry never distinguishes
-a single-file from a multi-file skill. For a published skill it also
+artefact is the `.skill` bundle, so the entry never distinguishes
+a single-file from a multi-file skill; on the skill-card route the entry
+names the card as the install artefact instead. For a published skill it also
 carries the community-item classification from Step 5 (include now /
 test branch / declined, with the reason), per included item the
 reporter's GitHub login and numeric id, so your publishing step's commit
