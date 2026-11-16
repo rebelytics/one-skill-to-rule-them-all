@@ -485,7 +485,8 @@ the user has asked for a report to be drafted; nothing before that point
 fetches anything — except the review's upstream version check for a
 foreign-maintained skill (`weekly-review.md`, Step 2), run only where the
 instruction file carries the opt-in line "the review may check upstream
-versions" (`environments.md`, "Configuration lines beside the block").
+versions", and its read of a tracker the `[FEEDBACK CHANNELS]` line names
+(both: `environments.md`, "Configuration lines beside the block").
 
 **Pre-send gate — run on the finished draft, after the pre-flight.** The
 pre-flight decides whether and where a report goes; nothing reads the

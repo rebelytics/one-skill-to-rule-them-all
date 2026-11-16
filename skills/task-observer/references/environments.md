@@ -204,7 +204,7 @@ caller"), and the write path (SKILL.md, How to Log; after a compaction:
 "none logged" with no line per correction and per incident is a claim
 nobody checked, so the reasons are what make it a check.
 
-**Configuration lines beside the block.** Three values the skill reads
+**Configuration lines beside the block.** Four values the skill reads
 are configuration, not instructions that must fire before it loads. Keep
 them in the same instruction file, after the block, filled in at install
 like `[ABSOLUTE PATH]`; each is optional:
@@ -214,6 +214,8 @@ The user's repositories live under:
   [PROJECTS ROOT]
 Runs that cannot write here or get an approval answered write their output to:
   [RUN OUTPUT PATHS, one per line, or "none"]
+Findings about these skills also arrive through:
+  [FEEDBACK CHANNELS, one per line, or "none"]
 the review may check upstream versions
 ```
 
@@ -222,9 +224,14 @@ skill absent (`observation-families.md`, "Skill families and the sibling
 check"). `[RUN OUTPUT PATHS]` names where runs that skip the write steps
 leave their `## Task-observer notes` section ("Sessions whose output
 channel is owned by a caller"; which runs those are: "Before writing a
-user-scope block" below). The last line lets the review's Step 2 fetch a
-foreign-maintained skill's upstream version — the one network use a
-review starts; leave it out to keep reviews local. A block from before
+user-scope block" below). `[FEEDBACK CHANNELS]` names each other channel
+that carries findings about the installed skills — an inbound folder, a
+handoff directory, or an issue tracker with the command that lists its
+open items — and the review reads it at Step 1 (`weekly-review.md`,
+"Read the feedback channels"); naming a tracker that needs the network is
+the opt-in to that read. The last line lets the review's Step 2 fetch a
+foreign-maintained skill's upstream version — with a named tracker, the
+only network use a review starts; leave both out to keep reviews local. A block from before
 v3.11.0 carries these lines inside it; they are read the same way there.
 
 **The first line is the template's stamp, and an upgrade does not move
