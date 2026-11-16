@@ -449,11 +449,17 @@ name contains the project's name — with each one's open entries:
 
 ```bash
 root="[ABSOLUTE PATH]"; par=$(dirname "$root"); c="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"   # quoted: it may contain a space; bash
+oc='function out() { print (st ~ /^(actioned|declined|superseded|parked)$/ ? "x" : "o") }
+  FNR==1 { if (NR>1) out(); st=""; fm=0; sub(/^\357\273\277/, "") }
+  { sub(/\r$/, "") }
+  /^---[[:space:]]*$/ { fm++; next }
+  fm==1 && /^status:/ { st=$2; gsub(/["\047]/, "", st) }
+  END { if (NR>0) out() }'   # open = every entry but the resolved and parked, statusless included; CRLF and BOM read
 for a in "$par" "$(dirname "$par")"/* "$HOME/.claude" "$HOME/.claude/projects" "$c" "$c/projects"; do [ -d "$a" ] && find "$a" -maxdepth 5 \( -name .git -o \
   -name node_modules -o -name skill-updates \) -prune -o -type d -path '*/skill-observations/observation-log' -print 2>/dev/null; done | sort -u |
 while IFS= read -r d; do
   r=${d%/skill-observations/observation-log}; [ "$r" = "$root" ] && continue
-  n=$(find "$d" -maxdepth 1 -name '*.md' -exec grep -l '^status: open' {} + 2>/dev/null | wc -l | tr -d ' ')
+  n=$(find "$d" -maxdepth 1 -name '*.md' ! -empty -exec awk "$oc" {} + 2>/dev/null | grep -c o)
   printf '%s open=%s
 ' "$r" "$n"
 done
@@ -596,7 +602,13 @@ if [ ! -f "$s/SKILL.md" ] || [ ! -f "$s/scripts/new-observation.sh" ]; then   # 
   msg=$(printf '%s' "$msg" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '\000-\037')
   printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$msg"; exit 0
 fi
-open=$(find "$d/observation-log" -maxdepth 1 -name '*.md' -exec grep -l '^status: open$' {} + 2>/dev/null | wc -l | tr -d ' ')
+open=$(find "$d/observation-log" -maxdepth 1 -name '*.md' ! -empty -exec awk '
+  function out() { print (st ~ /^(actioned|declined|superseded|parked)$/ ? "x" : "o") }
+  FNR==1 { if (NR>1) out(); st=""; fm=0; sub(/^\357\273\277/, "") }
+  { sub(/\r$/, "") }
+  /^---[[:space:]]*$/ { fm++; next }
+  fm==1 && /^status:/ { st=$2; gsub(/["\047]/, "", st) }
+  END { if (NR>0) out() }' {} + 2>/dev/null | grep -c o)   # the review's open set: statusless counted, CRLF read; never a status grep
 last=$(tr -d '\r' 2>/dev/null < "$d/last-review-date.txt"); last=${last:-never}   # a CRLF file must not carry \r into the JSON
 msg="Make the first tool call of this session one batched call that both lists the task-observer workspace ($OBS_WORKSPACE) and invokes the task-observer skill; then run its Session Start Protocol. Observation files are created only by scripts/new-observation.sh in the skill directory, never by copying a header."
 msg="$msg $open open observations in $d; last review: $last."   # always, zero included: a mispinned path reads 0 too
