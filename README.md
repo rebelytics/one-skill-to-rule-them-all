@@ -6,7 +6,7 @@
 
 This meta-skill has **logged over 2,400 observations across my 86 skills**, most of which were turned into skill improvements. The majority of my 86 skills were themselves created based on observations by the meta-skill.
 
-The current version of task-observer also includes improvements from over 100 contributors, each credited as an author or co-author in the commit history, and over 340 issues and pull requests have been closed. Without these contributions, the project wouldn't be half as good as it is today.
+The current version of task-observer also includes improvements from over 100 contributors, each credited as an author or co-author in the commit history, and over 360 issues and pull requests have been closed. Without these contributions, the project wouldn't be half as good as it is today.
 
 **Want to support the project? It's not about money — read [how you can help](SUPPORT.md).**
 
@@ -15,7 +15,7 @@ This meta-skill is a practical application of the [Augmented Expertise](https://
 ## Quick install
 
 1. **Install it, by either route:**
-   - **From a terminal (Vercel's skills CLI, needs Node.js):** `npx skills add rebelytics/one-skill-to-rule-them-all --skill task-observer` — add `-g` to install it for all your projects. This is the most-used route: the skills.sh listing reports over 18,000 installs.
+   - **From a terminal (Vercel's skills CLI, needs Node.js):** `npx skills add rebelytics/one-skill-to-rule-them-all --skill task-observer` — add `-g` to install it for all your projects. This is the most-used route: the skills.sh listing reports over 19,000 installs.
    - **In the Claude apps (web, desktop, mobile, Cowork):** upload the `.skill` bundle from the latest release via Settings → Customize.
 2. **Activate it, whichever route you used.** In Claude Code, start with the session-start hook in `references/environments.md` ("A session-start hook"): it injects the activation into every session, and it is the only layer the harness enforces. Then, in Claude Code as everywhere else, paste the activation block from the same file into your CLAUDE.md (or your platform's equivalent): 31 lines, plus up to five optional configuration lines beside it. Check that it runs (see "Check that it actually runs" below). Installing alone is not enough, because description matching under-triggers.
 
@@ -76,13 +76,15 @@ One honest boundary: the formal observation log and review cycle pay off most as
 
 ## Installation
 
-The skill is a small bundle: `SKILL.md`, the files in `references/` that are loaded on demand (this keeps the always-loaded part lean), and six helper scripts in `scripts/`. Installing only SKILL.md works, but runs degraded and isn't recommended — the skill will tell you which files are missing.
+The skill is a small bundle: `SKILL.md`, the files in `references/` that are loaded on demand (this keeps the always-loaded part lean), and ten helper scripts in `scripts/`. Installing only SKILL.md works, but runs degraded and isn't recommended — the skill will tell you which files are missing.
 
 **Get the files:** download the `.skill` bundle attached to the latest release, or download the repo as a ZIP (Code → Download ZIP) / clone it and copy the `skills/task-observer/` folder, which holds `SKILL.md`, `references/` and `scripts/`. In this repository the skill lives in `skills/task-observer/`, and paths such as `references/environments.md` are relative to that folder.
 
 **Claude (web interface, desktop app, mobile app, Cowork):** without the release bundle, zip the `skills/task-observer/` folder and upload it via Settings → Customize. The skill is then available in all chats and in Cowork tasks.
 
 **Claude Code:** place the folder at `.claude/skills/task-observer/` (project-level) or in your user-level skills directory, preserving the `references/` and `scripts/` subfolders.
+
+**Claude Code plugin:** run `/plugin marketplace add rebelytics/one-skill-to-rule-them-all`, then `/plugin install task-observer@one-skill-to-rule-them-all`. The plugin installs the whole `skills/task-observer/` folder; run `/reload-plugins` or restart Claude Code afterwards.
 
 **Other systems:** keep the folder structure intact wherever your platform expects skills, and let your AI guide you (see "How it works" above).
 
