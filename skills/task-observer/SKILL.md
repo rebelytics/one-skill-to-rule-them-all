@@ -72,6 +72,8 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
 - `references/weekly-review.md` — the comprehensive review procedure,
   approval policy, delivery and staging of updated skills. **Load when a
   review triggers or the user asks for one.**
+- `references/review-slice.md` — the bounded slice's entry path. **Load
+  when a slice runs, instead of `weekly-review.md`**, whose sections it names.
 - `references/skill-authoring.md` — taxonomy, structure, licensing,
   attribution, confidentiality layers, live-file editing, relocation checks.
   **Load before writing any `SKILL.md` or skill file, setup work included.**
@@ -234,8 +236,8 @@ The `- [ ]` items under How to Log are ticked in the reply of the turn that writ
    observations, offer the full review ("the backlog hasn't been reviewed
    [in N days / yet] — N open; run it now, or carry on?"); above that, offer
    a bounded slice whose unit of work stays constant as the backlog grows
-   ("review the 10 oldest": `references/weekly-review.md`, "Bounded
-   slice") and state both numbers, open and roughly how
+   ("review the 10 oldest": `references/review-slice.md`, loaded instead
+   of the whole review file) and state both numbers, open and roughly how
    many distinct findings (cluster on the scanned `title` and `skill`; why:
    `references/weekly-review.md`). Only a scheduled/autonomous run loads
    `references/weekly-review.md` and runs the review unprompted; a session

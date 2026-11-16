@@ -2185,29 +2185,10 @@ the same as always available").
 
 ### Bounded slice
 
-A bounded slice is a review of the N oldest OPEN entries — the offer
-Session Start step 3 makes above ~15 open — and it runs as a review, not a
-glance. **Selection:** the N oldest by `date:`, then id, leaving out parked
-entries and those asked and unanswered (Approval policy, "An escalation is
-recorded on the entry"), which the record lists once under "Waiting for
-the user" — and re-asks, as a yes-or-no with the recommendation, each
-such entry whose last ask was in the previous review, appending the
-re-ask to its `escalated:` field; one re-asked and still unanswered is
-parked (Approval policy). **Run for the slice:** Steps 3, 5 and 6 over its
-entries, and the gate for the skills it stages. For each skill the slice
-stages, also list the open entries naming it (`bash scripts/skill-load.sh
-"[ABSOLUTE PATH]" <skill-name> --query-only`) and read the titles of
-those outside the slice: the staged text stays consistent with them, or
-the record names the conflict. They are checked for contradiction only,
-never reported as reviewed. **Run for the whole log whatever the
-slice:** Step 1's integrity checks (duplicate id, contiguity, header
-conformance, the inbox drain) and Step 6's re-scan against the Step 1 list
-— a slice that skips them leaves the log unchecked for as long as slices
-are all that run. **Record:** `reviews/<date>-slice/REVIEW.md`, the Step 7
-template with a first line "Bounded slice: N of M open — ids …", and the
-steps not run named (Step 4, the promotion pass); entries outside the slice
-are never reported as reviewed. **Timestamp:** Step 8 with `rec` set to the
-slice's record, bound to an outcome like a full review.
+A bounded slice — a review of the N oldest OPEN entries, the offer
+Session Start step 3 makes above ~15 open — is defined and run from
+`references/review-slice.md`, which a slice loads instead of this whole
+file and which names the sections of this file each of its steps reads.
 
 ## Constraints
 

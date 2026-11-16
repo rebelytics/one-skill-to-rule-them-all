@@ -1963,7 +1963,7 @@ regimes:
 ## Bundle manifest
 
 This skill consists of `SKILL.md`, the reference files it lists
-(`weekly-review.md`, `skill-authoring.md`, `environments.md`,
+(`weekly-review.md`, `review-slice.md`, `skill-authoring.md`, `environments.md`,
 `observation-log.md`, `observation-scan.md`, `observation-families.md`,
 `signals.md`, `migration.md`,
 `starter-principles.md`) and `scripts/bin-check.sh`, `scripts/diff-staged.sh`,
