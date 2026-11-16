@@ -21,7 +21,8 @@
 # SKILL.md is compared by parsed frontmatter value plus body bytes, through
 # `validate-skill-bundle.py --compare-frontmatter` beside this file; where
 # no working Python 3 runs, through the text normaliser the same section
-# documents (name:, description:, version: quotes stripped), with one
+# documents (name:, description:, version: and the metadata.version and
+# metadata.core_max_lines lines quotes stripped), with one
 # `diff-staged: no working Python 3 …` line on stderr saying so. "Working"
 # is measured, not looked up: the interpreter is the first of python3,
 # python that runs `-c` and reports major version 3. `command -v` alone
@@ -75,7 +76,7 @@ else
   else
     why="no validate-skill-bundle.py beside this script"
   fi
-  fm=$'1,/^---$/{/^(name|description|version):[[:space:]]*".*"[[:space:]]*$/{s/:[[:space:]]*"/: /;s/"[[:space:]]*$//;s/\\\\"/"/g;s/\\\\\\\\/\\\\/g;};/^(name|description|version):[[:space:]]*\'.*\'[[:space:]]*$/{s/:[[:space:]]*\'/: /;s/\'[[:space:]]*$//;s/\'\'/\'/g;};}'
+  fm=$'1,/^---$/{/^(name|description|version|[[:space:]]+(version|core_max_lines)):[[:space:]]*".*"[[:space:]]*$/{s/:[[:space:]]*"/: /;s/"[[:space:]]*$//;s/\\\\"/"/g;s/\\\\\\\\/\\\\/g;};/^(name|description|version|[[:space:]]+(version|core_max_lines)):[[:space:]]*\'.*\'[[:space:]]*$/{s/:[[:space:]]*\'/: /;s/\'[[:space:]]*$//;s/\'\'/\'/g;};}'
   a=$(mktemp) && b=$(mktemp) || { echo "ERROR normalisation: mktemp failed"; exit 2; }
   trap 'rm -f "$a" "$b"' EXIT
   if ! sed -E "$fm" "$live/SKILL.md" > "$a" || ! sed -E "$fm" "$staged/SKILL.md" > "$b" || [ ! -s "$a" ] || [ ! -s "$b" ]; then

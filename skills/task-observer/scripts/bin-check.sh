@@ -14,9 +14,11 @@
 #                   tautology (references/environments.md, "Where the scripts
 #                   are not on the device"), so a digests file carrying a
 #                   `verified_against:` line is the MANIFEST and is refused.
-#                   It may open with the installed SKILL.md's `version:` line
-#                   (the "Refresh the digests" row there writes it).
-#   --installed-version <v>  the installed skill's frontmatter `version:`,
+#                   It may open with the installed SKILL.md's version line —
+#                   `metadata.version`, or a top-level `version:` on an older
+#                   install — read indented or not (the "Refresh the digests"
+#                   row there writes it).
+#   --installed-version <v>  the installed skill's frontmatter version,
 #                   where the digests file does not carry it.
 #   <script>        the file name under .bin/ to run (session-start-scan.sh,
 #                   skill-load.sh, new-observation.sh, …); a .py runs under
@@ -54,8 +56,9 @@ fi
 shift 3
 bin="$root/skill-observations/.bin"
 [ -f "$bin/$script" ] || { echo "BIN REFUSED — no '$script' under '$bin'" >&2; exit 3; }
-# `key: "1.2.3"` -> 1.2.3 (first matching line of a file; quotes and spaces dropped)
-field() { awk -v k="$1" 'index($0, k ":") == 1 {v = substr($0, length(k) + 2); gsub(/["'"'"' \t\r]/, "", v); print v; exit}' "$2"; }
+# `key: "1.2.3"` -> 1.2.3 (first matching line of a file, indented or not, so
+# a `metadata.version` line copied with its indent reads; quotes and spaces dropped)
+field() { awk -v k="$1" '{s = $0; sub(/^[ \t]+/, "", s)} index(s, k ":") == 1 {v = substr(s, length(k) + 2); gsub(/["'"'"' \t\r]/, "", v); print v; exit}' "$2"; }
 [ -z "$(field verified_against "$dig")" ] || { echo "BIN REFUSED — '$dig' carries verified_against: it is the MANIFEST, not the installed digests" >&2; exit 3; }
 [ -n "$iv" ] || iv=$(field version "$dig")
 iv=$(printf '%s' "$iv" | tr -d "\"' ")

@@ -83,7 +83,7 @@
 # block: every finding line (DUE / NOTE / LOST ENTRIES / UNFILLED / DUPLICATE
 # ID / RESURRECTED / SPLIT STORE / GAP) repeated VERBATIM, and LAST one `end of scan` line
 # repeating the counts, how many finding lines stand above the entries, how
-# many bytes stdout carried above it, and this script's version (VERSION below, equal to the skill's `version:`), so
+# many bytes stdout carried above it, and this script's version (VERSION below, equal to the skill's `metadata.version`), so
 # a run can tell a script that lacks a feature from one that is broken. The findings
 # open the output and close it, so a view cut by `head` keeps them and one
 # cut by `tail` keeps them with the summary; the same lines are written to
@@ -133,7 +133,7 @@
 
 set -u
 
-VERSION="3.12.0"   # equal to the skill's frontmatter version:; the end line names it
+VERSION="3.12.0"   # equal to the skill's frontmatter metadata.version; the end line names it
 
 entries=   # --entries-to target; empty = the entries print to stdout
 skill_dir= # --skill-dir: the installed skill directory; empty = the one this script sits in

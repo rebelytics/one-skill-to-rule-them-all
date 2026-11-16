@@ -186,6 +186,33 @@ def frontmatter(text):
     return m.group(1) if m else None
 
 
+def frontmatter_version(fm):
+    """The skill's version from a frontmatter block, or None: `metadata.version`
+    (one level under `metadata:`, the form this skill carries), else a
+    top-level `version:` (other skills and older installs still carry it).
+    Either quote style is stripped."""
+    parent = None
+    for line in (fm or "").splitlines():
+        if re.match(r"^\S", line):
+            pm = re.match(r"^([A-Za-z_][\w-]*):", line)
+            parent = pm.group(1) if pm else None
+            continue
+        km = re.match(r"""^[ \t]+version:[ \t]*["']?([^"'\s]+)["']?[ \t]*$""", line)
+        if km and parent == "metadata":
+            return km.group(1)
+    top = re.search(r"""(?m)^version:[ \t]*["']?([^"'\s]+)["']?[ \t]*$""", fm or "")
+    return top.group(1) if top else None
+
+
+# (name, frontmatter body, version read)
+VERSION_READ_FIXTURES = [
+    ("metadata.version, quoted, is read", 'name: x\nmetadata:\n  author: a\n  version: "1.2.0"\n', "1.2.0"),
+    ("a top-level version: (older install) is still read", "name: x\nversion: 1.2.0\n", "1.2.0"),
+    ("version nested under another parent is not read", "name: x\nother:\n  version: 1.2.0\n", None),
+    ("no version: None", "name: x\n", None),
+]
+
+
 def folded_description(fm):
     """The description as the installer sees it, for both YAML block styles.
 
@@ -2401,7 +2428,8 @@ def scan_entries_empty_ok():
 
 def scan_version_ok():
     """The end line names the script's VERSION, and VERSION equals the
-    skill's frontmatter version when SKILL.md sits beside scripts/."""
+    skill's frontmatter `metadata.version` (or a top-level `version:`) when
+    SKILL.md sits beside scripts/."""
     text = SCAN_SCRIPT.read_text(encoding="utf-8")
     m = re.search(r'(?m)^VERSION="([^"]+)"', text)
     if not m:
@@ -2411,9 +2439,9 @@ def scan_version_ok():
     detail = f"end line {out.splitlines()[-1][-80:]!r}"
     skill_md = SCAN_SCRIPT.parent.parent / "SKILL.md"
     if skill_md.is_file():
-        fm = re.search(r'(?m)^version:\s*["\']?([^"\'\s]+)["\']?', skill_md.read_text(encoding="utf-8"))   # either quote style
-        ok = ok and fm is not None and fm.group(1) == m.group(1)
-        detail += f", script {m.group(1)} vs skill {fm.group(1) if fm else None}"
+        fv = frontmatter_version(frontmatter(skill_md.read_text(encoding="utf-8")))   # metadata.version, else top level
+        ok = ok and fv == m.group(1)
+        detail += f", script {m.group(1)} vs skill {fv}"
     return ok, detail
 
 
@@ -2590,6 +2618,8 @@ BINCHECK_FIXTURES = [
     ("installed version known, MANIFEST without verified_against: refused", "nover", 3, "", "has no verified_against: line"),
     ("the MANIFEST passed as the digests file: refused", "selfdig", 3, "", "it is the MANIFEST"),
     ("no installed version anywhere: gate skipped with a note, digests decide", "match", 0, "hello a b", "version gate skipped"),
+    ("an indented metadata.version line in the digests file is read: newer than verified_against, refused",
+     "metaolder", 3, "", "installed 3.9.0 is newer than .bin/MANIFEST verified_against 3.8.0"),
 ]
 
 
@@ -2612,9 +2642,11 @@ def bincheck_case(scenario):
         sums = "".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p}\n"
                        for p in sorted(installed.iterdir()))
         head = 'version: "3.9.0"\n' if scenario in ("older", "same", "nover", "selfdig") else ""
+        if scenario == "metaolder":
+            head = '  version: "3.9.0"\n'
         dig.write_text(head + sums, encoding="utf-8")
         manifest = bin_dir / "MANIFEST"
-        va = {"older": "3.8.0", "same": "3.9.0", "flag": "3.9.0", "selfdig": "3.9.0"}.get(scenario)
+        va = {"older": "3.8.0", "metaolder": "3.8.0", "same": "3.9.0", "flag": "3.9.0", "selfdig": "3.9.0"}.get(scenario)
         manifest.write_text((f"verified_against: {va}\n" if va else "") + sums, encoding="utf-8")
         if scenario == "selfdig":
             dig = manifest
@@ -2643,16 +2675,19 @@ def _py_stubs(tmp, python_works):
     return env
 
 
-def diffstaged_nopy_case(python_works):
+def diffstaged_nopy_case(python_works, meta=False):
     """diff-staged.sh with python3 a Store-alias stub: the live name: quoted,
     the staged one bare (the installer's quoting), and with python_works a
-    changed body line too. Returns (status, stdout, stderr)."""
+    changed body line too; with meta, a metadata.version quoted on one side
+    and bare on the other. Returns (status, stdout, stderr)."""
     import subprocess
     with tempfile.TemporaryDirectory() as tmp:
         live, staged = pathlib.Path(tmp) / "live dir" / "sk", pathlib.Path(tmp) / "staged dir" / "sk"
         for d, name, body in ((live, '"sk"', "body"), (staged, "sk", "body2" if python_works else "body")):
             d.mkdir(parents=True)
-            (d / "SKILL.md").write_text(f"---\nname: {name}\ndescription: d\n---\n{body}\n", encoding="utf-8")
+            mv = ('"1.0"' if d == live else "1.0") if meta else ""
+            md = f"metadata:\n  version: {mv}\n" if meta else ""
+            (d / "SKILL.md").write_text(f"---\nname: {name}\ndescription: d\n{md}---\n{body}\n", encoding="utf-8")
         r = subprocess.run(["bash", str(DIFFSTAGED_SCRIPT), str(staged), str(live)], cwd=tmp, env=_py_stubs(tmp, python_works),
                            capture_output=True, text=True, encoding="utf-8", errors="replace")
         return r.returncode, r.stdout, r.stderr
@@ -2664,6 +2699,8 @@ DIFFSTAGED_NOPY_FIXTURES = [
      False, 0, "IDENTICAL", "diff-staged: no working Python 3", "compare failed"),
     ("python3 a stub, python a working Python 3: the parsed compare runs (a body difference named as body:)",
      True, 1, "DIFFERS 1 path(s): SKILL.md (body: DIFFERS", "", "no working Python 3"),
+    ("no working Python: a metadata.version quoted on one side only is IDENTICAL by the text fallback",
+     "meta", 0, "IDENTICAL", "diff-staged: no working Python 3", "compare failed"),
 ]
 
 
@@ -3423,6 +3460,10 @@ def selftest():
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} template token: warns, does not fail the gate"
               + ("" if ok else f" (fails {fails})"))
+    for name, fm, want in VERSION_READ_FIXTURES:
+        ok = frontmatter_version(fm) == want
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} version read: {name}")
     for name, extra, want_fail, want_warn in TOP_KEY_FIXTURES:
         with tempfile.TemporaryDirectory() as td:
             sk = pathlib.Path(td) / "tk"
@@ -3496,7 +3537,7 @@ def selftest():
                          ("--entries-to onto a non-empty file is refused, nothing written", scan_entries_refused_ok),
                          ("an argument after the root is refused by name, nothing written", scan_trailing_ok),
                          ("--entries-to leaving its file empty beside files: N > 0 is a broken run, exit 3", scan_entries_empty_ok),
-                         ("the end line names VERSION, equal to the skill's version:", scan_version_ok),
+                         ("the end line names VERSION, equal to the skill's metadata.version", scan_version_ok),
                          ("a root with no observation log under it is refused by name, nothing written", scan_wrong_root_ok),
                          ("a root named skill-observations/ holding the log scans its parent, with a NOTE", scan_child_root_ok),
                          ("the scan's commands off PATH: SCAN TOOLS MISSING, no checkpoint line", scan_tools_missing_ok),
@@ -3569,7 +3610,7 @@ def selftest():
             print(f"{'ok  ' if ok else 'FAIL'} diff-staged script: {name}"
                   + ("" if ok else f" (exit {rc}, out {out!r})"))
         for name, works, want_rc, want, want_err, lacks in DIFFSTAGED_NOPY_FIXTURES:
-            rc, out, err = diffstaged_nopy_case(works)
+            rc, out, err = diffstaged_nopy_case(works is True, meta=(works == "meta"))
             ok = (rc == want_rc and out.startswith(want) and out.count("\n") == 1
                   and want_err in err and lacks not in out + err)
             bad += not ok; total += 1
@@ -3749,11 +3790,11 @@ def check_repo_versions(repo_dir, fails):
             skill_md = found[0]
     if skill_md.is_file():
         fm = frontmatter(skill_md.read_text(encoding="utf-8")) or ""
-        m = re.search(r'(?m)^version:\s*["\']?([^"\'\s]+)["\']?\s*$', fm)
-        if not m:
-            fails.append("repo: SKILL.md frontmatter has no `version:` (it must equal the canonical version)")
-        elif m.group(1) != canonical:
-            fails.append(f"repo: SKILL.md frontmatter version {m.group(1)!r} != canonical {canonical!r}")
+        fv = frontmatter_version(fm)
+        if fv is None:
+            fails.append("repo: SKILL.md frontmatter has no `metadata.version` (or top-level `version:`); it must equal the canonical version")
+        elif fv != canonical:
+            fails.append(f"repo: SKILL.md frontmatter version {fv!r} != canonical {canonical!r}")
     mp = repo_dir / ".claude-plugin" / "marketplace.json"
     if mp.is_file():
         try:

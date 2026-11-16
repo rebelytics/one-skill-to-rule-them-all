@@ -863,12 +863,13 @@ manifests, which a staged copy never does, so a checkout install reads as (a).
 <live>` is this command packaged (VCS metadata, build artefacts and a
 checkout's `.claude-plugin/` excluded, the text fallback below where no Python runs), with one verdict
 line and its exit: `IDENTICAL` 0, `DIFFERS <n> path(s): …` 1, `ERROR` 2. Where no Python runs, the fallback
-is a text normaliser — frontmatter only, `name:`, `description:` and
-`version:` only: surrounding double quotes stripped with `\"` and `\\`
+is a text normaliser — frontmatter only, `name:`, `description:`,
+`version:` and the indented `metadata.version` and `metadata.core_max_lines`
+lines only: surrounding double quotes stripped with `\"` and `\\`
 resolved, surrounding single quotes stripped with `''` resolved:
 
 ```bash
-fm=$'1,/^---$/{/^(name|description|version):[[:space:]]*".*"[[:space:]]*$/{s/:[[:space:]]*"/: /;s/"[[:space:]]*$//;s/\\\\"/"/g;s/\\\\\\\\/\\\\/g;};/^(name|description|version):[[:space:]]*\'.*\'[[:space:]]*$/{s/:[[:space:]]*\'/: /;s/\'[[:space:]]*$//;s/\'\'/\'/g;};}'
+fm=$'1,/^---$/{/^(name|description|version|[[:space:]]+(version|core_max_lines)):[[:space:]]*".*"[[:space:]]*$/{s/:[[:space:]]*"/: /;s/"[[:space:]]*$//;s/\\\\"/"/g;s/\\\\\\\\/\\\\/g;};/^(name|description|version|[[:space:]]+(version|core_max_lines)):[[:space:]]*\'.*\'[[:space:]]*$/{s/:[[:space:]]*\'/: /;s/\'[[:space:]]*$//;s/\'\'/\'/g;};}'
 norm() { sed -E "$fm" "$1" > "$2" && [ -s "$2" ]; }
 a=$(mktemp) && b=$(mktemp) && norm "$live/SKILL.md" "$a" && norm "$staged/SKILL.md" "$b" && diff "$a" "$b" && diff -rq -x SKILL.md -x .git -x .hg -x .svn -x .claude-plugin "$live" "$staged"   # bash; exit 0 and silent = (a)
 ```
@@ -982,7 +983,8 @@ scripts are not on the device"), hash the installed `scripts/` and compare
 with `.bin/MANIFEST`; on any difference — a copy this gate classified (a),
 or an install nothing recorded — replace `.bin/`'s scripts with the
 installed ones and rewrite `.bin/MANIFEST`: a `verified_against: <version>`
-line carrying the installed frontmatter `version:`, the date, and one
+line carrying the installed frontmatter version (`metadata.version`, or a
+top-level `version:` on an older install), the date, and one
 `sha256  <file>` line per installed script, none omitted — no prose that
 reads as a verification result, since `bin-check.sh` refuses a copy whose
 `verified_against:` is older than the installed version. Verify by
@@ -1071,7 +1073,7 @@ rule that fires after the damage, the backstop for the attribution read.
 
 **A (b) skill never reaches Step 5, so Step 2 records its currency.** For
 each foreign-maintained skill with open observations, state its installed
-`version:` and install date from the local copy, and mark each of its
+version (`metadata.version`, or a top-level `version:`) and install date from the local copy, and mark each of its
 observations "currency unverified — may already be fixed upstream"; offer
 the feedback pre-flight's HEAD re-read (`skill-authoring.md`) before such
 an entry is clustered, escalated or approved. An upstream that was not
@@ -1549,12 +1551,13 @@ version.** When the staged skill is published, or built and awaiting its
 first push (however your publication process records that state), the
 review bumps the version as part of the staging: patch for wording,
 minor for new rules or sections, major for restructures. Where the skill
-carries a `version:` in its frontmatter, the bump goes into the staged
-frontmatter; where the version lives only in the repo's manifest (a
+carries a version in its frontmatter (`metadata.version`, as this skill
+does, or a top-level `version:` a skill has not yet moved), the bump goes
+into that field of the staged frontmatter; where the version lives only in the repo's manifest (a
 `plugin.json` or equivalent), the review records the intended bump in
 the staging manifest entry (`PENDING.md`) so the publishing sync applies
-it. Where a published skill carries no `version:` and no repo manifest
-holds one, the review adds the field and the bump in the same staging —
+it. Where a published skill carries no frontmatter version and no repo manifest
+holds one, the review adds the field (`metadata.version`, quoted) and the bump in the same staging —
 `1.0.0`, or the next minor above what the README or the release history
 implies — never deferring either to your publishing step, which cannot
 bump a version nobody has set: a hold that tests "version unchanged"

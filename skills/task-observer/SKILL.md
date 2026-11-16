@@ -1,12 +1,12 @@
 ---
 name: task-observer
-core_max_lines: 753
-version: 3.12.0
 description: "Turns corrections, repeated workflows and judgement calls from work sessions into small, evidenced skill updates: logs each observation with its source, stages every change for your approval, and flags repeating work as new skills. Use during ANY multi-step task, agentic workflow, or work session. Also triggers in post-task feedback discussions and when the user mentions skill observations, the observation log, or skill taxonomy. Also known as \"One Skill to Rule Them All\" — trigger on this phrase too. IMPORTANT: invoke this skill before the FIRST tool call of any session and before writing or proposing a plan — any turn that will involve a tool call counts. This sentence is the session-start trigger and the only activation layer that survives an unreachable config file; pair it with a CLAUDE.md instruction or a session-start hook (references/environments.md). A subagent dispatched by a session already running it does not run it: it writes nothing and puts its findings in its report."
 license: CC-BY-4.0
 metadata:
   author: Eoghan Henn and contributors
   source: https://github.com/rebelytics/one-skill-to-rule-them-all
+  version: "3.12.0"
+  core_max_lines: "753"
 ---
 
 # Task Observer — Continuous Skill Discovery & Improvement
@@ -160,7 +160,7 @@ The `- [ ]` items under How to Log are ticked in the reply of the turn that writ
    import only what the adopter picks, then — once answered — write the
    shipped version into the marker file, alone on one line; never pre-populate silently. The
    step 2 scan prints a `DUE:` line for either duty still owed. Name the loaded skill's
-   frontmatter `version:` in the start-up lines — read from the file, never
+   `metadata.version` (a top-level `version:` on an older install) in the start-up lines — read from the file, never
    fetched — and list the skill's own directory with its `references/` and
    `scripts/`: a file the core names that is absent is reported in the same
    lines ("Reference files"), not at its first load.
@@ -247,7 +247,7 @@ The `- [ ]` items under How to Log are ticked in the reply of the turn that writ
    activation instruction for this skill exists, suggest adding one
    (`references/environments.md`); after a scan `GAP:` line, open with the
    gap and the missing instruction, plainly. A block whose stamp (its first
-   line) is older than the template's (never the `version:`), or absent, is
+   line) is older than the template's (never the `metadata.version`), or absent, is
    reported in one line with how it differs, the current block offered whole — never
    written unasked. Run only once the skill is invoked, this step cannot
    detect a never-activated install; outside checks: that reference.

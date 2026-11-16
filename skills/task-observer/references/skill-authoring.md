@@ -1375,7 +1375,10 @@ as an unexpected key. The validator checks the same set: any other top-level
 key fails, except a few older ones still carried by published skills
 (`version`, `core_max_lines`, `origin`, `maintainer`, `author`), which warn
 naming `metadata:` until each skill's next release moves them; it reads
-`core_max_lines` in either place, and notes the key nested anywhere else as not read:
+`core_max_lines` in either place, and notes the key nested anywhere else as not read.
+A skill's version is `metadata.version`, quoted (this skill carries it there);
+the scripts that read a version take it from there first and accept a
+top-level `version:` on another skill or an older install:
 
 ```yaml
 metadata:
