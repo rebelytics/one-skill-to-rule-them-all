@@ -40,7 +40,9 @@ footer routing methodology feedback to the creator — the body opens with
 what the skill does, never with the offer; tool-agnostic language
 (capabilities like "browser access", not product names); built-in
 enforcement (see Pre-Flight Principle). Default to open-source when a skill
-could go either way — strip specifics and generalise.
+could go either way — strip specifics and generalise. The boundary is a confidentiality boundary with
+asymmetric errors — internal costs only reach, open-source can leak — so
+when genuinely uncertain, prefer internal and promote later.
 
 **Internal skills** contain user/client/project specifics, personal
 preferences, or context only the user has. They identify themselves as
@@ -1355,6 +1357,9 @@ caught only by a test built to break it.
    mutant means harden the fixture or delete the redundant condition.
 
 ## Runtime prerequisites — declare what the skill needs to be able to run
+
+Session Start step 6 resolves every logged target: a deleted skill
+accumulates observations unnoticed; a dead one more so.
 
 A skill that drives something outside itself — a CLI binary, a daemon, an
 API key, a container runtime — is only as installed as the thing it

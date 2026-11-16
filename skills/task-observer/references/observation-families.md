@@ -15,6 +15,13 @@ layout and the id snippet are in `observation-log.md`.
 
 ## Skill families and the sibling check
 
+From the core's write-time check: Fast test: **could this sentence survive having the tool's or subject's
+name removed?** If yes it belongs to every sibling. The
+`siblings_checked:` verdict is recorded even when it is "checked —
+instance-specific, no propagation": a one-entry `skill:` list looks the
+same whether the siblings were evaluated or never considered, and only the
+recorded field makes the *absence* of the judgement visible.
+
 Where several skills implement one idea — the same methodology for
 different tools, the same structure for different subjects, the same
 companion pattern for different base skills — the shared part drifts by
@@ -167,7 +174,10 @@ acts on only a subset of the listed skills — a release session owning one
 skill while a parallel review owns the rest — both plain moves are wrong:
 left `open`, another session may re-apply the finished portion; marked
 `actioned`, the unfinished portions silently leave every future review
-queue. Split the record along the work's seams instead:
+queue (the core's short form: mark the observation `actioned` with a
+`resolution:` naming the portions applied, then log a carrier holding the
+remainder, with only the outstanding skills in its `skill:` list). Split
+the record along the work's seams instead:
 
 1. **While the partial work is in progress**, note the claim in the body:
    "portion X being applied by session Y — do not re-apply." The claim is

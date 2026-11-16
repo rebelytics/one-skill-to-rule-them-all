@@ -17,6 +17,13 @@ here takes effect until the adopter consciously imports it.
 SKILL.md step 1 points here for the whole procedure; it carries only the
 trigger and the one-line summary.
 
+Offer it only in a review or a session the user opened for skill work,
+never appended to another task's reply (it waits for the next review);
+then load that file and follow its **Reconciliation** section: match by
+substance, offer once in one line, import only what the adopter picks,
+then — once answered — write the shipped version into the marker file,
+alone on one line; never pre-populate silently.
+
 **When to read this file:** only when the Session Start Protocol
 (SKILL.md, step 1) finds the starter-set reconciliation due — the marker
 `skill-observations/starter-principles-reviewed.txt` is absent, or holds

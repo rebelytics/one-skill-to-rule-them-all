@@ -1,6 +1,6 @@
 # Comprehensive Review (scheduled or fallback)
 
-Load triggers: a review runs (scheduled, an opted-in fallback, or asked for); the start-up line counting open observations as distinct findings; judging a staged-work ledger entry at session start
+Load triggers: a review runs (scheduled, an opted-in fallback, or asked for); the start-up line counting open observations as distinct findings; the session-start review check and offer (a run that recorded no review, what the offer says, scaled to the backlog); judging a staged-work ledger entry at session start
 
 Cross-checks all OPEN observations against all skills, propagates
 cross-cutting principles, and applies improvements that don't need user
@@ -23,6 +23,7 @@ input to staged copies — never to live skills. Two modes:
 
 ## Contents
 
+- The session-start review offer
 - Approval policy
 - Steps
   - Step 0 — recommend scheduled setup (fallback mode only)
@@ -165,6 +166,29 @@ Given the roots:
   the anchor workspace. Integration and staging unify; bookkeeping does
   not, and unification needs an identity per queue, or the merged
   references stop resolving.
+
+## The session-start review offer
+
+Session Start step 3 points here for two cases of its due test, and for
+the offer an interactive session makes once the review is due.
+`skill-observations/review-started.txt` not reading `completed`, or a
+registered scheduler reporting a later last run, is a run that completed
+no review: say "fired YYYY-MM-DD, no review recorded" and treat the review
+as due (a live `started … step5` claim is a review in progress: Step 5,
+below); a date with no `reviews/<date>/` or `<date>-slice/` is "review
+YYYY-MM-DD left no record", treated the same.
+
+The offer first says plainly what the review does and what a yes approves
+— logged notes become proposed edits to their skills, staged for them to
+install or discard — at least where step 4 finds no activation
+instruction. Scale the offer's CONTENT with the backlog, never its
+frequency: up to ~15 open observations, offer the full review ("the
+backlog hasn't been reviewed [in N days / yet] — N open; run it now, or
+carry on?"); above that, offer a bounded slice whose unit of work stays
+constant as the backlog grows ("review the 10 oldest": `references/review-
+slice.md`, loaded instead of the whole review file) and state both
+numbers, open and roughly how many distinct findings (cluster on the
+scanned `title` and `skill`; why: `references/weekly-review.md`).
 
 ## Approval policy
 
@@ -716,6 +740,15 @@ your own vehicle"); a refresh of an upstream-maintained skill is that
 check for every entry parked on it.
 
 ### Staged-work reconciliation gate
+
+Session Start step 6 reconciles `skill-updates/` before announcing it: no
+session observes an install, so the one that reads the ledger owns its
+cleanup. Compare each staged copy with live (`scripts/diff-staged.sh
+<staged> <live>`: ERROR is not reconciled, never clean; DIFFERS is
+classified, since a bare "differs" is not a verdict; bridged, the
+two-shell digest listing: `references/environments.md`, "Environment
+mappings"), and name every directory no manifest entry covers, there and
+under each previous root `skill-observations/previous-roots.txt` names.
 
 Installation is a manual, per-item act that happens outside any session,
 so nothing fires at install time and a ledger whose removal trigger is an

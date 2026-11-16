@@ -1,6 +1,6 @@
 # Signals — what to watch for, in full
 
-Load triggers: unsure whether something is worth logging or generalises; sorting many candidate observations; deciding in a review what a skill should lose; a defect that is not the deliverable takes a second hypothesis; the same rule broken a second time, before proposing a fix; before writing any "later" into a recommendation
+Load triggers: unsure whether something is worth logging or generalises; sorting many candidate observations; deciding in a review what a skill should lose; a defect that is not the deliverable takes a second hypothesis; the same rule broken a second time, before proposing a fix, or why a first violation is logged; before writing any "later" into a recommendation
 
 The core skill carries the short trigger list; this file is the full
 catalogue with examples, loaded on the triggers above.
@@ -98,9 +98,16 @@ debugging methodology — only the observation-capture rule at the boundary.
 
 ## Second violation — why a barrier, not a rewording
 
+A first violation is already an observation: breaking a rule that a skill or a project instruction file documents is
+not an embarrassment to move past: it is the only evidence that the rule's
+*enforcement* is too weak, and nobody but the agent can see it.
+
 The core carries the rule: from a rule's second failure onward, the proposed
 improvement is a structural barrier, not better wording. This is why, and
-what counts as a barrier.
+what counts as a barrier. A rule that has
+failed twice with no intervening `actioned` fix has a protection problem, not a
+wording problem: never a clearer sentence, a bolder warning,
+or the same rule moved somewhere more prominent.
 
 The observed case: one documented rule broken three times in three separate
 sessions. The rule lived in a project instruction file re-read at the start

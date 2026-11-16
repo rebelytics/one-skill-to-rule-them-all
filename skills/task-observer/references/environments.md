@@ -1,6 +1,6 @@
 # Environments, Activation Setup, and Handoff-Doc Mode
 
-Load triggers: anchoring, pinning, re-pinning or diagnosing a shard of the workspace; a new log was just created (list the sibling logs); setting up or diagnosing activation (instruction block, hooks, activation config); placing the session-start mount probe in the first batched call; the folder picker is refused or no device-bridge tool is found; no filesystem at all (handoff-doc mode); no stable path resolves for a disposable worker (report-back mode); a session whose output a caller owns; briefing a delegate (a subagent, another session, a specialist); after a compaction or resume; the checkpoint in a priced-write workspace; a permission or classifier denial of a log write; a mode that forbids every write by design; the first-run backfill
+Load triggers: anchoring, pinning, re-pinning or diagnosing a shard of the workspace; a new log was just created (list the sibling logs); setting up or diagnosing activation (instruction block, hooks, activation config); placing the session-start mount probe in the first batched call, or splitting a failed probe (first run, read-only grant, missing mount); the folder picker is refused or no device-bridge tool is found; no filesystem at all (handoff-doc mode); no stable path resolves for a disposable worker (report-back mode); a session whose output a caller owns; briefing a delegate (a subagent, another session, a specialist); after a compaction or resume; the checkpoint in a priced-write workspace; a permission or classifier denial of a log write; a mode that forbids every write by design; the first-run backfill
 
 Load this for setup questions, compaction/resume behaviour, or when running
 in an environment without filesystem access.
@@ -18,6 +18,7 @@ in an environment without filesystem access.
   - Verify activation in a NEW session — the installing session cannot prove it
   - Activation config — late, intermittent, and why the guard cannot live inside it
   - The probe rides inside the first batched call
+  - A failed session-start probe
   - Install-layout hazards — three ways a skill silently stops existing
   - Other agent tools that read the same skills folder
   - Two harness behaviours that block the protocol rather than break it
@@ -194,8 +195,8 @@ workspace pin and the subagent rule. Its ceiling is in `references/ceilings.txt`
 from the skill once it has loaded, at the moment it applies: the
 per-skill lookup at each skill load (`observation-scan.md`, "The
 per-skill lookup at every skill load", named in SKILL.md Session Start
-step 2), the consent rule for applying an open observation (SKILL.md,
-Surfacing Protocol), the checklist and its record in session-starts.log (SKILL.md, Session
+step 2), the consent rule for applying an open observation (`acting-on-observations.md`,
+"Using an open observation in this task"), the checklist and its record in session-starts.log (SKILL.md, Session
 Start Protocol), selection on the decision ("Select on the decision, not
 on the artefact" above), the derived paths ("Anchoring the workspace"),
 briefing a delegate ("Sessions whose output channel is owned by a
@@ -278,6 +279,14 @@ start WSL's bash instead; name Git's `bash.exe` by its full path there.
 SKILL.md's `[workspace folder]` definition states the rule; this is where
 to pin it, how a stable anchor still goes plural, and which plural case is
 legitimate.
+
+**Scope the workspace to what is observed:** skills installed at user or
+global scope need one matching user-scope root (`~/.claude`, which holds
+`skill-observations/`, or one outside any project — written as an absolute
+path when more than one config home exists), shared across projects, tools
+and agents; keep a per-project anchor only for skills that exist in that
+project alone: a per-project default silently shards one log into many,
+each complete from inside.
 
 A workspace under any `.claude/` folder — the config home or a project's
 own — that a headless run will write is proved by one write on the first
@@ -1191,6 +1200,26 @@ field, a file outside its reach), hand over the filled-in block to paste
 and name the surface ("Verify activation in a NEW session", the install
 report).
 
+### A failed session-start probe
+
+Session Start step 1 points here when its probe of the pinned path fails.
+A failed probe is split before any branch is chosen, by one `ls` of the
+pinned path's parent: the parent resolves and is writable → a first run,
+not a missing mount — run "Workspace creation" (SKILL.md step 1), then re-run the
+per-skill lookup once for each skill loaded in that batch; it resolves
+read-only → a grant that names a path it cannot create
+(`references/environments.md`, "Anchoring the workspace"); it does not
+resolve → the folder-picker tool (in Cowork, `request_cowork_directory`;
+elsewhere, its equivalent), never the "no filesystem" branch (handoff-doc
+mode), which a missing mount read as no filesystem reaches too easily. A
+permission-classifier refusal of that request (it names the classifier and
+gives a bracketed reason; a user decline does not) falls under the **How
+to Log** denial rule: at most one identical retry, told to the user, never
+another tool. Refused again, or no folder-picker or device-bridge tool
+after one tool search: load `references/environments.md` ("No link to the
+user's computer"), mandatory, and keep its order — the log, else ask to
+park in the user's memory inbox, else a handoff file.
+
 ### Install-layout hazards — three ways a skill silently stops existing
 
 Each of these leaves no error. The skill simply stops being offered, or an
@@ -1665,7 +1694,7 @@ needs the entries. Stdout then carries the findings, the counts and the end line
 |---|---|---|---|
 | Persistent workspace | the shared folder | pinned absolute path (see activation block) | none — handoff-doc mode below |
 | Live skill files | `.claude/skills/{skill}/` on a read-only mount (writes fail with EROFS) | `~/.claude/skills/{skill}/`, ordinary writable files — no guard | n/a |
-| Present a staged file for install | the file-presentation tool (`present_files`) with its upload button; where the harness's own instructions name its skill card as the install route instead, the card (SKILL.md, "Acting on Observations") | none — report the staged path and a change summary in chat | paste into the handoff doc |
+| Present a staged file for install | the file-presentation tool (`present_files`) with its upload button; where the harness's own instructions name its skill card as the install route instead, the card (`acting-on-observations.md`, "The skill-save control") | none — report the staged path and a change summary in chat | paste into the handoff doc |
 | Scheduled review | the app's scheduled tasks (cloud-default: run remotely; legacy local mode: run on the user's machine, only while it is on — see the execution-mode note above) | cron / an account-level scheduler that can reach the workspace — headless invocations carry the workspace grant (`--add-dir`) in the task definition; a `SessionStart` hook reports the review state, it does not run the review | calendar reminder + manual trigger |
 | Session-start hook | none | `SessionStart` hook (`hookSpecificOutput.additionalContext`) | none |
 | Local-vs-cloud tell | `allow_cowork_file_delete` present ⇒ local session | n/a | n/a |
@@ -1915,6 +1944,11 @@ is the case with neither a stable path nor a reader.
 
 ## First-run backfill
 
+From Session Start step 7: the project has history when it holds handover or decision docs, commit
+history, a notes or memory directory, or an existing CLAUDE.md. Entries
+cite the durable artefact (file and section) in `session_context`, never a
+session.
+
 The skill is least valuable at the moment it is adopted: the log is empty,
 a review correctly reports nothing to do, and the largest pile of
 uncaptured insight — the project's own history — is never touched because
@@ -1975,7 +2009,7 @@ regimes:
 This skill consists of `SKILL.md`, the reference files it lists
 (`weekly-review.md`, `review-slice.md`, `skill-authoring.md`, `environments.md`,
 `observation-log.md`, `observation-scan.md`, `observation-families.md`,
-`signals.md`, `migration.md`,
+`acting-on-observations.md`, `signals.md`, `migration.md`,
 `starter-principles.md`) and `scripts/bin-check.sh`, `scripts/diff-staged.sh`,
 `scripts/migrate-log.py`, `scripts/new-observation.sh`, `scripts/session-start-scan.sh`,
 `scripts/set-fields.sh`, `scripts/extend-observation.sh`, `scripts/stage-patch.sh`,
