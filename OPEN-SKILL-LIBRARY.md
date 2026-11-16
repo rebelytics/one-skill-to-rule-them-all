@@ -16,6 +16,8 @@ A listing is not a security review: read a skill before you install it. This pag
 | Skill | What it does | Licence | Last skill update |
 |---|---|---|---|
 | [ai-visibility-tracking-strategy-builder](https://github.com/rebelytics/ai-visibility-tracking-strategy-builder) | Builds and refines the prompt set and reporting structure for tracking how a brand appears in AI answers. | CC BY 4.0 | 2026-10 |
+| [bing-grounding-query-analysis](https://github.com/rebelytics/bing-grounding-query-analysis) | Turns an exported Bing Webmaster Tools grounding-query report into decisions: coverage and concentration first, then branded vs non-branded citations, entity confusion and six more cuts. | CC BY 4.0 | 2026-11 |
+| [bing-wmt-ai-grounding-export](https://github.com/rebelytics/bing-wmt-ai-grounding-export) | Exports Bing Webmaster Tools AI Performance data (cited pages and their grounding queries) at scale through the report's own API. | CC BY 4.0 | 2026-11 |
 | [peec-ai-tracking-strategy-builder](https://github.com/rebelytics/peec-ai-tracking-strategy-builder) | Peec AI companion to the tracking strategy builder: project setup, writes and analysis in Peec AI. | CC BY 4.0 | 2026-10 |
 | [searchviu-tracking-strategy-builder](https://github.com/rebelytics/searchviu-tracking-strategy-builder) | searchVIU companion to the tracking strategy builder: prompt sets, field mapping, validation and CSV handover. | CC BY 4.0 | 2026-10 |
 | [sistrix-tracking-strategy-builder](https://github.com/rebelytics/sistrix-tracking-strategy-builder) | SISTRIX companion to the tracking strategy builder: AI tracker tags, CSV imports and update quotas. | CC BY 4.0 | 2026-10 |
@@ -35,6 +37,7 @@ A listing is not a security review: read a skill before you install it. This pag
 |---|---|---|---|
 | [pagination-independence-architecture](https://github.com/rebelytics/pagination-independence-architecture) | Designs category and listing architecture so a site's indexable value does not depend on paginated pages. | CC BY 4.0 | 2026-11 |
 | [redirect-verification](https://github.com/rebelytics/redirect-verification) | Checks a reported redirect or link fix against its spec, using crawl data and targeted live requests. | CC BY 4.0 | 2026-11 |
+| [title-meta-gap-fill](https://github.com/rebelytics/title-meta-gap-fill) | Completes title tags and meta descriptions across a large page set without rewriting what already works. | CC BY 4.0 | 2026-11 |
 | [translation-audit](https://github.com/rebelytics/translation-audit) | Audits translated titles, headings, descriptions and body content across the language versions of a website. | CC BY 4.0 | 2026-11 |
 
 "Last skill update" is the month of the last commit on the default branch that touches the skill's own files: `SKILL.md`, `references/` or `scripts/`.
