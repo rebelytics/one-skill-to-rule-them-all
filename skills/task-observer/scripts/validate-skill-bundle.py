@@ -1787,6 +1787,11 @@ SCAN_FIXTURES = [
      1, "v213"),
     ("a current marker with a BOM and a CRLF ending: no DUE line, no NOTE", "crlfmarker", True, 0, "files: 2", 1,
      "starter-set"),
+    ("a recorded import with no imported entry in Active Principles: DUE: starter-set import lost", "lostimport",
+     True, 0, "DUE: starter-set import lost — checkpoints.log records 'starter set v5 reconciled: 3 imported (3, 7, 11)'",
+     2, ""),
+    ("a recorded import with an imported entry still active: no DUE line", "keptimport", True, 0, "files: 2", 2,
+     "DUE: "),
     ("--skill-dir without a starter set: a NOTE, not a silent skip", "healthy", True, 0,
      "NOTE: shipped starter set not found at /nonexistent/skill/references/starter-principles.md", 1, "DUE: ",
      ["--skill-dir", "/nonexistent/skill"]),
@@ -1914,6 +1919,12 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
             day = datetime.date.today() - datetime.timedelta(days=21 if scenario == "gap" else 2)
             ck.write_text(f"{day} 09:00 [w] session-start scan: files=2 parsed=2 principles=absent\n",
                           encoding="utf-8")
+        if scenario in ("lostimport", "keptimport"):   # a reconciliation that imported three entries
+            ck.write_text("2026-01-01 09:00 starter set v5 reconciled: 3 imported (3, 7, 11)\n", encoding="utf-8")
+            if scenario == "keptimport":
+                (so / "cross-cutting-principles.md").write_text(
+                    "# P\n\n## Active Principles\n\n### 3. A rule\n**Origin:** imported from starter set (#3)\n",
+                    encoding="utf-8")
         if scenario == "broken":
             (log / "0001-a.md").write_text('---\nid: 1\ntitle: "never closed"\n', encoding="utf-8")
         else:

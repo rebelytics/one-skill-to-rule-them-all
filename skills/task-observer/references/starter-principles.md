@@ -42,7 +42,8 @@ would have checked it — a recommendation drafted from titles has cited
 entries about something else, and only the import caught it. **The
 marker records an answer, not an offer:** write the shipped version into the
 marker file only after an explicit choice — seed all, seed some, or
-start empty — so the offer never repeats until the set changes. The
+start empty — and, after an import, only once the read-back below
+finds it, so the offer never repeats until the set changes. The
 marker is one line holding only that version as a bare integer (`4`),
 with no prefix and no note beside it: the step 2 scan reports any
 other text instead of comparing it. A reply
@@ -94,11 +95,24 @@ started in, and says so.
 **How to import:** copy the entries the adopter chooses (all, or a subset)
 into the live file in the template format from `references/skill-authoring.md`,
 setting `**Added:**` to the import date, `**Propagation:** opportunistic`,
-`**Status:** active`, and adding `**Origin:** imported from starter set` to
-each. The Origin marker is load-bearing: it tells every later review that
-the entry arrived without local evidence, so the pruning pass can drop it
-as freely as any single-observation rule. Imported principles that never
+`**Status:** active`, and adding `**Origin:** imported from starter set (#N)`
+to each, N being the entry's number here. The Origin marker is
+load-bearing: it tells every later review that the entry arrived without
+local evidence, so the pruning pass can drop it as freely as any
+single-observation rule. Imported principles that never
 fire in the adopter's own work should be removed, not kept out of respect.
+
+**Read the import back before the marker certifies it.** The marker
+records that the adopter answered, and a copy that never landed looks the
+same from it. After copying, read the live file's `## Active Principles`
+and find `imported from starter set (#N)` for every number picked. Write
+the marker only when every one is there; otherwise redo the copy, or say
+which numbers are missing. Then append one line to `checkpoints.log`
+naming the picked numbers, so a later loss can be redone without asking
+again: `<date> <time> starter set v4 reconciled: 3 imported (3, 7, 11)`,
+with `0 imported` for a start-empty answer. The step 2 scan prints `DUE:
+starter-set import lost` when that line records imports and the Active
+Principles hold none.
 
 **Extend `Origin:` with the evidence that justified the entry** — one line
 naming the local artefact, after the `imported from starter set (#N)` part:

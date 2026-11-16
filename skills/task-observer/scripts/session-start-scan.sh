@@ -42,6 +42,9 @@
 # DUE and an older one is not compared, so no line prints for it; the line
 # names where the offer may be made, since it is read mid-task; a marker
 # that is not one line holding only the version is a NOTE quoting line 1;
+# `DUE: starter-set import lost` when checkpoints.log records a
+# reconciliation that imported entries and the principles file's Active
+# Principles hold none marked as imported;
 # UNFILLED: a header whose title: is empty — the skeleton new-observation.sh
 # writes at create time, a write in progress or abandoned; NOTE: id: … when
 # a header's id does not read as its filename prefix; DUPLICATE ID — NNNN:
@@ -367,6 +370,17 @@ else
   elif [ -z "$mv_v" ] || [ "$((10#$mv_v))" -lt "$ship" ]; then
     finding "DUE: starter-set reconciliation — marker v${mv_v:-?} < shipped set v$ship; offer once, in a review or a session opened for skill work, never in another task's reply (references/starter-principles.md, Reconciliation)"
   fi
+fi
+# The marker certifies the answer, not the import: when checkpoints.log's
+# last reconciliation line records K > 0 imported and the principles file's
+# Active Principles hold no entry marked as imported from the starter set,
+# the import was lost and the offer is due again. Zero, not fewer than K:
+# the pruning pass removes imported entries on purpose.
+ck_si=$(grep -E 'starter set v[0-9]+ reconciled: [0-9]+ imported' "$root/skill-observations/checkpoints.log" 2>/dev/null | tail -n 1 | tr -d '\r')
+ck_k=$(printf '%s' "$ck_si" | sed -n 's/.*reconciled: \([0-9][0-9]*\) imported.*/\1/p')
+if [ -e "$mk" ] && [ -n "$ck_k" ] && [ "$((10#$ck_k))" -gt 0 ] && [ -f "$p" ] && [ "$pr" != unparsed ]; then
+  p_imp=$(awk "$pa"' a && /imported from starter set/ {n++} END {print n+0}' "$p")
+  [ "$p_imp" -eq 0 ] && finding "DUE: starter-set import lost — checkpoints.log records 'starter set ${ck_si#* starter set }' but the Active Principles in cross-cutting-principles.md hold no entry imported from the starter set; redo the import from the entry numbers on that line, or re-offer the reconciliation (references/starter-principles.md, How to import)"
 fi
 
 # --- the guard: files present and nothing parsed is a broken command ----------
