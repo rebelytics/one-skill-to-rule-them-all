@@ -466,7 +466,11 @@ the mismatch shows.
 The same pass reads `session-starts.log`: every session with a `loaded
 task-observer` line in `checkpoints.log` has a `session start:` line of the
 same day, and a load without one — the protocol loaded but not
-run — is a Log integrity finding.
+run — is a Log integrity finding. Each `session start:` line, which the
+scan writes, has the session's own `session start 4-5:` line (activation
+and concurrency) beside it; parallel sessions interleave in this file, so
+count per day: fewer 4-5 lines than scan lines — items 4 and 5 not
+recorded — is a Log integrity finding too, with both counts.
 
 **Drain the observation inbox before the work queue is built.** Where this
 run can read the user-scoped store that sessions without the log park
