@@ -12,6 +12,7 @@ in an environment without filesystem access.
   - Anchoring the workspace
   - A session-start hook (Claude Code and similar harnesses)
   - A stop hook — the per-task backstop as a harness event
+  - A plan-tool counter — the 3rd-completion checkpoint as a harness event
   - A pre-tool hook — the only write path as a barrier
   - A skill-file write gate — the skill-authoring load as a harness event
   - Verify activation in a NEW session — the installing session cannot prove it
@@ -786,6 +787,53 @@ real event — run it against a transcript with tool calls and no write,
 then against the same with a checkpoint line appended and the transcript
 appended to after it (a start time read from the change time blocks that
 one), before trusting either outcome.
+
+### A plan-tool counter — the 3rd-completion checkpoint as a harness event
+
+The 3rd-completion checkpoint depends on a count kept in the agent's head,
+and it drifts when the host's own plan tool replaces the todo tool or one
+call completes several items. Where the harness has a post-tool event,
+count there instead: one state file per session, a reminder whenever the
+count passes a multiple of three. Node, no dependencies; register it on
+every plan tool the host provides (in Claude Code, matcher `TodoWrite` plus
+the host plan tool's name):
+
+```js
+// PostToolUse hook on the plan tools: count completed items per session and
+// remind at every multiple of three, so the checkpoint does not rest on memory.
+const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
+let input = {};
+try { input = JSON.parse(fs.readFileSync(0, 'utf8') || '{}'); } catch { process.exit(0); }
+const session = String(input.session_id || '').replace(/[^A-Za-z0-9_-]/g, '');
+const t = input.tool_input || {};
+if (!session) process.exit(0);
+const state = path.join(os.tmpdir(), `task-observer-plan-${session}.json`);
+let s = { count: 0, seen: [] };
+try { s = JSON.parse(fs.readFileSync(state, 'utf8')); } catch {}
+const before = s.count;
+if (Array.isArray(t.todos)) {                           // a full list: count items newly completed
+  for (const i of t.todos) {
+    const key = String(i.id || i.content || '');
+    if (i.status === 'completed' && !s.seen.includes(key)) { s.seen.push(key); s.count++; }
+  }
+}
+if (Array.isArray(t.done)) s.count += t.done.length;    // an incremental call: each id counts
+if (t.advance) s.count++;
+if (s.count === before) process.exit(0);
+try { fs.writeFileSync(state, JSON.stringify(s)); } catch { process.exit(0); }
+if (Math.floor(s.count / 3) === Math.floor(before / 3)) process.exit(0);
+console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext:
+  `task-observer checkpoint: ${s.count} plan items completed this session. Before the next item, write ` +
+  'pending observation files or append a "no observations" line to checkpoints.log (How to Log).' } }));
+```
+
+The input fields are the host's: `todos` is the full list a todo tool
+sends, and `done` (a list of ids) and `advance` are the shape of one host
+plan tool. Read one real call of each plan tool before wiring it and map
+its fields; a field the hook does not read counts nothing, silently. Arm it
+like any trigger: three single completions remind once, one call
+completing two items after one completion reminds, and a list re-sent with
+no new completion stays silent.
 
 ### A pre-tool hook — the only write path as a barrier
 

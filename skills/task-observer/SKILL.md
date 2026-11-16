@@ -383,7 +383,10 @@ to `skill-observations/checkpoints.log`: a remembered "ask whether" is not
 enforcement. That line is valid only when, since the last checkpoint, no
 user correction came, no memory or feedback file was written and no
 workaround followed a denial or failure; otherwise it names each and why
-it does not generalise. Roughly every third completion is the rule. (Exception for a
+it does not generalise. Roughly every third completion is the rule. A todo
+item is an item in any plan or task-list tool the host provides, and a call
+that completes several items counts each; where hooks exist, a counter does
+the counting (`references/environments.md`, "A plan-tool counter"). (Exception for a
 priced-write workspace: `references/environments.md`.)
 
 **A denied or failed write is not a read-only log.** A transient failure
