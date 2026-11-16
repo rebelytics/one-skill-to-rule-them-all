@@ -208,7 +208,7 @@ The `- [ ]` items under How to Log are ticked in the reply of the turn that writ
    **Only the print can be refused, so it runs last** — a refused print is
    never an empty log: load `references/observation-scan.md` ("A refused
    print is not an empty log") before moving either half.
-- [ ] **3. Review trigger.** Read `skill-observations/last-review-date.txt`. The
+- [ ] **3. Review trigger.** Read `skill-observations/last-review-date.txt` (the scan's `review:` line prints it, its age and the entries no review has seen). The
    value carries the truth: a date = when the last review (full or a slice)
    reached a deliberate outcome — one that changed no status writes
    `last-triage-attempt.txt` instead; `never` = none yet; a missing file

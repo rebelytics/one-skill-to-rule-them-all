@@ -59,7 +59,9 @@
 # roots) or NOTE: legacy staging root line when
 # skill-observations/skill-updates/ (the pre-3.0 staging root) exists; a NOTE: pointer line when
 # skill-observations/MOVED.md exists; a GAP
-# line when the previous scan in checkpoints.log is 7 or more days old; the
+# line when the previous scan in checkpoints.log is 7 or more days old; a
+# `review:` line on every run (the last review's date and age in days, and
+# the open entries dated after it or undated — never a finding); the
 # session-start record; the active principles' headings; then one line per numbered entry,
 # `id | status | skill | proposes_skill | title` (`-` for a field the header
 # lacks), parked entries after the others, an actioned, declined or
@@ -512,6 +514,35 @@ if [ -f "$mv_ptr" ]; then
   mv_line=$(head -n 1 "$mv_ptr" | tr -d '\r' | cut -c 1-200)
   mv_after=$(find "$d" -maxdepth 1 -name '[0-9]*.md' -newer "$mv_ptr" 2>/dev/null | wc -l | tr -d ' ')
   finding "NOTE: pointer at this root (skill-observations/MOVED.md): \"$mv_line\" — $mv_after entries written here since it; report both roots and ask, never consolidate or re-anchor on it"
+fi
+
+# --- review: the age of the last review, printed on every run ----------------
+# GAP says whether the protocol kept running; this line says whether the
+# review did. A capture loop whose processing step stops keeps logging, and
+# nothing else at session start shows the backlog ageing. Days since
+# last-review-date.txt, and the open entries dated after it or undated (an
+# entry with no status: is open, as reviews read it): entries no review has
+# seen. A plain line, not a finding: Session Start step 3 decides whether
+# the review is due.
+rvd=$(sed '1!d' "$root/skill-observations/last-review-date.txt" 2>/dev/null | tr -d '\r' | cut -c 1-40)
+case $rvd in ([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*) since=${rvd%"${rvd#??????????}"} ;; (*) since= ;; esac
+unrev=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk -v since="$since" '
+  function val(s) { sub(/^[a-z_]+:[[:space:]]*/, "", s); sub(/[[:space:]]+#.*$/, "", s); gsub(/["\047\r[:space:]]/, "", s); return s }
+  FNR==1 {sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; st=""; dt=""; if (!fm) nextfile; next}
+  fm && /^---[[:space:]]*$/ {if ((st == "" || st == "open") && (since == "" || dt == "" || dt > since)) print FILENAME; nextfile}
+  fm && /^status:/ {st=val($ 0)}
+  fm && /^date:/ {dt=substr(val($ 0), 1, 10)}' {} + | wc -l | tr -d ' ')
+if [ -n "$since" ]; then
+  rage=$(LC_ALL=C awk -v today="$(date +%F)" -v last="$since" '
+    function dn(s,  y, m, d) { y = substr(s, 1, 4) + 0; m = substr(s, 6, 2) + 0; d = substr(s, 9, 2) + 0
+      if (m < 3) { y--; m += 12 }
+      return 365 * y + int(y / 4) - int(y / 100) + int(y / 400) + int((153 * (m - 3) + 2) / 5) + d }
+    BEGIN { print dn(today) - dn(last) }')
+  printf 'review: last %s, %s days ago; %s open entries dated after it or undated, never reviewed\n' "$since" "$rage" "$unrev"
+elif [ "$rvd" = never ]; then
+  printf 'review: none recorded (last-review-date.txt reads never); %s open entries, never reviewed\n' "$unrev"
+else
+  printf 'review: last-review-date.txt absent or not a date (read "%s"); %s open entries\n' "${rvd:-}" "$unrev"
 fi
 
 # --- gap: days since the previous session-start scan --------------------------

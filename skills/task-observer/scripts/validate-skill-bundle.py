@@ -1818,6 +1818,10 @@ SCAN_FIXTURES = [
     ("no staging root: the staged: line says so", "healthy", True, 0, "staged: no skill-updates/ at ", 1, ""),
     ("both staging roots: SPLIT STAGING replaces the legacy NOTE", "splitstage", True, 0,
      "NOTE: SPLIT STAGING — staged work under both ", 1, "NOTE: legacy staging root"),
+    ("no review yet: the review line counts every open entry, status-less ones included", "healthy", True, 0,
+     "review: none recorded (last-review-date.txt reads never); 2 open entries, never reviewed", 1, ""),
+    ("a dated review: its age, and the open entries dated after it or undated", "reviewed", True, 0,
+     ", 10 days ago; 3 open entries dated after it or undated, never reviewed", 1, ""),
 ]
 
 
@@ -1849,6 +1853,10 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
             (so / "cross-cutting-principles.md").write_text("# P\n\n## Active Principles\n", encoding="utf-8")
             (so / "starter-principles-reviewed.txt").write_text(
                 ("1" if scenario == "oldmarker" else "5") + "\n", encoding="utf-8")
+        if scenario == "reviewed":   # a review 10 days ago; entries before, after and undated
+            import datetime
+            (so / "last-review-date.txt").write_text(
+                f"{datetime.date.today() - datetime.timedelta(days=10)}\n", encoding="utf-8")
         fixture_skill = pathlib.Path(tmp) / "skill"   # the shipped set the scan reads, wherever this copy runs
         (fixture_skill / "references").mkdir(parents=True)
         (fixture_skill / "references" / "starter-principles.md").write_text(
@@ -1928,6 +1936,11 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
                                 ("0003-c.md", '\ufeff---\nid: 3\nstatus: open\nskill:\n  - foo\n  - bar\n'
                                  'proposes_skill: baz\ntitle: "bom"\nsiblings_checked: [x]\n---\n'),
                                 ("0004-d.md", "no header\n")],
+                    # 0001-a (undated, no status) counts; 0002 is before the review, 0003 actioned
+                    "reviewed": [("0002-b.md", '---\nid: 2\ntitle: "old"\nstatus: open\ndate: 2000-01-01\n---\n'),
+                                 ("0003-c.md", '---\nid: 3\ntitle: "done"\nstatus: actioned\ndate: 2999-01-01\n---\n'),
+                                 ("0004-d.md", '---\nid: 4\ntitle: "new"\nstatus: "open"   # open\ndate: 2999-01-01\n---\n'),
+                                 ("0005-e.md", '---\nid: 5\ntitle: "bare"\ndate: 2999-01-02\n---\n')],
                     "resolved": [("0002-b.md", '---\nid: 2\ntitle: "defect still present"\n'
                                   'status: actioned        # open | actioned\nresolved: 2026-01-01\n---\n')]}
             for f, text in rest.get(scenario, [("0002-b.md", "---\nid: 2\ntitle: Fix: unquoted\n---\n")]):
