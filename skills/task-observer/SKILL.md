@@ -154,7 +154,7 @@ The `- [ ]` items under How to Log are ticked in the reply of the turn that writ
    (it waits for the next review); then load that file and follow its
    **Reconciliation** section: match by substance, offer once in one line,
    import only what the adopter picks, then — once answered — write the
-   shipped version into the marker file; never pre-populate silently. The
+   shipped version into the marker file, alone on one line; never pre-populate silently. The
    step 2 scan prints a `DUE:` line for either duty still owed. Name the loaded skill's
    frontmatter `version:` in the start-up lines — read from the file, never
    fetched — and list the skill's own directory with its `references/` and

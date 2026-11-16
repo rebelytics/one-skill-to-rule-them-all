@@ -42,7 +42,10 @@ would have checked it — a recommendation drafted from titles has cited
 entries about something else, and only the import caught it. **The
 marker records an answer, not an offer:** write the shipped version into the
 marker file only after an explicit choice — seed all, seed some, or
-start empty — so the offer never repeats until the set changes. A reply
+start empty — so the offer never repeats until the set changes. The
+marker is one line holding only that version as a bare integer (`4`),
+with no prefix and no note beside it: the step 2 scan reports any
+other text instead of comparing it. A reply
 that does not address the offer is not a choice: leave the marker absent
 so the offer returns next session. Ask it as its own question, never as
 the last line of another task's report, where it goes unread and the

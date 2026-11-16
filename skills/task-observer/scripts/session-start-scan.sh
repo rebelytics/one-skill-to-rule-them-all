@@ -40,7 +40,8 @@
 # references/starter-principles.md beside this script; where that file is
 # unreadable — a .bin/ copy in a bridged session — an absent marker is still
 # DUE and an older one is not compared, so no line prints for it; the line
-# names where the offer may be made, since it is read mid-task;
+# names where the offer may be made, since it is read mid-task; a marker
+# that is not one line holding only the version is a NOTE quoting line 1;
 # UNFILLED: a header whose title: is empty — the skeleton new-observation.sh
 # writes at create time, a write in progress or abandoned; NOTE: id: … when
 # a header's id does not read as its filename prefix; DUPLICATE ID — NNNN:
@@ -348,8 +349,15 @@ if [ ! -e "$mk" ]; then
 elif [ -z "$ship" ]; then
   finding "NOTE: shipped starter set not found at $sp — the marker cannot be compared with it; pass --skill-dir <installed skill directory> (a copy run from skill-observations/.bin/ has no references/ beside it)"
 else
-  mv_v=$(sed '1!d; s/[^0-9]//g' "$mk")
-  if [ -z "$mv_v" ] || [ "$((10#$mv_v))" -lt "$ship" ]; then
+  # The marker's format: one line holding only the starter-set version, a
+  # bare integer. A BOM, a CR and surrounding blanks are tolerated; any
+  # other text is reported, never mined for digits (`v2 (13 imported)` is
+  # not 213). An empty marker is still due.
+  mv_v=$(awk 'NR == 1 { sub(/^\357\273\277/, "") } { sub(/\r$/, ""); gsub(/^[[:space:]]+|[[:space:]]+$/, "") } NF { n++; v = $0 }
+              END { if (n == 1 && v ~ /^[0-9]+$/) print v; else if (n) print "malformed" }' "$mk")
+  if [ "$mv_v" = malformed ]; then
+    finding "NOTE: starter-set marker skill-observations/starter-principles-reviewed.txt is not one line holding only a version number (line 1: '$(head -n 1 "$mk" | tr -d '\r' | cut -c1-60)') — not compared with shipped set v$ship; if the adopter answered for a set, rewrite it as that version alone, else remove it so the offer returns (references/starter-principles.md, Reconciliation)"
+  elif [ -z "$mv_v" ] || [ "$((10#$mv_v))" -lt "$ship" ]; then
     finding "DUE: starter-set reconciliation — marker v${mv_v:-?} < shipped set v$ship; offer once, in a review or a session opened for skill work, never in another task's reply (references/starter-principles.md, Reconciliation)"
   fi
 fi

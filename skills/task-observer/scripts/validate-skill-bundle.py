@@ -1780,6 +1780,11 @@ SCAN_FIXTURES = [
     ("a marker below the shipped set: DUE names both versions", "oldmarker", True, 0,
      "DUE: starter-set reconciliation — marker v1 < shipped set v", 1, "DUE: workspace creation"),
     ("the artefacts and a current marker: no DUE line", "healthy", True, 0, "files: 2", 1, "DUE: "),
+    ("a marker with text beside the version: a NOTE quoting it, never parsed as other digits", "textmarker", True, 0,
+     "NOTE: starter-set marker skill-observations/starter-principles-reviewed.txt is not one line holding only a version number (line 1: 'v2 (13 imported)')",
+     1, "v213"),
+    ("a current marker with a BOM and a CRLF ending: no DUE line, no NOTE", "crlfmarker", True, 0, "files: 2", 1,
+     "starter-set"),
     ("--skill-dir without a starter set: a NOTE, not a silent skip", "healthy", True, 0,
      "NOTE: shipped starter set not found at /nonexistent/skill/references/starter-principles.md", 1, "DUE: ",
      ["--skill-dir", "/nonexistent/skill"]),
@@ -1852,7 +1857,8 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
             (so / "last-review-date.txt").write_text("never\n", encoding="utf-8")
             (so / "cross-cutting-principles.md").write_text("# P\n\n## Active Principles\n", encoding="utf-8")
             (so / "starter-principles-reviewed.txt").write_text(
-                ("1" if scenario == "oldmarker" else "5") + "\n", encoding="utf-8")
+                {"oldmarker": "1\n", "textmarker": "v2 (13 imported)\n", "crlfmarker": "\ufeff5\r\n"}.get(scenario, "5\n"),
+                encoding="utf-8")
         if scenario == "reviewed":   # a review 10 days ago; entries before, after and undated
             import datetime
             (so / "last-review-date.txt").write_text(

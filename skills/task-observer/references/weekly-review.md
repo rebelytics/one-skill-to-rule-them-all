@@ -1275,7 +1275,7 @@ bump the `Starter set version:` line at the top of the starter file
 (every adopter's reconciliation offer is gated on that number, so an
 unbumped version ships the new entry to nobody), and run the
 confidentiality scan over the starter file in the pre-delivery gate. Every
-review there, principle edit or not, writes the starter file's version to
+review there, principle edit or not, writes the starter file's version, alone on one line, to
 `skill-observations/starter-principles-reviewed.txt` when the marker is
 absent or older: that principles file is the set's source, and the
 reconciliation would compare the set with its own origin. Elsewhere a scan
