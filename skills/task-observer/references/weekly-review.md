@@ -2039,6 +2039,11 @@ for the full accounting. Distinguish proposed, staged and installed changes;
 an observation count alone is not an outcome. Records are kept: no step
 prunes `reviews/`, and old ones are the user's to delete.
 
+**Removal is an outcome with its own line.** A review that can only add
+lets every skill grow. So the record names each rule removed or proposed
+for removal, or says why none was; a removal the agent proposes stays
+escalated in a scheduled run (Approval policy, criterion 2).
+
 Step 7 ends with the line **"N bundles staged, N bundles presented"**, and
 the run does not finish while the two numbers differ. A second line follows
 it: **"keep-two (as of HH:MM): N copies pruned, N kept as uninstalled, N
@@ -2117,6 +2122,11 @@ form (Step 3), N / M; inbox entries drained (Step 1), or "inbox
 not read: <reason>"; "N installed skills fail the validator: …" (Step 2),
 each with its one-line staging; run-output notes harvested (Step 1), N
 from M files, or the path not read; or "none"]
+
+### Removed or proposed for removal
+[one line each: the rule, its skill, why — not exercised across many
+sessions, superseded by a later rule, or repeatedly not followed and
+replaced by a barrier — and removed (staged) or proposed; or "none — <why>"]
 
 ### Skipped (needs manual review)
 [items with reasons]
