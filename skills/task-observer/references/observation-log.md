@@ -1,6 +1,6 @@
 # The observation log — storage layout, scripts and rationale
 
-Load triggers: creating the workspace or setting up the log; archiving, or verifying a bulk move; an id or a frontmatter field looks wrong or drifts; why snippets take a spaced path and run under bash; the id snippet at write time — its guard, the sweep's count or the noclobber create fires, skipping it feels reasonable, two files share an id, writes are being batched or parallelised, or a structural probe came back empty; editing an existing observation's body; setting, reviewing or unparking a parked status, or setting `reference:`; resolving, dismissing, fixing or citing an observation
+Load triggers: creating the workspace or setting up the log; archiving, or verifying a bulk move; an id or a frontmatter field looks wrong or drifts; why snippets take a spaced path and run under bash; the id snippet at write time — its guard, the sweep's count or the noclobber create fires, skipping it feels reasonable, two files share an id, writes are being batched or parallelised, an edit is chained onto a create, or a structural probe came back empty; editing an existing observation's body; setting, reviewing or unparking a parked status, or setting `reference:`; resolving, dismissing, fixing or citing an observation
 
 The core skill carries the per-invocation rules: where the log is, how to
 name and number a file, the frontmatter format, and the archival rule.
@@ -568,6 +568,15 @@ between deriving the id and typing it, not in the derivation.
 The number the snippet prints goes into the filename **and** the `id:`
 field, copied, not retyped from memory of what you expected it to be. If
 the two disagree, the file is the one every later scan believes.
+
+**An edit chained after a create takes the path the create printed.** In a
+log other sessions write to, an id is known only from the write that
+issued it. So a command that creates an entry and then changes it reads
+the helper's one-line output: `f=$(bash scripts/new-observation.sh --body
+<file> <slug> "[ABSOLUTE PATH]") && …`, then `"$f"` (its basename in a
+`set-fields.sh` plan line). Never an id computed, remembered or globbed
+from the number you expected: entries other sessions wrote since your last
+read hold those numbers, and the edit lands on one of them.
 
 **Never pre-compute a range.** A batch append is N separate races, not one;
 pre-baked sequential numbers collapse N independent max-checks into a

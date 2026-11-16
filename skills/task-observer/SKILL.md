@@ -468,8 +468,8 @@ write") when skipping feels reasonable.
 
 - [ ] **Resolve each id at its own write time** — run the snippet before EACH
 file, never pre-compute a range, and put the value it printed into both the
-filename and the `id:` field. Load `references/observation-log.md`
-("Resolve each id at its own write time") before batching or parallelising.
+filename and the `id:` field. An edit chained after a create takes the path the helper printed, never an expected id.
+Load `references/observation-log.md` ("Resolve each id at its own write time") before batching, parallelising or chaining an edit onto a create.
 
 - [ ] **Every instrument gets the same guard: an empty or zero result is a claim
 about the instrument until an independent probe shows the population is empty.**
