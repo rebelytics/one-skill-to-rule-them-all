@@ -1508,6 +1508,14 @@ device); with staged copies on the device and live in the container, run
 shell and diff the two listings — a differing `SKILL.md` then gets the
 frontmatter compare (`weekly-review.md`, "Staged-work reconciliation gate").
 
+**Through the device shell, the scan always writes its entries to a file.**
+The shell's result is capped and the scan's output grows with the log, so
+"read it whole" and the cap collide, and a cut follows. Remove the
+collision in the invocation:
+`e=$(mktemp) && bash "<root>/skill-observations/.bin/bin-check.sh" "<root>" <digests-file> session-start-scan.sh --entries-to "$e" "<root>"`
+(the same option on a direct run of the scan), then read `"$e"` when a step
+needs the entries. Stdout then carries the findings, the counts and the end line.
+
 | Capability | Claude Cowork | Claude Code | Web chat / no filesystem |
 |---|---|---|---|
 | Persistent workspace | the shared folder | pinned absolute path (see activation block) | none — handoff-doc mode below |
