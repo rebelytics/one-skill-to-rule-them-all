@@ -338,6 +338,9 @@ now and performs the operation the Issue describes, written as its bare
 name (`plugin:name` only where two skills share it). If the right home is
 not a skill — an instructions file, a memory note, the register a routine
 reads — put that path in `target_file:`; a skill not yet built goes in `proposes_skill:`.
+An Issue claiming the target lacks a rule first greps the target for the
+rule's key words and puts the command and the line numbers in the body; a
+hit makes the entry a closure candidate or narrows it to what is missing.
 
 **Check the target's siblings at write time, and record that you did.**
 Before writing, resolve the target against the family registry

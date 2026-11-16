@@ -1141,7 +1141,12 @@ untouched original. A checker that fails calibration is a false alarm
 today and a silent pass tomorrow. Additionally, inventory the original's enforcement
 mechanisms (checkpoints, assertions, invariants, mandatory-write rules,
 defaults) as an explicit checklist — compression preferentially destroys
-enforcement machinery because it reads as redundancy — and sweep any "pure
+enforcement machinery because it reads as redundancy — and write beside
+each item where it now lives: inline, pointer plus reference, or lost. A
+coverage check proves no sentence was lost, not where it sits, so in a
+split every never/always or security rule the reference holds keeps a
+one-line statement beside the pointer to it: an agent acting on the core
+alone never meets a rule behind a pointer that names only the topic. Sweep any "pure
 restructuring" change for net-new behaviour, which hides well in a large
 rewording diff.
 
