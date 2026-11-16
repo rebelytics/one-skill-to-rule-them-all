@@ -129,7 +129,7 @@
 
 set -u
 
-VERSION="3.11.2"   # equal to the skill's frontmatter version:; the end line names it
+VERSION="3.12.0"   # equal to the skill's frontmatter version:; the end line names it
 
 entries=   # --entries-to target; empty = the entries print to stdout
 skill_dir= # --skill-dir: the installed skill directory; empty = the one this script sits in
