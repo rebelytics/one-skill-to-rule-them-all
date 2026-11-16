@@ -102,10 +102,10 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
 ## Session Start Protocol
 
 The seven items below are recorded in `skill-observations/session-starts.log`,
-not in the reply: the scan writes items 1, 2, 3, 6 and 7 with their outcomes,
+a file the user can read: the scan writes items 1, 2, 3, 6 and 7 with their outcomes,
 and you append one line for items 4–5 (`<date> <time> session start 4-5:
 activation=<outcome> concurrency=<outcome>`); an item not run is logged as such, never assumed.
-The first reply names only an item that failed or needs the user, in one line before the answer.
+The first reply reports an item that failed or needs the user, in one line before the answer; the record holds the rest.
 The `- [ ]` items under How to Log are ticked in the reply of the turn that writes.
 
 - [ ] **1. Storage.** The existence check for `skill-observations/` is also
