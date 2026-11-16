@@ -9,8 +9,8 @@
     {
       "name": "task-observer",
       "source": {
-        "source": "github",
-        "repo": "rebelytics/one-skill-to-rule-them-all"
+        "source": "url",
+        "url": "https://github.com/rebelytics/one-skill-to-rule-them-all.git"
       },
       "description": "Turns the corrections and repeated workflows of your work sessions into small, reviewed skill updates: every change comes with its evidence and a written reason, and nothing touches a skill until you approve and install it.",
       "category": "productivity",
