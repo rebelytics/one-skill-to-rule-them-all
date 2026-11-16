@@ -271,7 +271,8 @@ The `- [ ]` items under How to Log are ticked in the reply of the turn that writ
    clean; DIFFERS is classified, since a bare "differs" is not a verdict;
    bridged, the two-shell digest listing: `references/environments.md`,
    "Environment mappings"),
-   and name every directory no manifest entry covers. The cases are in
+   and name every directory no manifest entry covers, there and under
+   each previous root `skill-observations/previous-roots.txt` names. The cases are in
    `references/weekly-review.md` ("Staged-work reconciliation gate") — load
    it before judging any entry. Then say "N staged updates awaiting review".
 - [ ] **7. First run, or a named past session.** If the log is empty and the

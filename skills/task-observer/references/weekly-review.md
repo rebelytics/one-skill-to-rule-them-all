@@ -716,7 +716,14 @@ the installed copies keep-two retains — as `retained`, so the unmarked
 names are the ones nothing explains. Enumerate the listing rather than
 matching a date-shaped name: discriminated anchors (`<date>-<slug>`,
 `<date>.2`) and hand-over material are valid names, and an index shows
-only what someone entered. Then, for each entry in
+only what someone entered. Then the same listing for every previous root
+`skill-observations/previous-roots.txt` names (one absolute path per line,
+written by a re-anchor or a shard consolidation: `references/environments.md`,
+"A re-anchor moves the root, not only the log"): "previous root <path>:
+N staging directories: …", or "previous root <path>: not readable" —
+never left out, because an absent `PENDING.md` at the new root reads as
+nothing staged. Each one listed is moved and classified at the new root,
+or reported to the user where the move is not safe. Then, for each entry in
 `skill-updates/PENDING.md` AND each skill directory under
 `skill-updates/<date>/` — always both, never the manifest alone: an
 absent manifest reads exactly like an empty one — run

@@ -59,6 +59,8 @@ skill-observations/
   checkpoints.log        # append-only acknowledgement markers (optional)
   MOVED.md               # only at an abandoned root: line 1 names the new root
                          #   (environments.md, "Before creating a log, search for one")
+  previous-roots.txt     # roots a re-anchor or consolidation left, one per line
+                         #   (environments.md, "A re-anchor moves the root, not only the log")
 ```
 
 Each file follows the core frontmatter format (How to Log); the listing

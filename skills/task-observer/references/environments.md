@@ -506,7 +506,10 @@ the staging reconciliation like any other entry (`weekly-review.md`,
 "Staged-work reconciliation gate"). Where a move is not safe — a session
 may still be writing at the old root — list what the old root's
 `skill-updates/` holds to the user in one line rather than leaving it
-behind silently.
+behind silently. Either way, record the old root at the new one: append
+its absolute path as one line to `skill-observations/previous-roots.txt`
+in the same step, so Session Start step 6 and the review's gate list what
+its `skill-updates/` still holds.
 
 **Report-back mode — when no pinned path resolves.** The Session Start
 guard warns and re-anchors when the resolved workspace sits under an
