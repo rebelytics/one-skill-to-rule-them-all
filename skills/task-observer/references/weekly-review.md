@@ -2515,6 +2515,13 @@ older subset (safe to overwrite) / carrying content absent from staged
 that names a remembered target list is not derived. Where live is a
 repository checkout, the install replaces the skill's files only; the
 checkout's root files (`.claude-plugin/`, VCS metadata) stay.
+Every delivery entry also carries `depends_on_unverified:`, either `none`
+or each fact the staged text relies on that is still open, with the id of
+the observation holding the doubt. While it is not `none`, the install
+offer names each such fact and installs only on an explicit "install
+anyway": a deferred check is safe only if nothing staged rests on it. A
+producer that writes a "verify later" note while staging asks whether any
+staged text rests on it, and then verifies now or takes that text out.
 Two optional fields mark staged work whose wait costs something:
 `runs_on: <scheduled task name, cadence>` where Step 0's scheduler query
 shows a task that invokes the skill, and `needed_by: <date> (<id>)`, the
