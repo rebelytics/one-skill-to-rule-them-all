@@ -2074,6 +2074,10 @@ files are split by owner"); or "none"
 [numbers and titles]
 [corrected on apply: #id — suggested form → form that ran; or "none"]
 
+### Yield
+[since the last review: N written, N actioned, N declined, N superseded,
+N parked, N unconfirmed (Unconfirmed, below)]
+
 ### Family coherence
 [each multi-skill observation: applied to all listed skills, or partially
 applied with the outstanding skill named — never left implicit]
