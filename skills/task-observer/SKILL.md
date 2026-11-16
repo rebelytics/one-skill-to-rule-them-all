@@ -200,10 +200,10 @@ The `- [ ]` items under How to Log are ticked in the reply of the turn that writ
    `.bin/` script, check it against the INSTALLED digests (`bin-check.sh`); on a
    mismatch refresh `.bin/` in the same batch — a MANIFEST self-check is not it.
 
-   Through a device shell, and wherever a channel caps the output, always pass `--entries-to <file>`: a file this
-   run creates (`mktemp`, never a fixed `/tmp` name — another session's file
-   reads as yours), `&&`-chained so a failed write is never followed by a
-   read; read the entries on demand. The end line names the script's version.
+   Through a device shell, and wherever a channel caps the output, always pass `--entries-to <file>` BEFORE the root
+   (after it the scan refuses): `f=$(mktemp) && bash "<skill directory>/scripts/session-start-scan.sh" --entries-to "$f" "[ABSOLUTE PATH]"`.
+   The file is one this run creates (`mktemp`, never a fixed `/tmp` name — another session's file reads as yours),
+   `&&`-chained so a failed write is never followed by a read; read the entries on demand. The end line names the script's version.
 
    **Only the print can be refused, so it runs last** — a refused print is
    never an empty log: load `references/observation-scan.md` ("A refused
