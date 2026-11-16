@@ -729,7 +729,15 @@ else
     case $zz in (0.01) zz=0.03 ;; (0.03) zz=0.1 ;; esac
   done
   wait "$spid" 2>/dev/null
-  found=$(grep -v '^#' "$tf" | sed 's|/skill-observations/observation-log$||; s|/skill-observations/log\.md$||' | LC_ALL=C sort -u)
+  # Each found workspace is resolved (rp, as for the split-store check) before
+  # the dedup, so two spellings of one directory — a drive-letter and an MSYS
+  # path, a symlinked home — are one log; the pinned root keeps its own spelling.
+  found=$(grep -v '^#' "$tf" | sed 's|/skill-observations/observation-log$||; s|/skill-observations/log\.md$||' |
+    while IFS= read -r w; do
+      w_r=$(rp "$w"); [ -n "$w_r" ] || w_r=$w
+      [ "$w_r" = "$root_r" ] && w_r=${root%/}
+      printf '%s\n' "$w_r"
+    done | LC_ALL=C sort -u)
   if ! grep -q '^#END$' "$tf"; then
     cut_a=$(sed -n 's/^#A //p' "$tf" | tail -n 1)
     n_all=$(printf '%s\n' "$anchors" | while IFS= read -r a; do [ -n "$a" ] && [ -d "$a" ] && echo x; done | wc -l | tr -d ' ')

@@ -2236,6 +2236,26 @@ def scan_home_parent_ok():
         return ok, f"exit {rc}, line {line!r}"
 
 
+def scan_spellings_ok():
+    """Two spellings of one directory are one log: HOME is a symlink to the
+    real home that holds the root (~/.claude) and a CLAUDE_CONFIG_DIR log, so
+    the parent anchor and the user-scope anchors find each twice. The listing
+    names the root once, in its pinned spelling, and the other log once."""
+    import os
+    with tempfile.TemporaryDirectory() as tmp:
+        t = pathlib.Path(tmp).resolve()
+        home, link = t / "home dir", t / "home link"
+        root = home / ".claude"
+        _scan_ws(root)
+        (home / "cfg" / "skill-observations" / "observation-log").mkdir(parents=True)
+        os.symlink(home, link)
+        rc, out, err, _ = _scan_run([root], t, link, {"CLAUDE_CONFIG_DIR": str(link / "cfg")})
+        line = next((l for l in out.splitlines() if l.startswith("logs at the plausible anchors")), "")
+        ok = (rc == 0 and line.count(" last=") == 2 and f" {root}=1 last=" in line and f" {home}/cfg=0 last=" in line
+              and "home link" not in line)
+        return ok, f"exit {rc}, line {line!r}"
+
+
 def scan_anchor_case(where):
     """The scan with a second log at the working directory ("cwd"), beside
     the skill's install reached through a symlink ("install"), or the cwd a
@@ -3403,7 +3423,9 @@ def selftest():
                          ("the entries print before the sibling-log search's listing", scan_order_ok),
                          ("a stalled sibling-log search is cut at its time limit with a NOTE; the scan completes", scan_stall_ok),
                          ("a root whose parent is HOME: the home folder searched 4 levels, Library pruned, said on the line",
-                          scan_home_parent_ok)):
+                          scan_home_parent_ok),
+                         ("two spellings of one directory are one log in the sibling listing, the root in its pinned spelling",
+                          scan_spellings_ok)):
             ok, detail = fn()
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} scan script: {name}" + ("" if ok else f" ({detail})"))
