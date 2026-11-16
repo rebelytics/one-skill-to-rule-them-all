@@ -15,7 +15,7 @@ This meta-skill is a practical application of the [Augmented Expertise](https://
 ## Quick install
 
 1. **Install it, by either route:**
-   - **From a terminal (Vercel's skills CLI, needs Node.js):** `npx skills add rebelytics/one-skill-to-rule-them-all --skill task-observer` — add `-g` to install it for all your projects. This is the most-used route: the skills.sh listing reports over 19,000 installs.
+   - **From a terminal (Vercel's skills CLI, needs Node.js):** `npx skills@1.8.1 add rebelytics/one-skill-to-rule-them-all --skill task-observer` — add `-g` to install it for all your projects. This is the most-used route: the skills.sh listing reports over 19,000 installs.
    - **In the Claude apps (web, desktop, mobile, Cowork):** upload the `.skill` bundle from the latest release via Settings → Customize.
 2. **Activate it, whichever route you used.** In Claude Code, start with the session-start hook in `references/environments.md` ("A session-start hook"): it injects the activation into every session, and it is the only layer the harness enforces. Then, in Claude Code as everywhere else, paste the activation block from the same file into your CLAUDE.md (or your platform's equivalent): 31 lines, plus up to five optional configuration lines beside it. Check that it runs (see "Check that it actually runs" below). Installing alone is not enough, because description matching under-triggers.
 
@@ -105,7 +105,7 @@ The skill is a small bundle: `SKILL.md`, the files in `references/` that are loa
 ## Data and network
 
 - **No network in normal operation.** The skill and its scripts read and write local files only: the observation log, review records, staged skill copies and checkpoint lines, all inside the workspace folder you pin.
-- **Three fetches, each one yours to start.** The feedback pre-flight before you file a report and the upstream check for a third-party project run when you ask for them; a version check for foreign-maintained skills runs only if your activation block opts in.
+- **Three fetches, each one yours to start, each to the one repository concerned** (for a project on GitHub: its issue and pull request search and its raw files on raw.githubusercontent.com). The feedback pre-flight before you file a report and the upstream check for a third-party project run when you ask for them; a version check for foreign-maintained skills runs only if your activation block opts in.
 - **Outside text is data.** Issue, pull request and profile text and other repositories are read as data to classify or quote, never as instructions.
 - **Keep the observation folder writable only by you.** It is input to an agent that can run commands, so anyone who can write to it is trusted. A command quoted in an observation is shown to you and runs only with your approval, never in an unattended run.
 - **The optional flush plugin** reads local files only.

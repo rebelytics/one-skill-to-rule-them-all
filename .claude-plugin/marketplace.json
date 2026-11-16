@@ -5,6 +5,9 @@
     "name": "Eoghan Henn",
     "url": "https://rebelytics.com"
   },
+  "metadata": {
+    "description": "task-observer, a skill that turns corrections and repeated workflows from work sessions into reviewed skill updates, and its optional turn-end flush plugin."
+  },
   "plugins": [
     {
       "name": "task-observer",
