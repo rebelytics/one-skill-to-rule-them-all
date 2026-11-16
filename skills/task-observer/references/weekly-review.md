@@ -2367,7 +2367,21 @@ already registered meets no registration step, so the staging is its
 only gate. Before staging, run the script offline on payloads built from the real
 tool record (`signals.md`, "Second violation — why a barrier, not a
 rewording"); after install, the next session confirms it refuses the real
-command and passes a legitimate one.
+command and passes a legitimate one. Payloads from the record test what the
+barrier sees, not where it runs, how often it fires or what it parses, so
+three more tests come before staging. Run each hook under its launcher's
+conditions, never only from the agent's shell: the launcher's shell and
+PATH, a payload written as raw UTF-8 bytes that include non-ASCII text,
+and stdin read as bytes. Run a barrier's predicate over every call its
+matcher would have seen in a recent window of transcripts, classify the
+hits by why each matches (counts and classes only, never the call text),
+narrow it to the harmful class, and put the three numbers (calls seen,
+hits, harmful hits) in the manifest entry and the install question. A
+barrier that parses a language is tested against that language's grammar
+(comments, quoting, escapes, operators without spaces, keywords, compound
+commands, here-documents) and, where the interpreter is available,
+against what the interpreter does with the same inputs; a parser that
+follows the grammar beats a general tokeniser.
 
 **Confirming a skill install is the reconciliation gate, not a byte
 compare.** After the user installs, classify each delivered copy with the
