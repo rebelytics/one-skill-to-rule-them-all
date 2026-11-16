@@ -413,7 +413,9 @@ memory and its saved or approved commands: a root persisted there from
 an earlier session keeps being used by every session that does not load
 the instruction file, after the file's pin has changed. Two distinct roots are a
 fork, not a variant: stop and reconcile before writing, and keep the pin
-in one file both tools load. If one exists, adopt it, or
+in one file both tools load. At install, ask once whether another
+assistant was given the same install request: two installs on different
+hosts each report complete, and neither search can see the other's. If one exists, adopt it, or
 consolidate deliberately with the user. A fresh
 empty log beside a populated one is a silent fork: both grow
 independently, ids collide, and each session sees only half the history.
@@ -908,7 +910,10 @@ invocation, the protocol's trace in `checkpoints.log`, or the
 artefact outside the skill proves it: create the workspace AND write the
 activation, then print what was written and where. Where the activation
 cannot be written, the install does not succeed silently: report it as
-incomplete and hand over the block to paste.
+incomplete and hand over the block to paste, with its values filled in.
+The same holds for a later session that finds the block unfilled and
+cannot write the surface it sits in: name that surface (the file, or the
+settings field) and hand over the filled-in block.
 
 ### Activation config — late, intermittent, and why the guard cannot live inside it
 
@@ -1065,6 +1070,23 @@ the first response. The per-skill lookups that rode in the probe's batch
 ran against no log: after a first-run creation, re-run the lookup once
 per skill loaded in that batch, so `checkpoints.log` holds the
 `workspace: created=…` line followed by one `loaded` line per skill.
+
+**An unfilled pin is an unfinished install, not a failed probe.** Read the
+pinned value before probing it. A value that still reads as a template
+placeholder (`[ABSOLUTE PATH]`, `[PROJECTS ROOT]`, `<skill directory>`) or
+is not absolute (`/…`, or a drive letter on Windows) was never filled in:
+none of the three readings above applies, because the parent of a
+placeholder is the working directory, and a first-run creation there makes
+a folder named after the placeholder. Report "unfinished install: the
+workspace path in <the file or settings field holding the block> was never
+filled in", run the anchor search ("Before creating a log, search for
+one"; in a bridged session through the device tool), and ask the user once
+for the path, offering any workspace the search found. Never probe the
+literal, run Workspace creation on it, or open the folder picker for it.
+Where this session cannot write that surface (an account-level preferences
+field, a file outside its reach), hand over the filled-in block to paste
+and name the surface ("Verify activation in a NEW session", the install
+report).
 
 ### Install-layout hazards — three ways a skill silently stops existing
 
@@ -1354,6 +1376,14 @@ tools over — `npm` and `npx` included — in their `.cmd` form, which the
 policy does not govern, not as the `.ps1` shim it refuses. The app's own
 terminal panel is a child of the packaged app and inherits its startup
 environment, so it is not the user's side either.
+
+**An assistant's own sandbox is the same boundary.** A home-relative path
+inside a cloud container or a sandboxed agent is not on the user's
+computer, and an install reported there reads as complete. So an install
+report names every path absolutely, with the host it is on (the user's
+computer, a cloud container), and confirms it through a route that does
+not pass through the sandbox that made it: a device tool, or a listing the
+user runs.
 
 **Resolving from the far side on a packaged Windows host — only with the
 user's explicit go-ahead.** `explorer.exe` starts what it opens outside the

@@ -112,7 +112,9 @@ The `- [ ]` items under How to Log are ticked in the reply of the turn that writ
    the workspace-mount probe — one `ls` of the pinned path, carried INSIDE
    the session's first batched tool call; session-start skill loads ride in
    that same batch, never in an earlier one (`references/environments.md`,
-   "The probe rides inside the first batched call"). A failed probe is
+   "The probe rides inside the first batched call"). A pin still holding a
+   template placeholder, or not absolute, is an unfinished install, never
+   probed (same file, "An unfilled pin is an unfinished install"). A failed probe is
    split before any branch is chosen, by one `ls` of the pinned path's
    parent: the parent resolves and is writable → a first run, not a missing
    mount — run "Workspace creation" (below), then re-run the per-skill
