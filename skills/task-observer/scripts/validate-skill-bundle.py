@@ -2794,6 +2794,14 @@ NEWOBS_FIXTURES = [
     ("--body with status actioned: refused by name, nothing created",
      "empty", "slug", GOOD_BODY.replace("status: open ", "status: actioned "), 1, "",
      "status: must read open", [], None),
+    ("--body with status parked and a parked_until condition: created in one write",
+     "empty", "parked", GOOD_BODY.replace("status: open ", "status: parked ").replace(
+         "date: __DATE__", 'date: __DATE__\nparked_until: "the upstream fix ships"'), 0,
+     "/0001-parked.md", "", ["0001-parked.md"], "1"),
+    ("--body with status parked and an empty parked_until: refused by name, nothing created",
+     "empty", "slug", GOOD_BODY.replace("status: open ", "status: parked ").replace(
+         "date: __DATE__", "date: __DATE__\nparked_until:          # the condition"), 1, "",
+     "status: parked needs a non-empty parked_until:", [], None),
     ("--body with a type outside the vocabulary: refused",
      "empty", "slug", GOOD_BODY.replace("type: open-source ", "type: process "), 1, "",
      "type: must be open-source or internal", [], None),

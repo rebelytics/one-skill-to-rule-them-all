@@ -19,7 +19,9 @@
 #                     an unquoted one runs every backticked span in the body;
 #                     this flag fills the two values so neither is needed.
 #                     The body's header is checked BEFORE anything is
-#                     touched: `status:` must read `open`, `type:` must be
+#                     touched: `status:` must read `open` (or `parked`
+#                     with a non-empty `parked_until:`, so a parked entry
+#                     needs no second edit), `type:` must be
 #                     `open-source` or `internal`, and `siblings_checked:`
 #                     must be non-empty, `title:` (its quotes aside) may
 #                     hold at most 200 characters, and no header line may trip the
@@ -148,6 +150,7 @@ sus='FNR==1 {sub(/^\357\273\277/, ""); fm = (/^---[[:space:]]*$/ ? 1 : 0); if (!
 # `# comment` (the core template carries one on status: and type:) and
 # trailing spaces stripped; status words stay bare, so a quoted `"open"` is
 # refused too — the archival sweep reads `$2` and would never match it.
+# parked_until: counts as empty when blank, `""` or `''`, or only a comment.
 # title: is measured in characters, its enclosing quotes aside: under
 # LC_ALL=C awk counts bytes, so the UTF-8 continuation bytes (\200-\277) are
 # dropped before the count. A title is one line naming the defect; one that
@@ -159,6 +162,7 @@ if [ -n "$body" ]; then
     FNR==1 {sub(/^\357\273\277/, ""); if (/^---[[:space:]]*$/) fm=1; else nofm=1; next}
     fm && /^---[[:space:]]*$/ {closed=1; exit}
     fm && /^status:/ {st=$0; sub(/^status:[[:space:]]*/, "", st); sub(/[[:space:]]+#.*$/, "", st); sub(/[[:space:]]+$/, "", st); hs=1}
+    fm && /^parked_until:/ {pu=$0; sub(/^parked_until:[[:space:]]*/, "", pu); sub(/^#.*$/, "", pu); sub(/[[:space:]]+#.*$/, "", pu); sub(/[[:space:]]+$/, "", pu)}
     fm && /^type:/ {ty=$0; sub(/^type:[[:space:]]*/, "", ty); sub(/[[:space:]]+#.*$/, "", ty); sub(/[[:space:]]+$/, "", ty); ht=1}
     fm && /^siblings_checked:/ {sc=$0; sub(/^siblings_checked:[[:space:]]*/, "", sc); sub(/[[:space:]]+$/, "", sc); hc=1}
     fm && /^title:/ {ti=$0; sub(/^title:[[:space:]]*/, "", ti); sub(/[[:space:]]+$/, "", ti)
@@ -167,7 +171,9 @@ if [ -n "$body" ]; then
     END {
       if (nofm) {print "line 1 is not ---"; exit}
       if (!closed) {print "the header never closes (no second ---)"; exit}
-      if (!hs || st != "open") print "status: must read open" (hs ? " (read \047" st "\047)" : " (missing)")
+      pk = (pu != "" && pu != "\"\"" && pu != "\047\047")
+      if (hs && st == "parked" && !pk) print "status: parked needs a non-empty parked_until: naming the condition that unparks it"
+      else if (!hs || (st != "open" && st != "parked")) print "status: must read open, or parked with a non-empty parked_until:" (hs ? " (read \047" st "\047)" : " (missing)")
       if (!ht || (ty != "open-source" && ty != "internal")) print "type: must be open-source or internal" (ht ? " (read \047" ty "\047)" : " (missing)")
       if (!hc || sc == "" || sc == "\"\"" || sc == "\047\047") print "siblings_checked: must be non-empty" (hc ? "" : " (missing)")
       if (tl > tmax) print "title: is " tl " characters, over the " tmax "-character limit — shorten it to one line that names the defect (the detail belongs in the body)"

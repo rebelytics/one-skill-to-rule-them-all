@@ -815,7 +815,9 @@ If the condition cannot occur, the entry is not waiting: close it on the
 substitute evidence available today, or park it on a trigger that can
 actually fire — phrased on the result in the target, never on the state
 of a vehicle ("A park condition names the result, never your own
-vehicle", above).
+vehicle", above). An entry parked at creation is written parked in one
+call: `--body` accepts `status: parked` with a non-empty `parked_until:`
+and refuses it with an empty one, so no second edit chases the new id.
 
 ## When the workspace is under version control
 
