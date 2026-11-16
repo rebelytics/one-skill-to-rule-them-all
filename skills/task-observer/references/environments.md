@@ -624,7 +624,7 @@ open=$(find "$d/observation-log" -maxdepth 1 -name '*.md' ! -empty -exec awk '
   fm==1 && /^status:/ { st=$2; gsub(/["\047]/, "", st) }
   END { if (NR>0) out() }' {} + 2>/dev/null | grep -c o)   # the review's open set: statusless counted, CRLF read; never a status grep
 last=$(tr -d '\r' 2>/dev/null < "$d/last-review-date.txt"); last=${last:-never}   # a CRLF file must not carry \r into the JSON
-msg="Make the first tool call of this session one batched call that both lists the task-observer workspace ($OBS_WORKSPACE) and invokes the task-observer skill; then run its Session Start Protocol. Observation files are created only by scripts/new-observation.sh in the skill directory, never by copying a header."
+msg="Make the first tool call of this session one batched call that lists the task-observer workspace ($OBS_WORKSPACE), invokes the task-observer skill and runs bash \"$s/scripts/skill-load.sh\" \"$OBS_WORKSPACE\" task-observer; then run its Session Start Protocol. Observation files are created only by scripts/new-observation.sh in the skill directory, never by copying a header."
 msg="$msg $open open observations in $d; last review: $last."   # always, zero included: a mispinned path reads 0 too
 if [ "$open" -gt 0 ]; then
   cutoff=$(date -d '7 days ago' +%F 2>/dev/null || date -v-7d +%F)   # GNU, then BSD/macOS
@@ -641,7 +641,9 @@ The hook checks the payload before the workspace: a workspace, an
 instruction block and both hooks can all be in place while the skill
 directory is not, and a message built from the workspace alone keeps
 telling every session to invoke a skill it cannot invoke, with a review
-offer on top. Set `OBS_SKILL_DIR` beside `OBS_WORKSPACE`. The message names the resolved workspace and the whole first batch,
+offer on top. Set `OBS_SKILL_DIR` beside `OBS_WORKSPACE`. The message names the resolved workspace and the whole first batch — the
+listing, the skill load and its per-skill lookup, since a message that
+lists two items gets a batch of two —
 because it is the one pre-skill text the harness delivers on turn 1
 ("The probe rides inside the first batched call", below): a message that
 only says "invoke the skill" leaves the probe to a skill not yet read,

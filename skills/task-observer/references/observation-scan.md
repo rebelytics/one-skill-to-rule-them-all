@@ -123,7 +123,9 @@ errors gets, in the next call, the same command with `--correct
 `loaded` line and prints nothing. A skill listed on disk but refused by
 the Skill tool ("Unknown skill") is loaded by reading its SKILL.md
 directly; the lookup call rides with that read, never with the refused
-call. On a first run the log does not exist yet (Session Start step 1
+call. A skill loaded by the user's slash command, with no Skill call of
+your own, gets the same lookup in the first batch after the command
+arrives. On a first run the log does not exist yet (Session Start step 1
 creates it): the call says so and exits 0 with no checkpoint line; re-run
 it once per skill loaded in that batch after the Workspace creation
 command.
