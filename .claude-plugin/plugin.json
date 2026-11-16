@@ -10,6 +10,9 @@
   },
   "homepage": "https://github.com/rebelytics/one-skill-to-rule-them-all",
   "repository": "https://github.com/rebelytics/one-skill-to-rule-them-all",
+  "documentationUrl": "https://github.com/rebelytics/one-skill-to-rule-them-all/blob/main/USER-GUIDE.md",
+  "supportUrl": "https://github.com/rebelytics/one-skill-to-rule-them-all/issues",
+  "privacyPolicyUrl": "https://github.com/rebelytics/one-skill-to-rule-them-all#data-and-network",
   "license": "CC-BY-4.0",
   "icon": "./.claude-plugin/icon.png",
   "keywords": [
