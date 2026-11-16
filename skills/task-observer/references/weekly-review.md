@@ -2278,7 +2278,8 @@ is presented (Step 7's staged/presented count); the number of cards is
 never a reason to present fewer, since each card is an install decision
 the user makes either way; (3) each staged skill's folded frontmatter
 description is at most 1024 characters (soft warning above ~900); (4)
-`name` is kebab-case, matches the directory, and the frontmatter parses;
+`name` is kebab-case, matches the directory, and the frontmatter parses,
+with only the Agent Skills keys at the top level (a transitional few warn, naming `metadata:`);
 (5) the bundle's member paths use `/`, checked on raw bytes; (6) exactly one frontmatter block
 — a second `---` block or stray `name:`/`description:` lines directly
 after the first is a duplicated header that every field check passes by

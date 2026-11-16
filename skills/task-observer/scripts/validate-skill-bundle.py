@@ -409,6 +409,50 @@ def check_frontmatter_shape(fm, fails, yaml_available):
               "not parsed. Install PyYAML for the stronger check.")
 
 
+# The top-level frontmatter keys the Agent Skills specification defines, and
+# so the set an installer's validator accepts (skill-creator's quick_validate
+# rejects any other). Update it when the specification changes.
+AGENT_SKILLS_KEYS = ("name", "description", "license", "allowed-tools", "metadata", "compatibility")
+# Keys published skills still carry at the top level from before the gate
+# checked: reported as warnings until each skill moves them under
+# `metadata:` at its next release; any other key fails.
+TRANSITIONAL_KEYS = ("version", "core_max_lines", "origin", "maintainer", "author")
+
+
+def check_top_level_keys(fm, fails):
+    """A top-level key outside the Agent Skills set fails the gate, except a
+    transitional key, which warns naming where it belongs. Read from the
+    unindented `key:` lines, so it runs with or without PyYAML."""
+    seen = []
+    for line in fm.splitlines():
+        m = re.match(r"^([A-Za-z_][\w.-]*)[ \t]*:", line)
+        if m and m.group(1) not in seen:
+            seen.append(m.group(1))
+    for key in seen:
+        if key in AGENT_SKILLS_KEYS:
+            continue
+        if key in TRANSITIONAL_KEYS:
+            print(f"warn: frontmatter: top-level key `{key}` is outside the Agent Skills set "
+                  f"({', '.join(AGENT_SKILLS_KEYS)}) — it belongs under `metadata:` as a string "
+                  f"(`metadata.{key}`); accepted until the skill's next release moves it")
+        else:
+            fails.append(f"frontmatter: top-level key `{key}` is outside the Agent Skills set "
+                         f"({', '.join(AGENT_SKILLS_KEYS)}), which installers enforce — move it under "
+                         f"`metadata:` as a string")
+
+
+# (name, frontmatter keys after name/description, fail substring or None, warn substring or None)
+TOP_KEY_FIXTURES = [
+    ("a clean header passes with no warning", "license: MIT\nmetadata:\n  author: A\n", None, None),
+    ("an unknown top-level key fails, naming metadata:", "requires: [git]\n",
+     "top-level key `requires` is outside the Agent Skills set", None),
+    ("a transitional key warns, naming where it belongs", "version: 1.2.0\n", None,
+     "warn: frontmatter: top-level key `version` is outside the Agent Skills set"),
+    ("a key nested under metadata: is not top-level", "metadata:\n  version: \"1.2.0\"\n  requires: git\n",
+     None, None),
+]
+
+
 def core_ceiling_value(fm):
     """The raw `core_max_lines` value from a frontmatter block, or None.
 
@@ -1368,6 +1412,7 @@ def check_dir(skill_dir, fails):
         fails.append(f"description {len(desc)} chars > cap {MAX_DESCRIPTION_CHARS}")
     elif len(desc) > 900:
         print(f"warn: description {len(desc)} chars (cap {MAX_DESCRIPTION_CHARS}) — near the boundary")
+    check_top_level_keys(fm, fails)
     for ln, tok in template_tokens(text):
         print(f"warn: SKILL.md:{ln}: {tok!r} is rewritten when the skill is invoked with "
               f"arguments — write an awk field as `$ 2`, or move the text to a reference or script")
@@ -3370,6 +3415,25 @@ def selftest():
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} template token: warns, does not fail the gate"
               + ("" if ok else f" (fails {fails})"))
+    for name, extra, want_fail, want_warn in TOP_KEY_FIXTURES:
+        with tempfile.TemporaryDirectory() as td:
+            sk = pathlib.Path(td) / "tk"
+            sk.mkdir()
+            (sk / "SKILL.md").write_text('---\nname: tk\ndescription: "D."\n' + extra + "---\nbody\n",
+                                         encoding="utf-8")
+            import contextlib
+            import io
+            fails, buf = [], io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                check_dir(sk, fails)
+        keyed = [x for x in fails if "top-level key" in x]
+        warned = [x for x in buf.getvalue().splitlines() if "top-level key" in x]
+        ok = ((len(keyed) == 1 and want_fail in keyed[0] and "under `metadata:`" in keyed[0]) if want_fail else not keyed) and \
+             ((len(warned) == 1 and warned[0].startswith(want_warn) and "`metadata.version`" in warned[0])
+              if want_warn else not warned)
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} frontmatter keys: {name}"
+              + ("" if ok else f" (fails {fails}, warnings {warned})"))
     for name, text, want in COMMAND_PATH_FIXTURES:
         ok = command_paths(text) == want
         bad += not ok; total += 1

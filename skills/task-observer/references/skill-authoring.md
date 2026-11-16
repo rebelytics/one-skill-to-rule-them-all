@@ -133,9 +133,10 @@ session is fixed overhead and should be audited like one.
 
 **Declare your own core ceiling, and let it only fall.** A skill opts into
 the size ratchet by naming its own bound — `core_max_lines: N` in SKILL.md
-frontmatter, at the top level or one level under `metadata:` (the
-spec-conformant form, value quoted: `core_max_lines: "N"`; see Runtime
-prerequisites on why), or a `.core-ceiling` file beside it — seeded at whatever the
+frontmatter, one level under `metadata:` (the spec-conformant form,
+value quoted: `core_max_lines: "N"`; see Runtime prerequisites on why;
+the top level is still read, with a warning until the skill's next
+release moves it), or a `.core-ceiling` file beside it — seeded at whatever the
 core measures today: the point is not that every skill reaches some ideal
 size, it is that no skill silently grows past where it already is.
 `validate-skill-bundle.py` then fails when the core exceeds it: trim,
@@ -1346,8 +1347,11 @@ left optional, a family drifts.
 prerequisites as *checkable facts*, so that something other than a human reader
 can evaluate them, in ONE string under `metadata` — the Agent Skills spec types
 `metadata` as string→string, and a top-level key of our own fails its validators
-as an unexpected key (the validator reads `core_max_lines` in either place for
-that reason, and notes the key nested anywhere else as not read):
+as an unexpected key. The validator checks the same set: any other top-level
+key fails, except a few older ones still carried by published skills
+(`version`, `core_max_lines`, `origin`, `maintainer`, `author`), which warn
+naming `metadata:` until each skill's next release moves them; it reads
+`core_max_lines` in either place, and notes the key nested anywhere else as not read:
 
 ```yaml
 metadata:
