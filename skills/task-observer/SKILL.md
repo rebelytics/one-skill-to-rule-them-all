@@ -6,7 +6,7 @@ metadata:
   author: Eoghan Henn and contributors
   source: https://github.com/rebelytics/one-skill-to-rule-them-all
   version: "3.12.0"
-  core_max_lines: "753"
+  core_max_lines: "600"
 ---
 
 # Task Observer — Continuous Skill Discovery & Improvement
