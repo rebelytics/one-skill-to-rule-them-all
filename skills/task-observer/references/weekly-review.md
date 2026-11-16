@@ -1441,6 +1441,15 @@ the summary carries.
    Where the branch changed the form of a session-start step (prose to
    a ticked checklist), the merge report records once whether
    loaded-but-not-run omissions fell against the previous cycle.
+
+   **Before any benchmark or eval compares two versions, measure the
+   repeated-error rate from the log.** Read it from the headers and the
+   helpers' lines alone: superseded ÷ actioned for the period, extensions
+   per entry (the sessions the extend helper joins into
+   `session_context:`), and entries re-opened (its re-open line). Record
+   it as the comparison's first row and in the review record. A claim that
+   a version repeats fewer errors is measured against that rate, never
+   against an assumed one.
 2. **Read the repo's open issues and pull requests as review inputs.**
    A published skill's issues and PRs are inputs alongside the
    observation log; sweeping, classifying and folding them into a
@@ -2075,6 +2084,8 @@ a user-decided restructure staged: listed FIRST, with the line
 "published skill — install and the release are your call";
 open issues and PRs read as inputs, and what the publishing process
 did with them; README and user-guide counts re-derived, old → new]
+[repeated-error rate measured before any version comparison (Step 5, "Published
+skills", pass 1); or "no comparison"]
 
 ### Parked
 [one line each: #id — title — unparks when: [condition]; plus any entry
