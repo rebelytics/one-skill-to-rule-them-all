@@ -117,6 +117,16 @@ uninformed decisions past the review gate, and approval locks them in.
 Load skills before exploring, researching or drafting the plan: both,
 skill first.
 
+**A host that requires its plan call in the turn's first message breaks
+"before proposing a plan" by construction.** There the plan call rides in
+the first batch with the skill load and the storage probe, the plan's first
+item is the Session Start Protocol, and the plan is revised once the scan
+has run, where open observations change it. Where a session-start hook
+injects the scan's summary ("A session-start hook", the scan-in-the-hook
+variant), reading that summary before the first plan meets the ordering.
+Record the host's plan call in the start-up lines, so a review reading the
+transcript sees a host rule, not a skipped one.
+
 **The block has a per-session cost, paid knowingly.** Every session it
 covers loads SKILL.md in full (bounded by `core_max_lines` in its
 frontmatter; the references load on demand) and runs the Session Start
@@ -144,21 +154,23 @@ skill that never loads cannot announce that it was relevant.
 ### The activation block
 
 ```text
-(task-observer activation block — template of v3.11.0)
-Before the first tool call of any session, and before writing or
-proposing a plan, invoke the task-observer skill AND run its Session
-Start Protocol: loading the skill without running the protocol activates
-nothing. Any turn that will involve a tool call counts; do not classify
-the session as "too simple" from its opening message. A step you did not
-run goes to session-starts.log; the reply carries it, in one line before
-the answer, only when the user can act on it (a failed probe, a review or
-staged update due, an activation gap). If the skill does not resolve on
-this turn, tell
-the user in your first reply, never only in a log; say which probe told
-you so (the skill listing, or the skill directory on disk), re-check the listing on every later turn that makes a tool call,
-and run the protocol the first time it resolves — a "not installed"
-verdict holds for one turn. Listed on disk but refused by the Skill tool
-("Unknown skill"): read its SKILL.md directly and run the protocol.
+(task-observer activation block — template of v3.12.0)
+Before the first tool call of any session, and before writing or proposing
+a plan, invoke the task-observer skill AND run its Session Start Protocol:
+loading the skill without running the protocol activates nothing. A host
+that requires its plan call in the first message puts it in the first
+batch, the protocol as its first item, and revises it after the scan. Any
+turn that will involve a tool call counts; do not classify the session as
+"too simple" from its opening message. A step you did not run goes to
+session-starts.log; the reply carries it, in one line before the answer,
+only when the user can act on it (a failed probe, a review or staged update
+due, an activation gap). If the skill does not resolve on this turn, tell
+the user in your first reply, never only in a log; say which probe told you
+so (the skill listing, or the skill directory on disk), re-check the
+listing on every later turn that makes a tool call, and run the protocol
+the first time it resolves — a "not installed" verdict holds for one turn.
+Listed on disk but refused by the Skill tool ("Unknown skill"): read its
+SKILL.md directly and run the protocol.
 
 After completing each task, list the observation records written this
 session in the same turn and append a one-line summary from that listing
