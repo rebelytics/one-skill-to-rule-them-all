@@ -184,7 +184,7 @@ from the skill once it has loaded, at the moment it applies: the
 per-skill lookup at each skill load (`observation-scan.md`, "The
 per-skill lookup at every skill load", named in SKILL.md Session Start
 step 2), the consent rule for applying an open observation (SKILL.md,
-Surfacing Protocol), the checklist in the first reply (SKILL.md, Session
+Surfacing Protocol), the checklist and its record in session-starts.log (SKILL.md, Session
 Start Protocol), selection on the decision ("Select on the decision, not
 on the artefact" above), the derived paths ("Anchoring the workspace"),
 briefing a delegate ("Sessions whose output channel is owned by a

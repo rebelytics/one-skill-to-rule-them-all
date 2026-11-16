@@ -101,12 +101,12 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
 
 ## Session Start Protocol
 
-Copy the seven items below into your first reply as `- [ ]` lines and tick
-each as it runs — an unticked item is reported, never assumed; the `- [ ]`
-items under How to Log are ticked the same way in the turn that writes.
-The scan also writes items 1, 2, 3, 6 and 7 with their outcomes to
-`skill-observations/session-starts.log`: in a run nobody reads, that line
-is the checklist's record, and items 4–5 go in the run's report.
+The seven items below are recorded in `skill-observations/session-starts.log`,
+not in the reply: the scan writes items 1, 2, 3, 6 and 7 with their outcomes,
+and you append one line for items 4–5 (`<date> <time> session start 4-5:
+activation=<outcome> concurrency=<outcome>`); an item not run is logged as such, never assumed.
+The first reply names only an item that failed or needs the user, in one line before the answer.
+The `- [ ]` items under How to Log are ticked in the reply of the turn that writes.
 
 - [ ] **1. Storage.** The existence check for `skill-observations/` is also
    the workspace-mount probe — one `ls` of the pinned path, carried INSIDE
