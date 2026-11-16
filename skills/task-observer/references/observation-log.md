@@ -240,7 +240,8 @@ look invalid by shape — an unquoted `: `, text after a closing quote
 (either style), a value opening with a backtick, `@` or `%`, an escape a
 double-quoted YAML string does not define (`\x`, `\u`, `\U` need 2, 4
 and 8 hex digits) — beside the file count, for the active directory and
-for `archive/`, so a log drifting into this state announces itself at
+for `archive/`, and its NOTE names each such file with the rule and key
+it tripped, so a log drifting into this state announces itself at
 session start rather than at the review that trips over it (the rules,
 one per line, are commented in `scripts/session-start-scan.sh`). It is a
 floor, not a parse: a `[…]` list is checked only for a colon in an

@@ -1743,6 +1743,8 @@ SCAN_SCRIPT = pathlib.Path(__file__).resolve().parent / "session-start-scan.sh"
 SCAN_FIXTURES = [
     ("healthy log scans: counts line, one checkpoint line", "healthy", True, 0,
      "files: 2  parsed: 2  suspect (awk, a floor): 1", 1, "NOTE: pointer"),
+    ("the suspect-YAML NOTE names each file with its rule and key, archive/ included", "susarch", True, 0,
+     "a colon in an unquoted list entry): 0002-b.md rule 3 title, archive/0009-z.md rule 5 source — quote", 1, "`x`"),
     ("no header parses: guard halts before the checkpoint", "broken", True, 1,
      "SCAN COMMAND BROKEN", 0, ""),
     ("no workspace root: refused, nothing written", "healthy", False, 2, "", 0, ""),
@@ -1951,6 +1953,8 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
                                   'status: actioned        # open | actioned\nresolved: 2026-01-01\n---\n')]}
             for f, text in rest.get(scenario, [("0002-b.md", "---\nid: 2\ntitle: Fix: unquoted\n---\n")]):
                 (log / f).write_text(text, encoding="utf-8")
+        if scenario == "susarch":
+            (log / "archive" / "0009-z.md").write_text("---\nid: 9\nsource: `x`\n---\n", encoding="utf-8")
         if scenario == "moved":
             (root / "skill-observations" / "MOVED.md").write_text(
                 "Moved to /new/root on 2026-01-01\r\n", encoding="utf-8")

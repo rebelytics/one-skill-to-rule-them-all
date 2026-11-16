@@ -254,8 +254,9 @@ if [ -n "$bad" ]; then echo "SCAN COMMAND BROKEN — the counts did not read as 
 #   5. a value opening with a backtick, @ or %
 #   6. a double-quoted value holding an escape YAML does not define
 #   7. a [ … ] list whose unquoted part holds a colon
-# A hit prints `<file> TAB <rule> TAB <line>`; the scan counts the lines, the
-# creation helper names the rule and the line in its refusal.
+# A hit prints `<file> TAB <rule> TAB <line>`; the scan names each file with
+# its rule and key in the NOTE, the creation helper names the rule and the
+# line in its refusal.
 # Every rule allows any number of spaces after the key's colon and any
 # &anchor / !tag before the value. The program holds no literal brace pair:
 # find -exec … {} + would replace it.
@@ -311,8 +312,14 @@ disp='function has(r, m,  s, i, c, rest) {s = r
   fm && key == "skill" && /^[[:space:]]+-[[:space:]]/ {v = $0; sub(/^[[:space:]]+-[[:space:]]*/, "", v); add(v); next}
   fm && key == "resolution" && /^[[:space:]]+[^[:space:]#]/ {res = res " " $0}'
 # <<< disp
-suspect=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk "$sus" {} + | wc -l | tr -d ' ')
-a_sus=0; [ -d "$d/archive" ] && a_sus=$(LC_ALL=C find "$d/archive" -maxdepth 1 -name '*.md' -exec awk "$sus" {} + | wc -l | tr -d ' ')   # archive/ may not exist yet
+# The hits are kept, not only counted: the NOTE names each file with its rule
+# and key (`0042-x.md rule 4 commands_verified`), never the value.
+s_hits=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk "$sus" {} +)
+a_hits=; [ -d "$d/archive" ] && a_hits=$(LC_ALL=C find "$d/archive" -maxdepth 1 -name '*.md' -exec awk "$sus" {} +)   # archive/ may not exist yet
+suspect=$(printf '%s\n' "$s_hits" | grep -c .)
+a_sus=$(printf '%s\n' "$a_hits" | grep -c .)
+sus_names=$( { printf '%s\n' "$s_hits" | awk -F '\t' 'NF >= 3 {f = $1; sub(/.*\//, "", f); k = $3; sub(/:.*/, "", k); print f " rule " $2 " " k}'
+  printf '%s\n' "$a_hits" | awk -F '\t' 'NF >= 3 {f = $1; sub(/.*\//, "", f); k = $3; sub(/:.*/, "", k); print "archive/" f " rule " $2 " " k}'; } | LC_ALL=C sort | awk '{printf "%s%s", (NR > 1 ? ", " : ""), $0}')
 
 # --- principles: count the headings under `## Active Principles` --------------
 # A fenced block is skipped, so a template inside the file is not a principle.
@@ -450,7 +457,7 @@ if [ "$parsed" -lt "$n" ]; then
   unparsed=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {if (NR>1 && fm) print f; f=FILENAME; sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) {print f; nextfile}; next} fm && /^---[[:space:]]*$/ {fm=0; nextfile} END {if (fm) print f}' {} + | sed 's|.*/||' | LC_ALL=C sort | tr '\n' ' ')
   finding "NOTE: $((n - parsed)) of $n headers did not parse (no opening or no closing ---): $unparsed"
 fi
-[ "$suspect" -gt 0 ] || [ "$a_sus" -gt 0 ] && finding "NOTE: $suspect of $n headers (and $a_sus in archive/) look like invalid YAML (an unquoted ': ', text after a closing quote, a value opening with a backtick, @ or %, an undefined escape, a colon in an unquoted list entry) — quote or fix them (File format)"
+[ "$suspect" -gt 0 ] || [ "$a_sus" -gt 0 ] && finding "NOTE: $suspect of $n headers (and $a_sus in archive/) look like invalid YAML (rule 3 an unquoted ': ', 4 text after a closing quote, 5 a value opening with a backtick, @ or %, 6 an undefined escape, 7 a colon in an unquoted list entry): $sus_names — quote or fix them (File format)"
 printf 'files: %s  parsed: %s  suspect (awk, a floor): %s  archive-suspect: %s  resurrected: %s\n' "$n" "$parsed" "$suspect" "$a_sus" "$nres"
 
 # --- split store: a pre-3.0 log.md beside the directory -----------------------
