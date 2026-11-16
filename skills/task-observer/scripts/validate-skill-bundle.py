@@ -2312,7 +2312,7 @@ def scan_version_ok():
     detail = f"end line {out.splitlines()[-1][-80:]!r}"
     skill_md = SCAN_SCRIPT.parent.parent / "SKILL.md"
     if skill_md.is_file():
-        fm = re.search(r'(?m)^version:\s*"?([^"\s]+)"?', skill_md.read_text(encoding="utf-8"))
+        fm = re.search(r'(?m)^version:\s*["\']?([^"\'\s]+)["\']?', skill_md.read_text(encoding="utf-8"))   # either quote style
         ok = ok and fm is not None and fm.group(1) == m.group(1)
         detail += f", script {m.group(1)} vs skill {fm.group(1) if fm else None}"
     return ok, detail
@@ -2323,7 +2323,9 @@ def scan_version_ok():
 # substring, checkpoint lines written[, "nolog"]). The fixture holds one
 # match, one prefix-only name, one closed entry, one body-only mention and
 # two target_file entries; "nolog" runs it against a root with no
-# skill-observations/ at all (the first run, before step 1).
+# skill-observations/ at all (the first run, before step 1), "noroot"
+# against a root that does not exist under an existing parent. The
+# substring is matched against stdout and stderr together.
 LOAD_SCRIPT = pathlib.Path(__file__).resolve().parent / "skill-load.sh"
 LOAD_FIXTURES = [
     ("exact name, open only, frontmatter only", "foo", True, 0, "foo: 1 open observations\n0001-a.md", 1),
@@ -2336,6 +2338,8 @@ LOAD_FIXTURES = [
      "reviewer: 1 open observations\n0006-f.md", 1),
     ("no log yet: one NOTE line, exit 0, nothing written", "foo", True, 0,
      "NOTE: foo: no observation log yet at ", 0, "nolog"),
+    ("no root yet: refused, the message names the first-run branch", "foo", True, 2,
+     "this is a first run (run Workspace creation, then re-run this lookup); otherwise the pin is wrong", 0, "noroot"),
     ("a second skill name: refused, nothing written", "foo", True, 2, "", 0, "", ("bar",)),
     ("a list in one argument: refused, nothing written", "foo, bar", True, 2, "", 0),
 ]
@@ -2350,6 +2354,8 @@ def load_case(skill, absolute, scenario="", opts=()):
         ck = root / "skill-observations" / "checkpoints.log"
         if scenario == "nolog":
             root.mkdir(parents=True)
+        elif scenario == "noroot":
+            pass
         else:
             log.mkdir(parents=True)
             ck.write_text("", encoding="utf-8")
@@ -2364,7 +2370,7 @@ def load_case(skill, absolute, scenario="", opts=()):
         r = subprocess.run(["bash", str(LOAD_SCRIPT), arg, skill, *opts], cwd=tmp, capture_output=True,
                            text=True, encoding="utf-8", errors="replace")
         written = len(ck.read_text(encoding="utf-8").splitlines()) if ck.is_file() else 0
-        return r.returncode, r.stdout, written
+        return r.returncode, r.stdout + r.stderr, written
 
 
 def tools_missing_ok(script, slug_first):

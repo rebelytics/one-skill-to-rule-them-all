@@ -1278,6 +1278,18 @@ gap — it is the only moment when the differences between all of them are
 being actively thought about by anyone, so skipping the comparison wastes
 the audit and creates the divergence.
 
+**Before authoring a domain skill, find the domain where it already lives
+outside the family.** Grep the domain's vocabulary across every installed
+skill and its references, siblings or not, and route each hit to one
+owner: move the content into the new skill and leave a one-line pointer
+behind, or, where the other skill is the better owner, point to it from
+the new one. Material that changes (a framework, a dated value) stays in
+one store and is pointed to, never copied (starter principle 29). Where a
+skill cannot be edited, the review's companion route applies
+(`weekly-review.md`, Step 2). The failure shape: a domain split across
+skills that are not siblings is reached by no sibling read, so each copy
+drifts and every load pays for all of them.
+
 **When the extraction does happen, work brief-first.** Write the split
 rule once, before any file is touched — the test that decides where a
 sentence goes (*could this sentence survive having the platform's name

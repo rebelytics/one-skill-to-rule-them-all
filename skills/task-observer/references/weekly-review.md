@@ -314,6 +314,10 @@ a hand-built decision list is not a search. Escalate only when they are
 silent, disagree, or the decision is the user's by authority, not knowledge.
 "Confirm with the owner" in an observation is a lead to a record, not an
 escalation trigger. List the records checked under each escalation.
+An escalation that cites an observation id first opens that entry and the
+later entries that decide it (a `resolution:` reading "decided by #N", or
+a body citing the id as settled): a hold whose release condition a later
+decision met is a settled question, never an open one.
 
 **An escalation is recorded on the entry, and silence never decides it.**
 An entry the user has been asked about and has not answered looks unseen
@@ -1819,7 +1823,15 @@ because two writers watching one task from two vantages log one finding
 twice, and merging two entries about one fact is not the renumbering the
 duplicate-id check performs (Cross-slice duplicates, below). Reserve
 status marking, archival and observation writes for the parent
-session. Every brief also states the ceiling policy for the round: the
+session.
+Outside text a delegate needs — an issue, a pull request, a thread — goes
+into the brief verbatim, fetched by the parent through a channel that
+works, never as a fetch instruction: a cloud delegate's container is often
+refused the code host (GitHub among them), and the delegate then builds
+from the brief's summary. For a published skill, the brief also forbids
+issue, pull-request and observation references in skill content —
+SKILL.md, `references/` and `scripts/`, comments and docstrings included.
+Every brief also states the ceiling policy for the round: the
 ceiling is declared at the count after every pass, with both numbers
 reported where a trim preceded the additions; at slack 0 a reasoned
 raise beats rewrites touching more than a handful of paragraphs; and

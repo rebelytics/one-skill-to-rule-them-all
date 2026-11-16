@@ -55,7 +55,10 @@
 #      is the one result nobody questions; or LOOKUP TOOLS MISSING — a
 #      command the script runs is not on PATH, named before anything runs
 #   2  refused: missing arguments, a relative root, a root that does not
-#      exist, a pre-3.0 log.md with no observation-log/ beside it, or a
+#      exist (a first run when its parent exists and is writable: run
+#      Workspace creation, then re-run the lookup; otherwise a wrong pin —
+#      the caller checks the parent, the message names both), a pre-3.0
+#      log.md with no observation-log/ beside it, or a
 #      skill name with characters outside [A-Za-z0-9:._/-], an unknown
 #      option, or --correct with no reason, or an argument after --query-only,
 #      or more than one skill name (a second name, or a list in one
@@ -134,13 +137,15 @@ if [ "$mode" = "--correct" ]; then
 fi
 d="$root/skill-observations/observation-log"
 if [ ! -d "$d" ]; then
-  # A missing log under a missing root is a wrong pin; under a pre-3.0
-  # log.md it is an unmigrated install; under an existing root it is the
-  # first run, where this call rides in the batch BEFORE step 1 creates
-  # the log — reported, not refused, so the first load is not a failure
-  # and the re-run after step 1 writes the checkpoint line.
+  # A missing root is refused, so a mistyped pin never creates a second
+  # workspace; the message names both readings, because the parent check
+  # that tells them apart stays with the caller (Session Start step 1).
+  # Under a pre-3.0 log.md it is an unmigrated install; under an existing
+  # root it is the first run, where this call rides in the batch BEFORE
+  # step 1 creates the log — reported, not refused, so the first load is
+  # not a failure and the re-run after step 1 writes the checkpoint line.
   if [ ! -d "$root" ]; then
-    echo "workspace root does not exist: '$root' — check the pinned path" >&2; exit 2
+    echo "workspace root does not exist: '$root' — if its parent exists and is writable this is a first run (run Workspace creation, then re-run this lookup); otherwise the pin is wrong" >&2; exit 2
   fi
   if [ -e "$root/skill-observations/log.md" ]; then
     echo "LEGACY log.md under '$root/skill-observations' and no observation-log/ — run the migration (references/migration.md) first" >&2; exit 2

@@ -170,6 +170,7 @@ promise about the rest.
 | `area` | The part of the skill or workflow concerned. |
 | `date` | Date logged, `YYYY-MM-DD`. |
 | `session_context` | What was being worked on. |
+| `session_id` | Optional, never required: the host's machine id for the session that wrote the entry, copied at creation from what the environment exposes (an environment variable carrying the host's session id), so a review can open that session without searching transcripts. Empty where the host exposes none, and never inferred. It does not replace `session_context`, which stays the human-readable description because an id stops resolving once its session is deleted. A value added later is backfilled only where the creating session was seen writing the file. No check reads it, and an entry without it is complete. |
 | `resolved` | Resolution date; set only when status is `actioned`, `declined` or `superseded`. Archival is gated on it. |
 | `resolution` | What was done, or why declined. When the fix is a prescription (a rule, a check, a form to use), an `actioned` resolution names where it now lives — a file and section, a staged skill copy, or a registered backlog entry. If no such place can be named, the prescription has been described, not applied: leave the entry `open`, or resolve the part that landed and carry the rest in a carrier observation (below). A review's own resolution already names the staged copy (`weekly-review.md`, Step 6); this is the rule for a resolution set outside a review. |
 | `reference` | Optional path to saved session-local evidence. |
