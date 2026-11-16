@@ -155,13 +155,15 @@ skill that never loads cannot announce that it was relevant.
 
 ```text
 (task-observer activation block — template of v3.12.0)
-Before the first tool call of any session, and before writing or proposing
-a plan, invoke the task-observer skill AND run its Session Start Protocol:
-loading the skill without running the protocol activates nothing. A host
-that requires its plan call in the first message puts it in the first
-batch, the protocol as its first item, and revises it after the scan. Any
-turn that will involve a tool call counts; do not classify the session as
-"too simple" from its opening message. A step you did not run goes to
+Before the first tool call of any session, the first turn after a
+compaction included, and before writing or proposing a plan, invoke the
+task-observer skill AND run its Session Start Protocol: loading the skill
+without running the protocol activates nothing, and a harness note not to
+re-execute earlier skills does not cover this protocol. A host that
+requires its plan call in the first message puts it in the first batch, the
+protocol as its first item, and revises it after the scan. Any turn that
+will involve a tool call counts; do not classify the session as "too
+simple" from its opening message. A step you did not run goes to
 session-starts.log; the reply carries it, in one line before the answer,
 only when the user can act on it (a failed probe, a review or staged update
 due, an activation gap). If the skill does not resolve on this turn, tell
@@ -1920,6 +1922,23 @@ probe, frontmatter scan, review trigger, and the per-skill grep for every
 skill the task in front of you needs. Where the CLAUDE.md structural
 trigger reaches the resumed context it re-invokes the skill; do not rely on
 it having done so.
+
+**A harness note against re-running skills does not cover the protocol.**
+A resumed context can carry a harness block that lists the skills invoked
+before the compaction, headed in words like "Do NOT re-execute these skills
+or perform their one-time setup actions". The Session Start Protocol is not
+a one-time setup action: it is a per-context check, and it runs again
+after every compaction, whatever that note says. The note arrives later and
+reads as more authoritative than the activation block, so name it when you
+re-invoke: the block wins for this protocol, the note for everything else.
+Where text alone has failed, a barrier is the remedy (SKILL.md, the
+second-violation rule); one shape, for a harness whose session-start event
+reports a compaction as its source: on that event, write a per-session
+marker and inject the line above; a pre-tool hook refuses tool calls while
+the marker exists, except subagent calls, the deferred-tool loader and the
+host's task-list tool; loading the skill clears the marker; after three
+refusals, or on any internal error, the hook lets the call through and
+logs that, so a session whose skill cannot load is never trapped.
 
 **The write path has to survive the compaction; the skill body does
 not.** The pointer to this section sits in the skill body, which
