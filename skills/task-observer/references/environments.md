@@ -796,7 +796,8 @@ call completes several items. Where the harness has a post-tool event,
 count there instead: one state file per session, a reminder whenever the
 count passes a multiple of three. Node, no dependencies; register it on
 every plan tool the host provides (in Claude Code, matcher `TodoWrite` plus
-the host plan tool's name):
+the host plan tool's name), and on the subagent tool (`Agent|Task`), where it
+reminds after every hand-back:
 
 ```js
 // PostToolUse hook on the plan tools: count completed items per session and
@@ -807,6 +808,12 @@ try { input = JSON.parse(fs.readFileSync(0, 'utf8') || '{}'); } catch { process.
 const session = String(input.session_id || '').replace(/[^A-Za-z0-9_-]/g, '');
 const t = input.tool_input || {};
 if (!session) process.exit(0);
+if (/^(Agent|Task)$/.test(String(input.tool_name || ''))) {   // a subagent hand-back
+  console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext:
+    'task-observer: a subagent handed back. Before the next launch or the integration edit, write an ' +
+    'observation for any friction it reports, or a "no observations" line to checkpoints.log.' } }));
+  process.exit(0);
+}
 const state = path.join(os.tmpdir(), `task-observer-plan-${session}.json`);
 let s = { count: 0, seen: [] };
 try { s = JSON.parse(fs.readFileSync(state, 'utf8')); } catch {}
@@ -832,8 +839,8 @@ sends, and `done` (a list of ids) and `advance` are the shape of one host
 plan tool. Read one real call of each plan tool before wiring it and map
 its fields; a field the hook does not read counts nothing, silently. Arm it
 like any trigger: three single completions remind once, one call
-completing two items after one completion reminds, and a list re-sent with
-no new completion stays silent.
+completing two items after one completion reminds, a list re-sent with
+no new completion stays silent, and a subagent call reminds every time.
 
 ### A pre-tool hook — the only write path as a barrier
 

@@ -403,7 +403,9 @@ every write by design is neither: defer, don't retry
 to a human — a file handed over, a render, a staged skill file, a
 completion notification, a final report, a finished todo batch — write any
 pending observation files at that moment; the flush rides on a tool call
-you were making anyway. (Why both checkpoints are writes, and why a finding
+you were making anyway. A subagent hand-back is one too: before launching
+the next subagent or making the integration edit, write an observation for
+any friction it reports, or a `no observations` line. (Why both checkpoints are writes, and why a finding
 met while resolving another gets its own file: `references/observation-scan.md`.)
 
 **A failed write to an external system is a flush trigger too** — a tool
