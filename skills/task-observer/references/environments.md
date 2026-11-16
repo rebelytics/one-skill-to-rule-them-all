@@ -169,8 +169,9 @@ the user in your first reply, never only in a log; say which probe told you
 so (the skill listing, or the skill directory on disk), re-check the
 listing on every later turn that makes a tool call, and run the protocol
 the first time it resolves — a "not installed" verdict holds for one turn.
-Listed on disk but refused by the Skill tool ("Unknown skill"): read its
-SKILL.md directly and run the protocol.
+On disk but absent from the skill listing, or refused by the Skill tool
+("Unknown skill"): read its SKILL.md directly, run the protocol, and say
+once that this disk load is the session's activation.
 
 After completing each task, list the observation records written this
 session in the same turn and append a one-line summary from that listing
@@ -968,6 +969,18 @@ resolves. Like the guard below, this rule cannot live only in the skill
 that failed to resolve; the line that carries it is in the activation
 block.
 
+**A listing can also omit an on-disk skill for good.** Some harnesses never
+list a skill whose directory resolves and is complete, session after
+session, so a Skill call fails every time and the re-check above never
+fires. When the listing lacks the skill and its `SKILL.md` resolves on
+disk, the disk load is the supported activation for that session: read
+`SKILL.md` from the installed directory, run the protocol with the
+scripts there, say once in the start-up lines that the skill was loaded
+from disk because the listing omits it, and make no further Skill call for
+it that session. Tell the user once that the listing omits an installed
+skill, so they can check the harness's skill settings; the omission is a
+harness fact, not a defect in the bundle.
+
 The durable form: **a guard against an activation config failing to load
 cannot live inside the thing that config loads.** The guard in SKILL.md step
 1 is in `task-observer`, which is loaded *because* the config says to load
@@ -988,11 +1001,13 @@ be loaded directly.
 the fix depends on which of these it was: *absent* (config unreachable),
 *present-but-not-yet-injected* (late — record the turn it arrived),
 *present-but-not-yet-resolving* (the instruction fired and the skill was
-not in the listing — record the turn it appeared), *present and skipped*
+not in the listing — record the turn it appeared), *present on disk and
+never listed* (the disk load above), *present and skipped*
 (attention), or *loaded-but-not-run* (the invocation succeeded and the
 protocol inside it never executed). Only the first two are fixed by
-changing the channel, and the third by re-checking the listing; the last
-two are not environmental, and an environmental cause found first will
+changing the channel, the third by re-checking the listing, and the
+fourth by the disk load and the harness's skill settings; the last two are
+not environmental, and an environmental cause found first will
 otherwise absorb the whole explanation.
 
 ### The probe rides inside the first batched call
