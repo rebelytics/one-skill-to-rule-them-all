@@ -159,21 +159,23 @@ Before the first tool call of any session, the first turn after a
 compaction included, and before writing or proposing a plan, invoke the
 task-observer skill AND run its Session Start Protocol: loading the skill
 without running the protocol activates nothing, and a harness note not to
-re-execute earlier skills does not cover this protocol. A host that
-requires its plan call in the first message puts it in the first batch, the
-protocol as its first item, and revises it after the scan. Any turn that
-will involve a tool call counts; do not classify the session as "too
-simple" from its opening message. A step you did not run goes to
-session-starts.log; the reply carries it, in one line before the answer,
-only when the user can act on it (a failed probe, a review or staged update
-due, an activation gap). If the skill does not resolve on this turn, tell
-the user in your first reply, never only in a log; say which probe told you
-so (the skill listing, or the skill directory on disk), re-check the
-listing on every later turn that makes a tool call, and run the protocol
-the first time it resolves — a "not installed" verdict holds for one turn.
-On disk but absent from the skill listing, or refused by the Skill tool
-("Unknown skill"): read its SKILL.md directly, run the protocol, and say
-once that this disk load is the session's activation.
+re-execute earlier skills does not cover this protocol. That first call is
+one batch: an `ls` of the workspace path below, the skill load and its
+per-skill lookup; the scan follows. A host that requires its plan call in
+the first message puts it in that batch, the protocol as its first item,
+and revises it after the scan. Any turn that will involve a tool call
+counts; do not classify the session as "too simple" from its opening
+message. A step you did not run goes to session-starts.log; the reply
+carries it, in one line before the answer, only when the user can act on it
+(a failed probe, a review or staged update due, an activation gap). If the
+skill does not resolve on this turn, tell the user in your first reply,
+never only in a log; say which probe told you so (the skill listing, or the
+skill directory on disk), re-check the listing on every later turn that
+makes a tool call, and run the protocol the first time it resolves — a "not
+installed" verdict holds for one turn. On disk but absent from the skill
+listing, or refused by the Skill tool ("Unknown skill"): read its SKILL.md
+directly, run the protocol, and say once that this disk load is the
+session's activation.
 
 After completing each task, list the observation records written this
 session in the same turn and append a one-line summary from that listing
@@ -193,8 +195,8 @@ it and does not write to the log; it reports its findings to its caller.
 ```
 
 **The block carries only what has to act before the skill is loaded:**
-the trigger, the per-task backstop, the workspace pin and the subagent
-rule. Its ceiling is in `references/ceilings.txt`. Everything else is read
+the trigger, the first batch's content, the per-task backstop, the
+workspace pin and the subagent rule. Its ceiling is in `references/ceilings.txt`. Everything else is read
 from the skill once it has loaded, at the moment it applies: the
 per-skill lookup at each skill load (`observation-scan.md`, "The
 per-skill lookup at every skill load", named in SKILL.md Session Start
@@ -1037,8 +1039,9 @@ never in an earlier one. That removes the contest instead of adjudicating it, th
 harness's parallel-call guidance already permits it, and it is checkable
 after the fact from the transcript (an ordering rule between two "first"
 actions is not). SKILL.md step 1 states it that way; the tier-2 preferences
-line above is worded to match; the activation block's "before the first
-tool call" is satisfied by the load riding *in* that call.
+line above is worded to match; the activation block names the same batch
+(the listing, the skill load and its per-skill lookup), so its "before the
+first tool call" is satisfied by the load riding *in* that call.
 
 **The pre-skill tier's line names the complete batch, not only the
 probe.** Whatever the harness reads before any skill — Cowork's
@@ -1101,6 +1104,17 @@ the first response. The per-skill lookups that rode in the probe's batch
 ran against no log: after a first-run creation, re-run the lookup once
 per skill loaded in that batch, so `checkpoints.log` holds the
 `workspace: created=…` line followed by one `loaded` line per skill.
+
+**A missing mount in a bridged session is asked for in the same turn, and
+re-probed while it stays missing.** When the probe fails because the
+workspace folder is not connected, the folder-access request goes out in
+the batch right after the failed probe, before any work, with the tool's
+schema loaded in that batch if it is deferred; the deliverable never goes
+first with the request after it. While the probe keeps failing (the folder
+not granted, the computer unreachable), re-probe through the same channel
+at each task boundary, where the per-task backstop runs; say so once in the
+reply and again only when the state changes, and run the Session Start
+Protocol in full at the first probe that succeeds.
 
 **An unfilled pin is an unfinished install, not a failed probe.** Read the
 pinned value before probing it. A value that still reads as a template
