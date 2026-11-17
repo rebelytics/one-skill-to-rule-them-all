@@ -1,5 +1,7 @@
 # task-observer - One Skill to Rule Them All
 
+[![AgentShield Security](https://merx.help/badge/A+.svg)](https://merx.help/shield)
+
 ## The meta-skill that builds and improves all your skills, including itself.
 
 **Why "One Skill to Rule Them All"?** The slogan doesn't claim this is the best skill. It couldn't be: a meta-skill is useless without the skills it watches over. It describes what Task Observer does: keep an eye on how all your other skills are working and suggest improvements. You decide which changes are installed.
