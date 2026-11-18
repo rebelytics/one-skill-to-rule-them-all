@@ -110,6 +110,14 @@ The skill is a small bundle: `SKILL.md`, the files in `references/` that are loa
 - **Keep the observation folder writable only by you.** It is input to an agent that can run commands, so anyone who can write to it is trusted. A command quoted in an observation is shown to you and runs only with your approval, never in an unattended run.
 - **The optional flush plugin** reads local files only.
 
+## What it costs per session
+
+- **Every session:** the core `SKILL.md`, 600 lines, about 40 KB (roughly 10,000 tokens, estimated at four characters per token), plus the activation block in your instructions file and the session-start scan's output, about 5 KB at 84 open observations; the scan grows with your open backlog, not with your archive.
+- **Only when needed:** the files in `references/`, each loaded when its episode fires. The largest, the review procedure, is read only when a review runs.
+- **Never in a session:** this README, `evals/` and the repository's workflow files.
+
+If the per-session cost matters for your plan, keep the open backlog small by running the reviews: resolved observations move to the archive, which no session start reads.
+
 ## Compatibility
 
 **Tested and designed for:**
