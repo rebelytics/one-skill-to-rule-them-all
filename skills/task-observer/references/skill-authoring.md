@@ -1488,7 +1488,11 @@ With the sidecar present, `validate-skill-bundle.py` fails when:
   that added the lines, in words a reader without the repository
   understands — the file ships inside the skill — never an issue, PR or
   observation number, and never process history: when and why in detail
-  belong in the commit message. The threshold comes from the measured distribution
+  belong in the commit message. Nor where the lines came from — no
+  "found", "reported", "a review", "later illustrated": the reason
+  states what the file now contains. In a published skill it is
+  public text, read under the same confidentiality and dated-claim
+  rules as the content beside it. The threshold comes from the measured distribution
   over one library at last measurement, not from intuition: one to eight
   triggers almost everywhere, three files above eight, and the two files
   just under the earlier threshold of 12 were the ones readers described
