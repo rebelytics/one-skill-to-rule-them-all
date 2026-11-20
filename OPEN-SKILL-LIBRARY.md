@@ -18,15 +18,15 @@ A listing is not a security review: read a skill before you install it. This pag
 | [ai-visibility-tracking-strategy-builder](https://github.com/rebelytics/ai-visibility-tracking-strategy-builder) | Builds and refines the prompt set and reporting structure for tracking how a brand appears in AI answers. | CC BY 4.0 | 2026-11 |
 | [bing-grounding-query-analysis](https://github.com/rebelytics/bing-grounding-query-analysis) | Turns an exported Bing Webmaster Tools grounding-query report into decisions: coverage and concentration first, then branded vs non-branded citations, entity confusion and six more cuts. | CC BY 4.0 | 2026-11 |
 | [bing-wmt-ai-grounding-export](https://github.com/rebelytics/bing-wmt-ai-grounding-export) | Exports Bing Webmaster Tools AI Performance data (cited pages and their grounding queries) at scale through the report's own API. | CC BY 4.0 | 2026-11 |
-| [peec-ai-tracking-strategy-builder](https://github.com/rebelytics/peec-ai-tracking-strategy-builder) | Peec AI companion to the tracking strategy builder: project setup, writes and analysis in Peec AI. | CC BY 4.0 | 2026-10 |
-| [searchviu-tracking-strategy-builder](https://github.com/rebelytics/searchviu-tracking-strategy-builder) | searchVIU companion to the tracking strategy builder: prompt sets, field mapping, validation and CSV handover. | CC BY 4.0 | 2026-10 |
+| [peec-ai-tracking-strategy-builder](https://github.com/rebelytics/peec-ai-tracking-strategy-builder) | Peec AI companion to the tracking strategy builder: project setup, writes and analysis in Peec AI. | CC BY 4.0 | 2026-11 |
+| [searchviu-tracking-strategy-builder](https://github.com/rebelytics/searchviu-tracking-strategy-builder) | searchVIU companion to the tracking strategy builder: prompt sets, field mapping, validation and CSV handover. | CC BY 4.0 | 2026-11 |
 | [sistrix-tracking-strategy-builder](https://github.com/rebelytics/sistrix-tracking-strategy-builder) | SISTRIX companion to the tracking strategy builder: AI tracker tags, CSV imports and update quotas. | CC BY 4.0 | 2026-11 |
 
 ## Tool companions (MCP servers)
 
 | Skill | What it does | Licence | Last skill update |
 |---|---|---|---|
-| [peec-ai-mcp](https://github.com/rebelytics/peec-ai-mcp) | Companion skill for the Peec AI MCP server: reports, competitive analysis and reading Peec metrics correctly. | CC BY 4.0 | 2026-10 |
+| [peec-ai-mcp](https://github.com/rebelytics/peec-ai-mcp) | Companion skill for the Peec AI MCP server: reports, competitive analysis and reading Peec metrics correctly. | CC BY 4.0 | 2026-11 |
 | [screaming-frog-mcp](https://github.com/rebelytics/screaming-frog-mcp) | Companion skill for the Screaming Frog SEO Spider MCP server: querying a crawl without flooding the context, response shapes and cost traps. | CC BY 4.0 | 2026-11 |
 | [searchviu-mcp](https://github.com/rebelytics/searchviu-mcp) | Companion skill for the searchVIU MCP server: querying crawl reports, date filters, row caps and API passthrough. | CC BY 4.0 | 2026-11 |
 | [sistrix-mcp](https://github.com/rebelytics/sistrix-mcp) | Companion skill for the SISTRIX MCP server: visibility, keyword, backlink and AI visibility data. | CC BY 4.0 | 2026-11 |
