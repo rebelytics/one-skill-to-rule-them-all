@@ -67,8 +67,7 @@ knowingly; do not assume any of the middle ones is a guarantee.
    the folder-picker tool; never state whether the folder is connected
    without that probe" (why the wording is about the call's content, not
    its order: "The probe rides inside the first batched call" below) —
-   because a config
-   file inside the workspace folder cannot fire in the very case it
+   because a config file inside the workspace folder cannot fire in the very case it
    targets: when no folder is connected, there is no config file. Verify
    the channel once by asking a folder-less session to quote its
    preferences block; a line that does not reach the agent is not a tier.
@@ -443,8 +442,7 @@ fork, not a variant: stop and reconcile before writing, and keep the pin
 in one file both tools load. At install, ask once whether another
 assistant was given the same install request: two installs on different
 hosts each report complete, and neither search can see the other's. If one exists, adopt it, or
-consolidate deliberately with the user. A fresh
-empty log beside a populated one is a silent fork: both grow
+consolidate deliberately with the user. A fresh empty log beside a populated one is a silent fork: both grow
 independently, ids collide, and each session sees only half the history.
 Consolidating a shard is mechanical: carry over only the entries still
 `open` — its already-actioned entries re-import as duplicates of work
@@ -577,15 +575,14 @@ configuration lines the user needs, because constraints that live only in
 SKILL.md arrive after the decision they were meant to govern.
 
 **Load is not activation.** The failure the block's wording guards
-against: the agent loads the skill per the
-config instruction, then stops — the Session Start Protocol (log files,
-scan, review trigger) never runs, and nothing surfaces the omission
-because a loaded-but-inert skill looks identical to an active one from
-the user's side. Hence the two belts above: the
-instruction demands the protocol by name, not just the load, and the
-post-task summary line makes silent inactivity visible at the first
-task boundary. If you adopt only one line of the block, adopt the
-post-task check.
+against: the agent loads the skill per the config instruction, then
+stops — the Session Start Protocol (log files, scan, review trigger)
+never runs, and nothing surfaces the omission because a loaded-but-inert
+skill looks identical to an active one from the user's side. Hence the
+two belts above: the instruction demands the protocol by name, not just
+the load, and the post-task summary line makes silent inactivity visible
+at the first task boundary. If you adopt only one line of the block,
+adopt the post-task check.
 
 That check is prose in the same file as the rule it guards, and it fails
 with it: whatever made a session skip the block's first paragraph makes it
@@ -661,8 +658,7 @@ directory is not, and a message built from the workspace alone keeps
 telling every session to invoke a skill it cannot invoke, with a review
 offer on top. Set `OBS_SKILL_DIR` beside `OBS_WORKSPACE`. The message names the resolved workspace and the whole first batch — the
 listing, the skill load and its per-skill lookup, since a message that
-lists two items gets a batch of two —
-because it is the one pre-skill text the harness delivers on turn 1
+lists two items gets a batch of two — because it is the one pre-skill text the harness delivers on turn 1
 ("The probe rides inside the first batched call", below): a message that
 only says "invoke the skill" leaves the probe to a skill not yet read,
 and a tool whose sessions resolve the root another way keeps writing to
@@ -1756,8 +1752,7 @@ sandbox can deny a path that exists and is online — through every
 interface, a junction inside the allowed area included, because the
 sandbox canonicalises the target — and the run ends with the offline
 policy's one-line skip: a config gap wearing the costume of a transient
-outage. Registering a scheduled
-review therefore includes whatever allowed-directory configuration the
+outage. Registering a scheduled review therefore includes whatever allowed-directory configuration the
 harness needs for the workspace root — for Claude Code headless,
 `--add-dir "[ABSOLUTE PATH]"` on the invocation, or the equivalent
 permissions rule — and the setup is not done until one firing has
@@ -1774,7 +1769,12 @@ rule did not lift it, while `Write(...)` rules are not matched at all
 (reported on one install, tested): for a scheduled
 review, anchor the workspace outside any `.claude/` folder or prove the
 write on the first firing. (The run-time skip note:
-`references/weekly-review.md`, offline-workspace policy.)
+`references/weekly-review.md`, offline-workspace policy.) A write scope the
+prompt sets ("write only inside `<folder>`") covers the observation log and
+its logbooks too, and a classifier enforces it as written: name both ("…,
+plus `skill-observations/`"), and keep an optional cleanup (an `rm` of
+scratch files) out of the command that makes a required write — beside
+it, the write reads as destructive.
 
 **Managed skills directories (dotfile managers, sync tools).** Where the
 skills directory is generated by chezmoi, GNU Stow, yadm, a symlinked
