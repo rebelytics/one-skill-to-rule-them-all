@@ -40,7 +40,9 @@ footer routing methodology feedback to the creator — the body opens with
 what the skill does, never with the offer; tool-agnostic language
 (capabilities like "browser access", not product names); built-in
 enforcement (see Pre-Flight Principle). Default to open-source when a skill
-could go either way — strip specifics and generalise.
+could go either way — strip specifics and generalise. The boundary is a confidentiality boundary with
+asymmetric errors — internal costs only reach, open-source can leak — so
+when genuinely uncertain, prefer internal and promote later.
 
 **Internal skills** contain user/client/project specifics, personal
 preferences, or context only the user has. They identify themselves as
@@ -133,9 +135,10 @@ session is fixed overhead and should be audited like one.
 
 **Declare your own core ceiling, and let it only fall.** A skill opts into
 the size ratchet by naming its own bound — `core_max_lines: N` in SKILL.md
-frontmatter, at the top level or one level under `metadata:` (the
-spec-conformant form, value quoted: `core_max_lines: "N"`; see Runtime
-prerequisites on why), or a `.core-ceiling` file beside it — seeded at whatever the
+frontmatter, one level under `metadata:` (the spec-conformant form,
+value quoted: `core_max_lines: "N"`; see Runtime prerequisites on why;
+the top level is still read, with a warning until the skill's next
+release moves it), or a `.core-ceiling` file beside it — seeded at whatever the
 core measures today: the point is not that every skill reaches some ideal
 size, it is that no skill silently grows past where it already is.
 `validate-skill-bundle.py` then fails when the core exceeds it: trim,
@@ -174,7 +177,11 @@ not once the body has grown too big to read, because a structure rule
 that switches on a line count gives one skill two shapes. The ~500-line
 figure survives in one role only: as the **retrofit trigger** for an
 existing, not-yet-split skill — a body past roughly 500 lines is the
-point at which retrofitting stops being optional. Concretely:
+point at which retrofitting stops being optional. One exception: an
+unpublished skill whose only install route carries one file (the
+skill-card route, editing rule 5) is written as one file under the same
+~500-line budget, the every-invocation rules first and the episodic
+sections after them, each under its own heading so a later split is a cut. Concretely:
 
 - **SKILL.md keeps** the mental model, the small number of rules that
   change behaviour on every invocation, and a pointer list to the
@@ -480,7 +487,8 @@ the user has asked for a report to be drafted; nothing before that point
 fetches anything — except the review's upstream version check for a
 foreign-maintained skill (`weekly-review.md`, Step 2), run only where the
 instruction file carries the opt-in line "the review may check upstream
-versions" (`environments.md`, "Configuration lines beside the block").
+versions", and its read of a tracker the `[FEEDBACK CHANNELS]` line names
+(both: `environments.md`, "Configuration lines beside the block").
 
 **Pre-send gate — run on the finished draft, after the pre-flight.** The
 pre-flight decides whether and where a report goes; nothing reads the
@@ -867,7 +875,16 @@ record how to obtain it.
    install succeeds, the skill loads, and the missing pieces surface only
    when a reference load or script call fails mid-task), and a convention
    that switches on file count leaves that boundary to be re-derived
-   every time. **Pre-delivery gate — checked at the moment of delivery,
+   every time. **The skill-card route** is the one exception: where the
+   harness's own instructions forbid handing over a package and name its
+   skill-save control (the card) as the install route, stage the full copy
+   and its manifest entry first, run the gate below on it, present that
+   exact staged text through the card, and record the card as the install
+   artefact; the user's approval on the card is the sign-off. It carries
+   one-file skills only, because a card that saves one file truncates a
+   multi-file skill: for one of those, say the card cannot carry it and
+   leave the install to the user from the staged directory, outside the
+   session. **Pre-delivery gate — checked at the moment of delivery,
    not just at drafting time.** The item list is the gate in
    `weekly-review.md`, "Delivering updated skills"; what follows is the
    authoring detail for the items numbered the same there: (1) every UNQUALIFIED
@@ -897,8 +914,8 @@ record how to obtain it.
    written `$ 2`, and a command that needs `$1` belongs in a script or a
    reference file; a warning, not a failure, because a placeholder can be
    intended; (2) the delivery artefact
-   is the `.skill` bundle — bare file links fail this gate even when all
-   files are staged; (3) frontmatter constraints — measure the description
+   is the `.skill` bundle, or the card on the skill-card route — bare file
+   links fail this gate even when all files are staged; (3) frontmatter constraints — measure the description
    (the FOLDED value, not the raw YAML block) and fail the delivery above
    1024 characters, with a soft warning above ~900 so a near-boundary
    description gets tightened before it becomes someone else's install
@@ -1127,7 +1144,12 @@ untouched original. A checker that fails calibration is a false alarm
 today and a silent pass tomorrow. Additionally, inventory the original's enforcement
 mechanisms (checkpoints, assertions, invariants, mandatory-write rules,
 defaults) as an explicit checklist — compression preferentially destroys
-enforcement machinery because it reads as redundancy — and sweep any "pure
+enforcement machinery because it reads as redundancy — and write beside
+each item where it now lives: inline, pointer plus reference, or lost. A
+coverage check proves no sentence was lost, not where it sits, so in a
+split every never/always or security rule the reference holds keeps a
+one-line statement beside the pointer to it: an agent acting on the core
+alone never meets a rule behind a pointer that names only the topic. Sweep any "pure
 restructuring" change for net-new behaviour, which hides well in a large
 rewording diff.
 
@@ -1195,6 +1217,11 @@ inode, not by path, or a one-line change shows as several files and a
 zero-line change hides among them. An untraced null is unreported, not a null.
 
 ## New skills
+
+**Name the install route before proposing a structure.** Say how the skill
+will reach the installed set (a bundle the user installs, or the harness's
+skill card) and what that route can carry: an outline of four files agreed
+for a route that saves one is a structure folded after the fact.
 
 **Building next to siblings: separate the inherited steps from the
 necessary ones.** A new member of a family inherits its siblings' shape,
@@ -1331,6 +1358,9 @@ caught only by a test built to break it.
 
 ## Runtime prerequisites — declare what the skill needs to be able to run
 
+Session Start step 6 resolves every logged target: a deleted skill
+accumulates observations unnoticed; a dead one more so.
+
 A skill that drives something outside itself — a CLI binary, a daemon, an
 API key, a container runtime — is only as installed as the thing it
 drives: the listing says the files are there, not that they can run. The
@@ -1346,8 +1376,14 @@ left optional, a family drifts.
 prerequisites as *checkable facts*, so that something other than a human reader
 can evaluate them, in ONE string under `metadata` — the Agent Skills spec types
 `metadata` as string→string, and a top-level key of our own fails its validators
-as an unexpected key (the validator reads `core_max_lines` in either place for
-that reason, and notes the key nested anywhere else as not read):
+as an unexpected key. The validator checks the same set: any other top-level
+key fails, except a few older ones still carried by published skills
+(`version`, `core_max_lines`, `origin`, `maintainer`, `author`), which warn
+naming `metadata:` until each skill's next release moves them; it reads
+`core_max_lines` in either place, and notes the key nested anywhere else as not read.
+A skill's version is `metadata.version`, quoted (this skill carries it there);
+the scripts that read a version take it from there first and accept a
+top-level `version:` on another skill or an older install:
 
 ```yaml
 metadata:
@@ -1452,7 +1488,11 @@ With the sidecar present, `validate-skill-bundle.py` fails when:
   that added the lines, in words a reader without the repository
   understands — the file ships inside the skill — never an issue, PR or
   observation number, and never process history: when and why in detail
-  belong in the commit message. The threshold comes from the measured distribution
+  belong in the commit message. Nor where the lines came from — no
+  "found", "reported", "a review", "later illustrated": the reason
+  states what the file now contains. In a published skill it is
+  public text, read under the same confidentiality and dated-claim
+  rules as the content beside it. The threshold comes from the measured distribution
   over one library at last measurement, not from intuition: one to eight
   triggers almost everywhere, three files above eight, and the two files
   just under the earlier threshold of 12 were the ones readers described

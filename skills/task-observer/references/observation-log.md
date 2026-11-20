@@ -1,6 +1,6 @@
 # The observation log — storage layout, scripts and rationale
 
-Load triggers: creating the workspace or setting up the log; archiving, or verifying a bulk move; an id or a frontmatter field looks wrong or drifts; why snippets take a spaced path and run under bash; the id snippet at write time — its guard, the sweep's count or the noclobber create fires, skipping it feels reasonable, two files share an id, writes are being batched or parallelised, or a structural probe came back empty; editing an existing observation's body; setting, reviewing or unparking a parked status, or setting `reference:`; resolving, dismissing, fixing or citing an observation
+Load triggers: creating the workspace or setting up the log; archiving, or verifying a bulk move; an id or a frontmatter field looks wrong or drifts; why snippets take a spaced path and run under bash; the id snippet at write time — its guard, the sweep's count or the noclobber create fires, skipping it feels reasonable, two files share an id, writes are being batched or parallelised, an edit is chained onto a create, or a structural probe came back empty; editing an existing observation's body or fields (the batch field editor, a `use_evidence:` line, a decision appended); setting, reviewing or unparking a parked status, or setting `reference:`; resolving, dismissing, fixing or citing an observation
 
 The core skill carries the per-invocation rules: where the log is, how to
 name and number a file, the frontmatter format, and the archival rule.
@@ -35,6 +35,7 @@ pattern in `observation-families.md`.
 - When the workspace is under version control
 - Archival
 - Referencing observations
+- Quick reference
 
 ## Layout
 
@@ -59,6 +60,8 @@ skill-observations/
   checkpoints.log        # append-only acknowledgement markers (optional)
   MOVED.md               # only at an abandoned root: line 1 names the new root
                          #   (environments.md, "Before creating a log, search for one")
+  previous-roots.txt     # roots a re-anchor or consolidation left, one per line
+                         #   (environments.md, "A re-anchor moves the root, not only the log")
 ```
 
 Each file follows the core frontmatter format (How to Log); the listing
@@ -71,6 +74,7 @@ here: run this, do not work down the tree above by hand.
 
 ```bash
 d="[ABSOLUTE PATH]/skill-observations"   # the pinned path, quoted: it may contain a space; bash, not sh
+case $d in (/*|[A-Za-z]:[/\\]*) ;; (*) echo "UNFINISHED INSTALL: the pinned root is not an absolute path: '$d' — fill in the activation block's workspace path (environments.md, \"An unfilled pin is an unfinished install\")"; exit 1 ;; esac
 [ -e "$d/log.md" ] && [ ! -d "$d/observation-log" ] && { echo "LEGACY log.md — run the migration (references/migration.md) before creating anything"; exit 1; }
 [ -e "$d/log.md" ] && [ -d "$d/observation-log" ] && { echo "SPLIT STORE — log.md holds $(grep -c '^### Observation ' "$d/log.md") observations not in observation-log/ (an older installed copy still writes the legacy file); migrate the remainder (references/migration.md), re-issuing ids from the directory's counter"; exit 1; }
 c=; for x in observation-log observation-log/archive last-review-date.txt cross-cutting-principles.md; do [ -e "$d/$x" ] || c="$c${c:+,}$x"; done   # what this run creates
@@ -86,6 +90,11 @@ printf '%s [%s] workspace: created=%s\n' "$(date '+%F %H:%M')" "${PWD##*/}" "${c
 A checkpoint line whose `created=` names `observation-log` is a new log:
 before its first write, list the sibling logs and their open entries
 (`environments.md`, "A renamed project orphans its log").
+
+The `case` line refuses a root that is not absolute — a placeholder left
+unfilled at install, above all — before anything is created: without it,
+the command makes a folder named after the placeholder in the working
+directory and the install looks finished.
 
 `mkdir -p` creates the parent, so `observation-log/` needs no separate line;
 the `[ -e ]` guards make the command safe to re-run on an existing
@@ -138,6 +147,10 @@ fail differently and only one of them complains:
 
 ### Snippets take a spaced path and run under bash
 
+A snippet run with a relative path from any other
+directory does not fail: it reports an empty, clean backlog, which is the
+one answer that never gets questioned.
+
 **The substituted path routinely contains a space** — the default
 shared-folder name on at least one common install does — so every
 expansion of it stays double-quoted, and no snippet may feed it through
@@ -154,6 +167,10 @@ block that happens to be POSIX-safe too (the sweep) is incidental, not a
 promise about the rest.
 
 ## Frontmatter fields
+
+From the core: the helper refuses a `--body` whose header lacks `status:`
+or a non-empty `siblings_checked:`, whose `type:` is outside the two
+values, or that the scan would flag as suspect YAML, and creates no file.
 
 | Field | Meaning |
 |---|---|
@@ -175,8 +192,8 @@ promise about the rest.
 | `resolution` | What was done, or why declined. When the fix is a prescription (a rule, a check, a form to use), an `actioned` resolution names where it now lives — a file and section, a staged skill copy, or a registered backlog entry. If no such place can be named, the prescription has been described, not applied: leave the entry `open`, or resolve the part that landed and carry the rest in a carrier observation (below). A review's own resolution already names the staged copy (`weekly-review.md`, Step 6); this is the rule for a resolution set outside a review. |
 | `reference` | Optional path to saved session-local evidence. |
 | `commands_verified` | One clause per executable command, and per predicate (a regex, a search pattern, a hook or check condition), the body quotes: `run`, with what it returned — for a predicate, whether it matched the positive case and the negative — or `NOT RUN` with why; the literal `none` where the body quotes neither. Blank on a body that quotes a command or predicate means it was never run. See "Commands inside an observation" below. |
-| `next_actor` | Optional, set in the edit that appends a decision to the body: who acts on it next — `review`, `maintainer`, or a named run such as a publishing step. The value is open: no script parses it, so name your own runs. The same edit prefixes `title:` with `DECIDED:` (core, How to Log), so a title-only scan reads the entry as settled rather than as an open question. |
-| `use_evidence` | Optional, append-only block list: one line per session in which the entry was NEEDED to decide the agent's behaviour, `- YYYY-MM-DD accepted\|declined\|used — short context`. `accepted` / `declined` is the user's answer in an interactive session (core, Surfacing Protocol); `used` is an unattended run that applied it without asking. Lines are appended by the command below and never removed; a `declined` line never closes the entry. The context is a plain scalar: no `: ` and no ` #` in it — the first turns the item into a mapping, the second cuts it. The review orders its queue by the count of these lines and flags an entry with none 30 days after its `date:` as unconfirmed (`weekly-review.md`, Step 3). |
+| `next_actor` | Optional, set in the edit that appends a decision to the body: who acts on it next — `review`, `maintainer`, or a named run such as a publishing step. The value is open: no script parses it, so name your own runs. The same edit prefixes `title:` with `DECIDED:` ("Editing an existing observation", below), so a title-only scan reads the entry as settled rather than as an open question. |
+| `use_evidence` | Optional, append-only block list: one line per session in which the entry was NEEDED to decide the agent's behaviour, `- YYYY-MM-DD accepted\|declined\|used — short context`. `accepted` / `declined` is the user's answer in an interactive session (`acting-on-observations.md`, "Using an open observation in this task"); `used` is an unattended run that applied it without asking. Lines are appended by the command below and never removed; a `declined` line never closes the entry. The context is a plain scalar: no `: ` and no ` #` in it — the first turns the item into a mapping, the second cuts it. The review orders its queue by the count of these lines and flags an entry with none 30 days after its `date:` as unconfirmed (`weekly-review.md`, Step 3). |
 | `escalated` | Written by a review, append-only block list: one line per time the review asked the user about the entry, `- YYYY-MM-DD the one-line question` (a plain scalar: no `: `, no ` #`). A bounded slice skips an entry asked and unanswered; the second ask comes one review later, the third review parks it on the question (`weekly-review.md`, Approval policy, "An escalation is recorded on the entry"). |
 | `skill_qualifiers` | Optional map: skill name → the section or part of that skill meant. |
 | `migration_note` | Present only on files converted from a legacy log where the converter refused to guess; clear it once reviewed. |
@@ -224,6 +241,11 @@ and the file").
 
 ### Unquoted `: ` in a prose value — how far it drifts before anyone notices
 
+From the core: free text contains `: ` as the common case; unquoted, that
+is invalid YAML — the scan flags `key: a: b` as suspect; every consumer
+that PARSES it throws. A plugin-scoped name in a `[]` list
+(`[plugin:name]`) loads under one YAML parser and fails under another.
+
 The core states the rule (quote every prose value); this is the measurement
 behind it, because the failure is unusually quiet. An unquoted `: ` in a
 free-text value is invalid YAML, yet the frontmatter still *extracts* (a
@@ -240,7 +262,8 @@ look invalid by shape — an unquoted `: `, text after a closing quote
 (either style), a value opening with a backtick, `@` or `%`, an escape a
 double-quoted YAML string does not define (`\x`, `\u`, `\U` need 2, 4
 and 8 hex digits) — beside the file count, for the active directory and
-for `archive/`, so a log drifting into this state announces itself at
+for `archive/`, and its NOTE names each such file with the rule and key
+it tripped, so a log drifting into this state announces itself at
 session start rather than at the review that trips over it (the rules,
 one per line, are commented in `scripts/session-start-scan.sh`). It is a
 floor, not a parse: a `[…]` list is checked only for a colon in an
@@ -398,7 +421,11 @@ a reader on another re-reads it at that revision or maps it forward.
 ## Assigning an id
 
 Rules: core, How to Log. The snippet lives in the core; the notes below
-explain its lines.
+explain its lines. `.id-floor` holds the highest id ever issued — update it
+whenever you issue an id above it, so the counter can never restart from 1
+when the active directory is empty. The same command first sweeps stale
+resolved files into `archive/` — archival is a side effect of deriving the
+id, not a separate duty (Archival, below).
 
 The snippet leaves the derived number in `$next_id` and the target path in
 `$f`; append `printf '%04d\n' "$next_id"` if you also want the filename
@@ -500,6 +527,11 @@ arrays; the rule binds snippets written against this skill's guidance.
 
 ### The guard line, the sweep's count and the noclobber create
 
+From the core: the sweep's count does for the archival loop what the
+listing guard does for the listing, the prefix guard refuses a number
+already in use under any slug, and the `noclobber` create refuses an
+existing path.
+
 The listing guard tells "the log says zero" from "I could not read the
 log" (core): a command that fails to empty rather than to error would
 otherwise propose id 1 in a populated log. It compares the number of ids
@@ -541,6 +573,10 @@ through. Re-run the snippet; never adjust the number by hand.
 
 ### Run the snippet immediately before every write
 
+The helper issues no id while two
+files share a numeric prefix across `observation-log/` and `archive/`, and
+names both with the renumber.
+
 **Run the snippet immediately before EVERY write, including the first and
 only one of a session.** Having already read the log directory earlier for
 some other reason — the session-start frontmatter scan, a grep for
@@ -568,6 +604,15 @@ between deriving the id and typing it, not in the derivation.
 The number the snippet prints goes into the filename **and** the `id:`
 field, copied, not retyped from memory of what you expected it to be. If
 the two disagree, the file is the one every later scan believes.
+
+**An edit chained after a create takes the path the create printed.** In a
+log other sessions write to, an id is known only from the write that
+issued it. So a command that creates an entry and then changes it reads
+the helper's one-line output: `f=$(bash scripts/new-observation.sh --body
+<file> <slug> "[ABSOLUTE PATH]") && …`, then `"$f"` (its basename in a
+`set-fields.sh` plan line). Never an id computed, remembered or globbed
+from the number you expected: entries other sessions wrote since your last
+read hold those numbers, and the edit lands on one of them.
 
 **Never pre-compute a range.** A batch append is N separate races, not one;
 pre-baked sequential numbers collapse N independent max-checks into a
@@ -662,7 +707,9 @@ read to judge an artefact against it — excerpt to find an entry, full
 text to judge one (`weekly-review.md`, "Staged-work reconciliation gate").
 
 **A change you did not make resolves an observation point by point,
-never title against title** (core, Acting on Observations). A point
+never title against title** (core, Acting on Observations): list the points
+the body makes, name the line of the fix covering each, and any point
+without a line stays open on a carrier. A point
 that joins several conditions (A and B) counts as one point per
 condition — a line that matches the second half does not cover the
 first. Holding the fix's title against the observation's title measures
@@ -676,6 +723,23 @@ Core rule (How to Log); re-read first — a parallel review may have
 resolved it — and never rewrite a file you don't own.
 Append an instance with `scripts/extend-observation.sh`, never a redirect onto
 a remembered path: it finds the entry by id and refuses an archived or resolved one.
+
+**Changing fields** (core, "Changing an existing observation"): `scripts/set-fields.sh`
+refuses the whole plan unless every file changes only on the named
+lines, and `actioned` unless `resolution:` gives each `skill:` member a
+disposition. A `use_evidence:` line is appended inside the header, before
+its closing `---`, by one insert command, never a rewrite of the file (the
+command: "Frontmatter fields", above). A
+decision appended to the body sets `next_actor:` and prefixes `title:`
+with `DECIDED:` in the same edit, so a title-only scan stops showing a
+settled item as open.
+
+**Extending a restated finding** (core, "Check for a restatement before
+writing"): append the new instance to its body, add the session to `session_context`,
+and rewrite `title:` so it still names the finding in one line — never
+append the new instance to it; the helpers refuse a title over 200
+characters. Duplication is only visible in aggregate, and a near-duplicate
+costs a capture every session and a triage every review.
 
 **An appended instance is a test input for the entry's predicate.** The
 restatement path (core, "Check for a restatement before writing") is the
@@ -805,7 +869,9 @@ If the condition cannot occur, the entry is not waiting: close it on the
 substitute evidence available today, or park it on a trigger that can
 actually fire — phrased on the result in the target, never on the state
 of a vehicle ("A park condition names the result, never your own
-vehicle", above).
+vehicle", above). An entry parked at creation is written parked in one
+call: `--body` accepts `status: parked` with a non-empty `parked_until:`
+and refuses it with an empty one, so no second edit chases the new id.
 
 ## When the workspace is under version control
 
@@ -840,7 +906,24 @@ review as the expected cost of a missed pull, renumbered exactly as Step
 
 ## Archival
 
-Rules: core, Archival on Write. The sweep's date check fails closed, so a
+Archival is not a preamble duty to remember before writing — it rides
+inside the id-derivation snippet (core, How to Log): the same command that computes the
+next id first `mv`s already-resolved files from `observation-log/` to
+`observation-log/archive/`, so the sweep runs whenever an id is issued and
+cannot be skipped without failing the write (a duty attached as a preamble
+to another action inherits none of its enforcement; put it inside the same
+command). The scheduled review archives too, at Step 1, as an independent
+backstop. "Already resolved" is read from the file's
+own frontmatter: `status: actioned`, `declined` or `superseded` AND a
+`resolved:` date **before today**. Files resolved today stay until the next
+day, whichever session resolved them — the grace period lives in the file,
+never in session memory. A resolved file with no readable `resolved:` date
+gets today's date written to that field instead of being archived (the
+snippet skips it; make that one-field edit separately). One file per
+`mv`, no rewrite of anything else, and a bulk move outside the sweep is
+verified by conservation (below).
+
+The sweep's date check fails closed, so a
 resolved file with no readable `resolved:` date is skipped; the one-field
 repair is a separate edit.
 
@@ -910,6 +993,10 @@ sequence contiguous across both directories (`weekly-review.md`).
 
 ## Referencing observations
 
+From the core: an id must fall inside the range
+across `observation-log/`, `archive/` and `.id-floor`; one far outside it is a
+line number misread as an id.
+
 Rules: core, Referencing Observations. In chat, every surfaced id reads
 `observation NNNN` — in a review offer, a checkpoint summary, a status
 line — never a bare number, which the user cannot tell from a count.
@@ -919,3 +1006,19 @@ applies an observation names its id (`observation #<id>`, qualified by
 workspace where several logs exist). The fix is then findable without
 guessing its wording: it is the second surface the review's presence check
 searches (`weekly-review.md`, Step 3).
+
+## Quick reference
+
+The core's one-line answers, moved here whole; each row restates a rule the
+core states in its own section.
+
+| Question | Answer |
+|----------|--------|
+| When do I observe? | The whole session, including feedback and reflection phases |
+| How do I log? | Immediately, without interrupting the user's task, as one file per observation named `NNNN-slug.md`; id = max(active, archive, `.id-floor`) + 1, derived by running the snippet immediately before each write — an earlier read of the log for any other purpose is not a substitute; where a helper can run, `bash scripts/new-observation.sh --body <file> <slug> "[ABSOLUTE PATH]"`, `<file>` the complete entry (frontmatter and body), is the only write path |
+| Status field? | Mandatory `status: open` frontmatter on every new observation; reviews treat a missing status as OPEN, never as nonexistent. Five values: `open`, `actioned`, `declined`, `superseded`, `parked` — `parked` = decided but blocked on an external precondition, so it leaves the queue, requires `parked_until:`, and never archives |
+| Does the target skill have siblings? | Resolve it against `skill-observations/skill-families.md` BEFORE writing; add every sibling the insight applies to to `skill:`, and record the verdict in the mandatory `siblings_checked:` field — including "checked, no propagation" |
+| A scan or query came back empty? | Two possibilities, only one is a finding: guard every retrieval meant to prevent duplicate work with an independent existence check, and treat empty output over known content as a broken command |
+| Small fix or substantial? | Additive → apply directly; restructuring/new skill → `references/skill-authoring.md` |
+| Same rule broken twice? | The fix is a structural barrier (hook, lint, default) — never a third rewording |
+| Changing an observation (status/archival)? | Re-read that one file, edit only its frontmatter, or `mv` it to `observation-log/archive/` — no shared-file rewrite; to `actioned`, several entries or a renumber: `scripts/set-fields.sh` |

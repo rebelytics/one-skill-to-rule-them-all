@@ -40,7 +40,11 @@
 # references/starter-principles.md beside this script; where that file is
 # unreadable — a .bin/ copy in a bridged session — an absent marker is still
 # DUE and an older one is not compared, so no line prints for it; the line
-# names where the offer may be made, since it is read mid-task;
+# names where the offer may be made, since it is read mid-task; a marker
+# that is not one line holding only the version is a NOTE quoting line 1;
+# `DUE: starter-set import lost` when checkpoints.log records a
+# reconciliation that imported entries and the principles file's Active
+# Principles hold none marked as imported;
 # UNFILLED: a header whose title: is empty — the skeleton new-observation.sh
 # writes at create time, a write in progress or abandoned; NOTE: id: … when
 # a header's id does not read as its filename prefix; DUPLICATE ID — NNNN:
@@ -59,7 +63,9 @@
 # roots) or NOTE: legacy staging root line when
 # skill-observations/skill-updates/ (the pre-3.0 staging root) exists; a NOTE: pointer line when
 # skill-observations/MOVED.md exists; a GAP
-# line when the previous scan in checkpoints.log is 7 or more days old; the
+# line when the previous scan in checkpoints.log is 7 or more days old; a
+# `review:` line on every run (the last review's date and age in days, and
+# the open entries dated after it or undated — never a finding); the
 # session-start record; the active principles' headings; then one line per numbered entry,
 # `id | status | skill | proposes_skill | title` (`-` for a field the header
 # lacks), parked entries after the others, an actioned, declined or
@@ -77,7 +83,7 @@
 # block: every finding line (DUE / NOTE / LOST ENTRIES / UNFILLED / DUPLICATE
 # ID / RESURRECTED / SPLIT STORE / GAP) repeated VERBATIM, and LAST one `end of scan` line
 # repeating the counts, how many finding lines stand above the entries, how
-# many bytes stdout carried above it, and this script's version (VERSION below, equal to the skill's `version:`), so
+# many bytes stdout carried above it, and this script's version (VERSION below, equal to the skill's `metadata.version`), so
 # a run can tell a script that lacks a feature from one that is broken. The findings
 # open the output and close it, so a view cut by `head` keeps them and one
 # cut by `tail` keeps them with the summary; the same lines are written to
@@ -127,7 +133,7 @@
 
 set -u
 
-VERSION="3.11.2"   # equal to the skill's frontmatter version:; the end line names it
+VERSION="3.12.0"   # equal to the skill's frontmatter metadata.version; the end line names it
 
 entries=   # --entries-to target; empty = the entries print to stdout
 skill_dir= # --skill-dir: the installed skill directory; empty = the one this script sits in
@@ -251,8 +257,9 @@ if [ -n "$bad" ]; then echo "SCAN COMMAND BROKEN — the counts did not read as 
 #   5. a value opening with a backtick, @ or %
 #   6. a double-quoted value holding an escape YAML does not define
 #   7. a [ … ] list whose unquoted part holds a colon
-# A hit prints `<file> TAB <rule> TAB <line>`; the scan counts the lines, the
-# creation helper names the rule and the line in its refusal.
+# A hit prints `<file> TAB <rule> TAB <line>`; the scan names each file with
+# its rule and key in the NOTE, the creation helper names the rule and the
+# line in its refusal.
 # Every rule allows any number of spaces after the key's colon and any
 # &anchor / !tag before the value. The program holds no literal brace pair:
 # find -exec … {} + would replace it.
@@ -308,8 +315,14 @@ disp='function has(r, m,  s, i, c, rest) {s = r
   fm && key == "skill" && /^[[:space:]]+-[[:space:]]/ {v = $0; sub(/^[[:space:]]+-[[:space:]]*/, "", v); add(v); next}
   fm && key == "resolution" && /^[[:space:]]+[^[:space:]#]/ {res = res " " $0}'
 # <<< disp
-suspect=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk "$sus" {} + | wc -l | tr -d ' ')
-a_sus=0; [ -d "$d/archive" ] && a_sus=$(LC_ALL=C find "$d/archive" -maxdepth 1 -name '*.md' -exec awk "$sus" {} + | wc -l | tr -d ' ')   # archive/ may not exist yet
+# The hits are kept, not only counted: the NOTE names each file with its rule
+# and key (`0042-x.md rule 4 commands_verified`), never the value.
+s_hits=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk "$sus" {} +)
+a_hits=; [ -d "$d/archive" ] && a_hits=$(LC_ALL=C find "$d/archive" -maxdepth 1 -name '*.md' -exec awk "$sus" {} +)   # archive/ may not exist yet
+suspect=$(printf '%s\n' "$s_hits" | grep -c .)
+a_sus=$(printf '%s\n' "$a_hits" | grep -c .)
+sus_names=$( { printf '%s\n' "$s_hits" | awk -F '\t' 'NF >= 3 {f = $1; sub(/.*\//, "", f); k = $3; sub(/:.*/, "", k); print f " rule " $2 " " k}'
+  printf '%s\n' "$a_hits" | awk -F '\t' 'NF >= 3 {f = $1; sub(/.*\//, "", f); k = $3; sub(/:.*/, "", k); print "archive/" f " rule " $2 " " k}'; } | LC_ALL=C sort | awk '{printf "%s%s", (NR > 1 ? ", " : ""), $0}')
 
 # --- principles: count the headings under `## Active Principles` --------------
 # A fenced block is skipped, so a template inside the file is not a principle.
@@ -346,10 +359,28 @@ if [ ! -e "$mk" ]; then
 elif [ -z "$ship" ]; then
   finding "NOTE: shipped starter set not found at $sp — the marker cannot be compared with it; pass --skill-dir <installed skill directory> (a copy run from skill-observations/.bin/ has no references/ beside it)"
 else
-  mv_v=$(sed '1!d; s/[^0-9]//g' "$mk")
-  if [ -z "$mv_v" ] || [ "$((10#$mv_v))" -lt "$ship" ]; then
+  # The marker's format: one line holding only the starter-set version, a
+  # bare integer. A BOM, a CR and surrounding blanks are tolerated; any
+  # other text is reported, never mined for digits (`v2 (13 imported)` is
+  # not 213). An empty marker is still due.
+  mv_v=$(awk 'NR == 1 { sub(/^\357\273\277/, "") } { sub(/\r$/, ""); gsub(/^[[:space:]]+|[[:space:]]+$/, "") } NF { n++; v = $0 }
+              END { if (n == 1 && v ~ /^[0-9]+$/) print v; else if (n) print "malformed" }' "$mk")
+  if [ "$mv_v" = malformed ]; then
+    finding "NOTE: starter-set marker skill-observations/starter-principles-reviewed.txt is not one line holding only a version number (line 1: '$(head -n 1 "$mk" | tr -d '\r' | cut -c1-60)') — not compared with shipped set v$ship; if the adopter answered for a set, rewrite it as that version alone, else remove it so the offer returns (references/starter-principles.md, Reconciliation)"
+  elif [ -z "$mv_v" ] || [ "$((10#$mv_v))" -lt "$ship" ]; then
     finding "DUE: starter-set reconciliation — marker v${mv_v:-?} < shipped set v$ship; offer once, in a review or a session opened for skill work, never in another task's reply (references/starter-principles.md, Reconciliation)"
   fi
+fi
+# The marker certifies the answer, not the import: when checkpoints.log's
+# last reconciliation line records K > 0 imported and the principles file's
+# Active Principles hold no entry marked as imported from the starter set,
+# the import was lost and the offer is due again. Zero, not fewer than K:
+# the pruning pass removes imported entries on purpose.
+ck_si=$(grep -E 'starter set v[0-9]+ reconciled: [0-9]+ imported' "$root/skill-observations/checkpoints.log" 2>/dev/null | tail -n 1 | tr -d '\r')
+ck_k=$(printf '%s' "$ck_si" | sed -n 's/.*reconciled: \([0-9][0-9]*\) imported.*/\1/p')
+if [ -e "$mk" ] && [ -n "$ck_k" ] && [ "$((10#$ck_k))" -gt 0 ] && [ -f "$p" ] && [ "$pr" != unparsed ]; then
+  p_imp=$(awk "$pa"' a && /imported from starter set/ {n++} END {print n+0}' "$p")
+  [ "$p_imp" -eq 0 ] && finding "DUE: starter-set import lost — checkpoints.log records 'starter set ${ck_si#* starter set }' but the Active Principles in cross-cutting-principles.md hold no entry imported from the starter set; redo the import from the entry numbers on that line, or re-offer the reconciliation (references/starter-principles.md, How to import)"
 fi
 
 # --- the guard: files present and nothing parsed is a broken command ----------
@@ -440,7 +471,7 @@ if [ "$parsed" -lt "$n" ]; then
   unparsed=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {if (NR>1 && fm) print f; f=FILENAME; sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) {print f; nextfile}; next} fm && /^---[[:space:]]*$/ {fm=0; nextfile} END {if (fm) print f}' {} + | sed 's|.*/||' | LC_ALL=C sort | tr '\n' ' ')
   finding "NOTE: $((n - parsed)) of $n headers did not parse (no opening or no closing ---): $unparsed"
 fi
-[ "$suspect" -gt 0 ] || [ "$a_sus" -gt 0 ] && finding "NOTE: $suspect of $n headers (and $a_sus in archive/) look like invalid YAML (an unquoted ': ', text after a closing quote, a value opening with a backtick, @ or %, an undefined escape, a colon in an unquoted list entry) — quote or fix them (File format)"
+[ "$suspect" -gt 0 ] || [ "$a_sus" -gt 0 ] && finding "NOTE: $suspect of $n headers (and $a_sus in archive/) look like invalid YAML (rule 3 an unquoted ': ', 4 text after a closing quote, 5 a value opening with a backtick, @ or %, 6 an undefined escape, 7 a colon in an unquoted list entry): $sus_names — quote or fix them (File format)"
 printf 'files: %s  parsed: %s  suspect (awk, a floor): %s  archive-suspect: %s  resurrected: %s\n' "$n" "$parsed" "$suspect" "$a_sus" "$nres"
 
 # --- split store: a pre-3.0 log.md beside the directory -----------------------
@@ -514,6 +545,35 @@ if [ -f "$mv_ptr" ]; then
   finding "NOTE: pointer at this root (skill-observations/MOVED.md): \"$mv_line\" — $mv_after entries written here since it; report both roots and ask, never consolidate or re-anchor on it"
 fi
 
+# --- review: the age of the last review, printed on every run ----------------
+# GAP says whether the protocol kept running; this line says whether the
+# review did. A capture loop whose processing step stops keeps logging, and
+# nothing else at session start shows the backlog ageing. Days since
+# last-review-date.txt, and the open entries dated after it or undated (an
+# entry with no status: is open, as reviews read it): entries no review has
+# seen. A plain line, not a finding: Session Start step 3 decides whether
+# the review is due.
+rvd=$(sed '1!d' "$root/skill-observations/last-review-date.txt" 2>/dev/null | tr -d '\r' | cut -c 1-40)
+case $rvd in ([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*) since=${rvd%"${rvd#??????????}"} ;; (*) since= ;; esac
+unrev=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk -v since="$since" '
+  function val(s) { sub(/^[a-z_]+:[[:space:]]*/, "", s); sub(/[[:space:]]+#.*$/, "", s); gsub(/["\047\r[:space:]]/, "", s); return s }
+  FNR==1 {sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; st=""; dt=""; if (!fm) nextfile; next}
+  fm && /^---[[:space:]]*$/ {if ((st == "" || st == "open") && (since == "" || dt == "" || dt > since)) print FILENAME; nextfile}
+  fm && /^status:/ {st=val($ 0)}
+  fm && /^date:/ {dt=substr(val($ 0), 1, 10)}' {} + | wc -l | tr -d ' ')
+if [ -n "$since" ]; then
+  rage=$(LC_ALL=C awk -v today="$(date +%F)" -v last="$since" '
+    function dn(s,  y, m, d) { y = substr(s, 1, 4) + 0; m = substr(s, 6, 2) + 0; d = substr(s, 9, 2) + 0
+      if (m < 3) { y--; m += 12 }
+      return 365 * y + int(y / 4) - int(y / 100) + int(y / 400) + int((153 * (m - 3) + 2) / 5) + d }
+    BEGIN { print dn(today) - dn(last) }')
+  printf 'review: last %s, %s days ago; %s open entries dated after it or undated, never reviewed\n' "$since" "$rage" "$unrev"
+elif [ "$rvd" = never ]; then
+  printf 'review: none recorded (last-review-date.txt reads never); %s open entries, never reviewed\n' "$unrev"
+else
+  printf 'review: last-review-date.txt absent or not a date (read "%s"); %s open entries\n' "${rvd:-}" "$unrev"
+fi
+
 # --- gap: days since the previous session-start scan --------------------------
 # Read before this run's trace line is appended. The previous scan's date is
 # the last day a session ran the protocol; a gap of 7 days or more (the
@@ -535,17 +595,18 @@ printf '%s [%s] session-start scan: files=%s parsed=%s principles=%s\n' "$(date 
   >> "$root/skill-observations/checkpoints.log"
 
 # --- the session-start record: the checklist items this scan can measure ----
-# The Session Start checklist lives in the agent's first reply, and a run
-# nobody reads (scheduled, delegated) skips it while doing the steps, so the
-# reply is no record. The items a script can measure are written here, one
-# line per session, to skill-observations/session-starts.log, and printed;
-# the review's Step 1 checks every session that loaded the skill left one.
-# Items 4 (activation) and 5 (concurrency) are judgements: the run reports them.
+# The Session Start checklist is recorded in the log, not in the agent's
+# reply: a reply the user cannot act on costs their attention, and a run
+# nobody reads (scheduled, delegated) leaves no reply to check. The items a
+# script can measure are written here, one line per session, to
+# skill-observations/session-starts.log, and printed; the review's Step 1
+# checks every session that loaded the skill left one. Items 4 (activation)
+# and 5 (concurrency) are judgements: the session appends them as its own line.
 rv=$(sed '1!d' "$root/skill-observations/last-review-date.txt" 2>/dev/null | tr -d '\r'); rv=${rv:-absent}
 rs=$(sed '1!d' "$root/skill-observations/review-started.txt" 2>/dev/null | tr -d '\r' | cut -c 1-40); rs=${rs:-absent}
 if [ -f "$su/PENDING.md" ]; then sg="manifest $(grep -c . "$su/PENDING.md" | tr -d ' ') lines, $su_n dirs"
 elif [ -d "$su" ]; then sg="no manifest, $su_n dirs"; else sg="none"; fi
-rec=$(printf '%s [%s] session start: 1 storage=%s 2 scan=files %s parsed %s 3 review=last %s, marker %s 6 staged=%s 7 log=%s entries; 4-5 in the run report' \
+rec=$(printf '%s [%s] session start: 1 storage=%s 2 scan=files %s parsed %s 3 review=last %s, marker %s 6 staged=%s 7 log=%s entries; 4-5 appended by the session' \
   "$(date '+%F %H:%M')" "${PWD##*/}" "${miss:+missing: $miss}" "$n" "$parsed" "$rv" "$rs" "$sg" "$n")
 rec=${rec/1 storage= /1 storage=ok }
 printf '%s\n' "$rec" >> "$root/skill-observations/session-starts.log"
@@ -682,7 +743,15 @@ else
     case $zz in (0.01) zz=0.03 ;; (0.03) zz=0.1 ;; esac
   done
   wait "$spid" 2>/dev/null
-  found=$(grep -v '^#' "$tf" | sed 's|/skill-observations/observation-log$||; s|/skill-observations/log\.md$||' | LC_ALL=C sort -u)
+  # Each found workspace is resolved (rp, as for the split-store check) before
+  # the dedup, so two spellings of one directory — a drive-letter and an MSYS
+  # path, a symlinked home — are one log; the pinned root keeps its own spelling.
+  found=$(grep -v '^#' "$tf" | sed 's|/skill-observations/observation-log$||; s|/skill-observations/log\.md$||' |
+    while IFS= read -r w; do
+      w_r=$(rp "$w"); [ -n "$w_r" ] || w_r=$w
+      [ "$w_r" = "$root_r" ] && w_r=${root%/}
+      printf '%s\n' "$w_r"
+    done | LC_ALL=C sort -u)
   if ! grep -q '^#END$' "$tf"; then
     cut_a=$(sed -n 's/^#A //p' "$tf" | tail -n 1)
     n_all=$(printf '%s\n' "$anchors" | while IFS= read -r a; do [ -n "$a" ] && [ -d "$a" ] && echo x; done | wc -l | tr -d ' ')

@@ -1,6 +1,6 @@
 # The session-start scan — the scan, its guards and the checkpoint pairing
 
-Load triggers: writing or changing any instrument that reads the log; a skill load where the per-skill lookup's fallback, a refusal or a first run applies; the per-skill check feels redundant after the session-start scan; the scan's guard fires or the scan is being adapted; moving the scan's print; why the checkpoints are writes; adding or changing an enforcement trigger
+Load triggers: writing or changing any instrument that reads the log; a skill load where the per-skill lookup's fallback, a refusal or a first run applies; the per-skill check feels redundant after the session-start scan; the scan's guard fires or the scan is being adapted; moving the scan's print; running the scan in a bridged session, through a device shell, or where a channel caps the output; why the checkpoints are writes; adding or changing an enforcement trigger
 
 The core skill carries the scan's invocation (Session Start step 2) and
 the checkpoint rules (How to Log). This file holds the reasoning behind
@@ -12,6 +12,7 @@ id snippet and archival are in `observation-log.md`.
 ## Contents
 
 - Scanning cheaply
+  - The scan in a bridged session or a capped channel
   - The per-skill lookup at every skill load
   - Why the session-start scan does not satisfy the per-skill check
   - An empty scan over a non-empty log is a broken command
@@ -29,7 +30,10 @@ lines — never the bodies. This is what keeps the session-start scan and
 the review's work-queue pass cheap once hundreds of observations exist.
 The scan is `scripts/session-start-scan.sh`, the one copy: SKILL.md's
 Session Start Protocol (step 2) runs it, and a reader reviews it there.
-The notes below explain its parts.
+The notes below explain its parts. Its finding lines open the output, are repeated verbatim in the summary
+block after the entries, and are written to
+`skill-observations/last-scan-findings.txt`, which the end line names: a
+cut view still shows them, and the file holds them when it did not.
 
 **Why the line carries a time and a source, not just a date.** The
 workspace is shared across every project that observes the same globally
@@ -101,6 +105,23 @@ not found`. Never carry a list in a variable: write it to a file under
 the workspace and read it back with `while IFS= read -r`, or compare two
 such files with `comm`; quote any word that starts with `=`.
 
+### The scan in a bridged session or a capped channel
+
+Session Start step 2 points here for a bridged session, a device shell, or
+a channel that caps the output.
+
+In a bridged session where the skill directory is not on the device, run it from
+`skill-observations/.bin/` or a digest-matched staged copy — never a per-skill
+grep instead (`references/environments.md`, "Environment mappings", the
+paragraph "Where the scripts are not on the device"). Before the first
+`.bin/` script, check it against the INSTALLED digests (`bin-check.sh`); on a
+mismatch refresh `.bin/` in the same batch — a MANIFEST self-check is not it.
+
+Through a device shell, and wherever a channel caps the output, always pass `--entries-to <file>` BEFORE the root
+(after it the scan refuses): `f=$(mktemp) && bash "<skill directory>/scripts/session-start-scan.sh" --entries-to "$f" "[ABSOLUTE PATH]"`.
+The file is one this run creates (`mktemp`, never a fixed `/tmp` name — another session's file reads as yours),
+`&&`-chained so a failed write is never followed by a read; read the entries on demand. The end line names the script's version.
+
 ### The per-skill lookup at every skill load
 
 Loading a skill is not complete until you have queried the observation
@@ -123,7 +144,9 @@ errors gets, in the next call, the same command with `--correct
 `loaded` line and prints nothing. A skill listed on disk but refused by
 the Skill tool ("Unknown skill") is loaded by reading its SKILL.md
 directly; the lookup call rides with that read, never with the refused
-call. On a first run the log does not exist yet (Session Start step 1
+call. A skill loaded by the user's slash command, with no Skill call of
+your own, gets the same lookup in the first batch after the command
+arrives. On a first run the log does not exist yet (Session Start step 1
 creates it): the call says so and exits 0 with no checkpoint line; re-run
 it once per skill loaded in that batch after the Workspace creation
 command.
@@ -154,8 +177,8 @@ glob: under zsh an unmatched glob aborts the whole command, and on an
 empty log it is unmatched in every session.
 
 Apply what the bodies say to the current work — let them change what you
-do in THIS task, with the user's consent at the point of use (SKILL.md,
-Surfacing Protocol). Editing the skill file, or writing the rule into any
+do in THIS task, with the user's consent at the point of use (`acting-on-observations.md`,
+"Using an open observation in this task"). Editing the skill file, or writing the rule into any
 other file a later session reads, is acting on the observation and waits
 for the review ("Log, don't act": the test is whether the action leaves a
 durable change outside the observation log).

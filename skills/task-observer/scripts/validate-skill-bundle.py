@@ -186,6 +186,33 @@ def frontmatter(text):
     return m.group(1) if m else None
 
 
+def frontmatter_version(fm):
+    """The skill's version from a frontmatter block, or None: `metadata.version`
+    (one level under `metadata:`, the form this skill carries), else a
+    top-level `version:` (other skills and older installs still carry it).
+    Either quote style is stripped."""
+    parent = None
+    for line in (fm or "").splitlines():
+        if re.match(r"^\S", line):
+            pm = re.match(r"^([A-Za-z_][\w-]*):", line)
+            parent = pm.group(1) if pm else None
+            continue
+        km = re.match(r"""^[ \t]+version:[ \t]*["']?([^"'\s]+)["']?[ \t]*$""", line)
+        if km and parent == "metadata":
+            return km.group(1)
+    top = re.search(r"""(?m)^version:[ \t]*["']?([^"'\s]+)["']?[ \t]*$""", fm or "")
+    return top.group(1) if top else None
+
+
+# (name, frontmatter body, version read)
+VERSION_READ_FIXTURES = [
+    ("metadata.version, quoted, is read", 'name: x\nmetadata:\n  author: a\n  version: "1.2.0"\n', "1.2.0"),
+    ("a top-level version: (older install) is still read", "name: x\nversion: 1.2.0\n", "1.2.0"),
+    ("version nested under another parent is not read", "name: x\nother:\n  version: 1.2.0\n", None),
+    ("no version: None", "name: x\n", None),
+]
+
+
 def folded_description(fm):
     """The description as the installer sees it, for both YAML block styles.
 
@@ -407,6 +434,50 @@ def check_frontmatter_shape(fm, fails, yaml_available):
     if not yaml_available:
         print("note: PyYAML not installed — frontmatter checked structurally, "
               "not parsed. Install PyYAML for the stronger check.")
+
+
+# The top-level frontmatter keys the Agent Skills specification defines, and
+# so the set an installer's validator accepts (skill-creator's quick_validate
+# rejects any other). Update it when the specification changes.
+AGENT_SKILLS_KEYS = ("name", "description", "license", "allowed-tools", "metadata", "compatibility")
+# Keys published skills still carry at the top level from before the gate
+# checked: reported as warnings until each skill moves them under
+# `metadata:` at its next release; any other key fails.
+TRANSITIONAL_KEYS = ("version", "core_max_lines", "origin", "maintainer", "author")
+
+
+def check_top_level_keys(fm, fails):
+    """A top-level key outside the Agent Skills set fails the gate, except a
+    transitional key, which warns naming where it belongs. Read from the
+    unindented `key:` lines, so it runs with or without PyYAML."""
+    seen = []
+    for line in fm.splitlines():
+        m = re.match(r"^([A-Za-z_][\w.-]*)[ \t]*:", line)
+        if m and m.group(1) not in seen:
+            seen.append(m.group(1))
+    for key in seen:
+        if key in AGENT_SKILLS_KEYS:
+            continue
+        if key in TRANSITIONAL_KEYS:
+            print(f"warn: frontmatter: top-level key `{key}` is outside the Agent Skills set "
+                  f"({', '.join(AGENT_SKILLS_KEYS)}) — it belongs under `metadata:` as a string "
+                  f"(`metadata.{key}`); accepted until the skill's next release moves it")
+        else:
+            fails.append(f"frontmatter: top-level key `{key}` is outside the Agent Skills set "
+                         f"({', '.join(AGENT_SKILLS_KEYS)}), which installers enforce — move it under "
+                         f"`metadata:` as a string")
+
+
+# (name, frontmatter keys after name/description, fail substring or None, warn substring or None)
+TOP_KEY_FIXTURES = [
+    ("a clean header passes with no warning", "license: MIT\nmetadata:\n  author: A\n", None, None),
+    ("an unknown top-level key fails, naming metadata:", "requires: [git]\n",
+     "top-level key `requires` is outside the Agent Skills set", None),
+    ("a transitional key warns, naming where it belongs", "version: 1.2.0\n", None,
+     "warn: frontmatter: top-level key `version` is outside the Agent Skills set"),
+    ("a key nested under metadata: is not top-level", "metadata:\n  version: \"1.2.0\"\n  requires: git\n",
+     None, None),
+]
 
 
 def core_ceiling_value(fm):
@@ -1368,6 +1439,7 @@ def check_dir(skill_dir, fails):
         fails.append(f"description {len(desc)} chars > cap {MAX_DESCRIPTION_CHARS}")
     elif len(desc) > 900:
         print(f"warn: description {len(desc)} chars (cap {MAX_DESCRIPTION_CHARS}) — near the boundary")
+    check_top_level_keys(fm, fails)
     for ln, tok in template_tokens(text):
         print(f"warn: SKILL.md:{ln}: {tok!r} is rewritten when the skill is invoked with "
               f"arguments — write an awk field as `$ 2`, or move the text to a reference or script")
@@ -1743,6 +1815,8 @@ SCAN_SCRIPT = pathlib.Path(__file__).resolve().parent / "session-start-scan.sh"
 SCAN_FIXTURES = [
     ("healthy log scans: counts line, one checkpoint line", "healthy", True, 0,
      "files: 2  parsed: 2  suspect (awk, a floor): 1", 1, "NOTE: pointer"),
+    ("the suspect-YAML NOTE names each file with its rule and key, archive/ included", "susarch", True, 0,
+     "a colon in an unquoted list entry): 0002-b.md rule 3 title, archive/0009-z.md rule 5 source — quote", 1, "`x`"),
     ("no header parses: guard halts before the checkpoint", "broken", True, 1,
      "SCAN COMMAND BROKEN", 0, ""),
     ("no workspace root: refused, nothing written", "healthy", False, 2, "", 0, ""),
@@ -1780,6 +1854,16 @@ SCAN_FIXTURES = [
     ("a marker below the shipped set: DUE names both versions", "oldmarker", True, 0,
      "DUE: starter-set reconciliation — marker v1 < shipped set v", 1, "DUE: workspace creation"),
     ("the artefacts and a current marker: no DUE line", "healthy", True, 0, "files: 2", 1, "DUE: "),
+    ("a marker with text beside the version: a NOTE quoting it, never parsed as other digits", "textmarker", True, 0,
+     "NOTE: starter-set marker skill-observations/starter-principles-reviewed.txt is not one line holding only a version number (line 1: 'v2 (13 imported)')",
+     1, "v213"),
+    ("a current marker with a BOM and a CRLF ending: no DUE line, no NOTE", "crlfmarker", True, 0, "files: 2", 1,
+     "starter-set"),
+    ("a recorded import with no imported entry in Active Principles: DUE: starter-set import lost", "lostimport",
+     True, 0, "DUE: starter-set import lost — checkpoints.log records 'starter set v5 reconciled: 3 imported (3, 7, 11)'",
+     2, ""),
+    ("a recorded import with an imported entry still active: no DUE line", "keptimport", True, 0, "files: 2", 2,
+     "DUE: "),
     ("--skill-dir without a starter set: a NOTE, not a silent skip", "healthy", True, 0,
      "NOTE: shipped starter set not found at /nonexistent/skill/references/starter-principles.md", 1, "DUE: ",
      ["--skill-dir", "/nonexistent/skill"]),
@@ -1818,6 +1902,10 @@ SCAN_FIXTURES = [
     ("no staging root: the staged: line says so", "healthy", True, 0, "staged: no skill-updates/ at ", 1, ""),
     ("both staging roots: SPLIT STAGING replaces the legacy NOTE", "splitstage", True, 0,
      "NOTE: SPLIT STAGING — staged work under both ", 1, "NOTE: legacy staging root"),
+    ("no review yet: the review line counts every open entry, status-less ones included", "healthy", True, 0,
+     "review: none recorded (last-review-date.txt reads never); 2 open entries, never reviewed", 1, ""),
+    ("a dated review: its age, and the open entries dated after it or undated", "reviewed", True, 0,
+     ", 10 days ago; 3 open entries dated after it or undated, never reviewed", 1, ""),
 ]
 
 
@@ -1848,7 +1936,12 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
             (so / "last-review-date.txt").write_text("never\n", encoding="utf-8")
             (so / "cross-cutting-principles.md").write_text("# P\n\n## Active Principles\n", encoding="utf-8")
             (so / "starter-principles-reviewed.txt").write_text(
-                ("1" if scenario == "oldmarker" else "5") + "\n", encoding="utf-8")
+                {"oldmarker": "1\n", "textmarker": "v2 (13 imported)\n", "crlfmarker": "\ufeff5\r\n"}.get(scenario, "5\n"),
+                encoding="utf-8")
+        if scenario == "reviewed":   # a review 10 days ago; entries before, after and undated
+            import datetime
+            (so / "last-review-date.txt").write_text(
+                f"{datetime.date.today() - datetime.timedelta(days=10)}\n", encoding="utf-8")
         fixture_skill = pathlib.Path(tmp) / "skill"   # the shipped set the scan reads, wherever this copy runs
         (fixture_skill / "references").mkdir(parents=True)
         (fixture_skill / "references" / "starter-principles.md").write_text(
@@ -1898,6 +1991,12 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
             day = datetime.date.today() - datetime.timedelta(days=21 if scenario == "gap" else 2)
             ck.write_text(f"{day} 09:00 [w] session-start scan: files=2 parsed=2 principles=absent\n",
                           encoding="utf-8")
+        if scenario in ("lostimport", "keptimport"):   # a reconciliation that imported three entries
+            ck.write_text("2026-01-01 09:00 starter set v5 reconciled: 3 imported (3, 7, 11)\n", encoding="utf-8")
+            if scenario == "keptimport":
+                (so / "cross-cutting-principles.md").write_text(
+                    "# P\n\n## Active Principles\n\n### 3. A rule\n**Origin:** imported from starter set (#3)\n",
+                    encoding="utf-8")
         if scenario == "broken":
             (log / "0001-a.md").write_text('---\nid: 1\ntitle: "never closed"\n', encoding="utf-8")
         else:
@@ -1928,10 +2027,17 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
                                 ("0003-c.md", '\ufeff---\nid: 3\nstatus: open\nskill:\n  - foo\n  - bar\n'
                                  'proposes_skill: baz\ntitle: "bom"\nsiblings_checked: [x]\n---\n'),
                                 ("0004-d.md", "no header\n")],
+                    # 0001-a (undated, no status) counts; 0002 is before the review, 0003 actioned
+                    "reviewed": [("0002-b.md", '---\nid: 2\ntitle: "old"\nstatus: open\ndate: 2000-01-01\n---\n'),
+                                 ("0003-c.md", '---\nid: 3\ntitle: "done"\nstatus: actioned\ndate: 2999-01-01\n---\n'),
+                                 ("0004-d.md", '---\nid: 4\ntitle: "new"\nstatus: "open"   # open\ndate: 2999-01-01\n---\n'),
+                                 ("0005-e.md", '---\nid: 5\ntitle: "bare"\ndate: 2999-01-02\n---\n')],
                     "resolved": [("0002-b.md", '---\nid: 2\ntitle: "defect still present"\n'
                                   'status: actioned        # open | actioned\nresolved: 2026-01-01\n---\n')]}
             for f, text in rest.get(scenario, [("0002-b.md", "---\nid: 2\ntitle: Fix: unquoted\n---\n")]):
                 (log / f).write_text(text, encoding="utf-8")
+        if scenario == "susarch":
+            (log / "archive" / "0009-z.md").write_text("---\nid: 9\nsource: `x`\n---\n", encoding="utf-8")
         if scenario == "moved":
             (root / "skill-observations" / "MOVED.md").write_text(
                 "Moved to /new/root on 2026-01-01\r\n", encoding="utf-8")
@@ -2213,6 +2319,26 @@ def scan_home_parent_ok():
         return ok, f"exit {rc}, line {line!r}"
 
 
+def scan_spellings_ok():
+    """Two spellings of one directory are one log: HOME is a symlink to the
+    real home that holds the root (~/.claude) and a CLAUDE_CONFIG_DIR log, so
+    the parent anchor and the user-scope anchors find each twice. The listing
+    names the root once, in its pinned spelling, and the other log once."""
+    import os
+    with tempfile.TemporaryDirectory() as tmp:
+        t = pathlib.Path(tmp).resolve()
+        home, link = t / "home dir", t / "home link"
+        root = home / ".claude"
+        _scan_ws(root)
+        (home / "cfg" / "skill-observations" / "observation-log").mkdir(parents=True)
+        os.symlink(home, link)
+        rc, out, err, _ = _scan_run([root], t, link, {"CLAUDE_CONFIG_DIR": str(link / "cfg")})
+        line = next((l for l in out.splitlines() if l.startswith("logs at the plausible anchors")), "")
+        ok = (rc == 0 and line.count(" last=") == 2 and f" {root}=1 last=" in line and f" {home}/cfg=0 last=" in line
+              and "home link" not in line)
+        return ok, f"exit {rc}, line {line!r}"
+
+
 def scan_anchor_case(where):
     """The scan with a second log at the working directory ("cwd"), beside
     the skill's install reached through a symlink ("install"), or the cwd a
@@ -2302,7 +2428,8 @@ def scan_entries_empty_ok():
 
 def scan_version_ok():
     """The end line names the script's VERSION, and VERSION equals the
-    skill's frontmatter version when SKILL.md sits beside scripts/."""
+    skill's frontmatter `metadata.version` (or a top-level `version:`) when
+    SKILL.md sits beside scripts/."""
     text = SCAN_SCRIPT.read_text(encoding="utf-8")
     m = re.search(r'(?m)^VERSION="([^"]+)"', text)
     if not m:
@@ -2312,9 +2439,9 @@ def scan_version_ok():
     detail = f"end line {out.splitlines()[-1][-80:]!r}"
     skill_md = SCAN_SCRIPT.parent.parent / "SKILL.md"
     if skill_md.is_file():
-        fm = re.search(r'(?m)^version:\s*["\']?([^"\'\s]+)["\']?', skill_md.read_text(encoding="utf-8"))   # either quote style
-        ok = ok and fm is not None and fm.group(1) == m.group(1)
-        detail += f", script {m.group(1)} vs skill {fm.group(1) if fm else None}"
+        fv = frontmatter_version(frontmatter(skill_md.read_text(encoding="utf-8")))   # metadata.version, else top level
+        ok = ok and fv == m.group(1)
+        detail += f", script {m.group(1)} vs skill {fv}"
     return ok, detail
 
 
@@ -2491,6 +2618,8 @@ BINCHECK_FIXTURES = [
     ("installed version known, MANIFEST without verified_against: refused", "nover", 3, "", "has no verified_against: line"),
     ("the MANIFEST passed as the digests file: refused", "selfdig", 3, "", "it is the MANIFEST"),
     ("no installed version anywhere: gate skipped with a note, digests decide", "match", 0, "hello a b", "version gate skipped"),
+    ("an indented metadata.version line in the digests file is read: newer than verified_against, refused",
+     "metaolder", 3, "", "installed 3.9.0 is newer than .bin/MANIFEST verified_against 3.8.0"),
 ]
 
 
@@ -2513,9 +2642,11 @@ def bincheck_case(scenario):
         sums = "".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p}\n"
                        for p in sorted(installed.iterdir()))
         head = 'version: "3.9.0"\n' if scenario in ("older", "same", "nover", "selfdig") else ""
+        if scenario == "metaolder":
+            head = '  version: "3.9.0"\n'
         dig.write_text(head + sums, encoding="utf-8")
         manifest = bin_dir / "MANIFEST"
-        va = {"older": "3.8.0", "same": "3.9.0", "flag": "3.9.0", "selfdig": "3.9.0"}.get(scenario)
+        va = {"older": "3.8.0", "metaolder": "3.8.0", "same": "3.9.0", "flag": "3.9.0", "selfdig": "3.9.0"}.get(scenario)
         manifest.write_text((f"verified_against: {va}\n" if va else "") + sums, encoding="utf-8")
         if scenario == "selfdig":
             dig = manifest
@@ -2544,16 +2675,19 @@ def _py_stubs(tmp, python_works):
     return env
 
 
-def diffstaged_nopy_case(python_works):
+def diffstaged_nopy_case(python_works, meta=False):
     """diff-staged.sh with python3 a Store-alias stub: the live name: quoted,
     the staged one bare (the installer's quoting), and with python_works a
-    changed body line too. Returns (status, stdout, stderr)."""
+    changed body line too; with meta, a metadata.version quoted on one side
+    and bare on the other. Returns (status, stdout, stderr)."""
     import subprocess
     with tempfile.TemporaryDirectory() as tmp:
         live, staged = pathlib.Path(tmp) / "live dir" / "sk", pathlib.Path(tmp) / "staged dir" / "sk"
         for d, name, body in ((live, '"sk"', "body"), (staged, "sk", "body2" if python_works else "body")):
             d.mkdir(parents=True)
-            (d / "SKILL.md").write_text(f"---\nname: {name}\ndescription: d\n---\n{body}\n", encoding="utf-8")
+            mv = ('"1.0"' if d == live else "1.0") if meta else ""
+            md = f"metadata:\n  version: {mv}\n" if meta else ""
+            (d / "SKILL.md").write_text(f"---\nname: {name}\ndescription: d\n{md}---\n{body}\n", encoding="utf-8")
         r = subprocess.run(["bash", str(DIFFSTAGED_SCRIPT), str(staged), str(live)], cwd=tmp, env=_py_stubs(tmp, python_works),
                            capture_output=True, text=True, encoding="utf-8", errors="replace")
         return r.returncode, r.stdout, r.stderr
@@ -2565,6 +2699,8 @@ DIFFSTAGED_NOPY_FIXTURES = [
      False, 0, "IDENTICAL", "diff-staged: no working Python 3", "compare failed"),
     ("python3 a stub, python a working Python 3: the parsed compare runs (a body difference named as body:)",
      True, 1, "DIFFERS 1 path(s): SKILL.md (body: DIFFERS", "", "no working Python 3"),
+    ("no working Python: a metadata.version quoted on one side only is IDENTICAL by the text fallback",
+     "meta", 0, "IDENTICAL", "diff-staged: no working Python 3", "compare failed"),
 ]
 
 
@@ -2695,6 +2831,14 @@ NEWOBS_FIXTURES = [
     ("--body with status actioned: refused by name, nothing created",
      "empty", "slug", GOOD_BODY.replace("status: open ", "status: actioned "), 1, "",
      "status: must read open", [], None),
+    ("--body with status parked and a parked_until condition: created in one write",
+     "empty", "parked", GOOD_BODY.replace("status: open ", "status: parked ").replace(
+         "date: __DATE__", 'date: __DATE__\nparked_until: "the upstream fix ships"'), 0,
+     "/0001-parked.md", "", ["0001-parked.md"], "1"),
+    ("--body with status parked and an empty parked_until: refused by name, nothing created",
+     "empty", "slug", GOOD_BODY.replace("status: open ", "status: parked ").replace(
+         "date: __DATE__", "date: __DATE__\nparked_until:          # the condition"), 1, "",
+     "status: parked needs a non-empty parked_until:", [], None),
     ("--body with a type outside the vocabulary: refused",
      "empty", "slug", GOOD_BODY.replace("type: open-source ", "type: process "), 1, "",
      "type: must be open-source or internal", [], None),
@@ -3316,6 +3460,29 @@ def selftest():
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} template token: warns, does not fail the gate"
               + ("" if ok else f" (fails {fails})"))
+    for name, fm, want in VERSION_READ_FIXTURES:
+        ok = frontmatter_version(fm) == want
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} version read: {name}")
+    for name, extra, want_fail, want_warn in TOP_KEY_FIXTURES:
+        with tempfile.TemporaryDirectory() as td:
+            sk = pathlib.Path(td) / "tk"
+            sk.mkdir()
+            (sk / "SKILL.md").write_text('---\nname: tk\ndescription: "D."\n' + extra + "---\nbody\n",
+                                         encoding="utf-8")
+            import contextlib
+            import io
+            fails, buf = [], io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                check_dir(sk, fails)
+        keyed = [x for x in fails if "top-level key" in x]
+        warned = [x for x in buf.getvalue().splitlines() if "top-level key" in x]
+        ok = ((len(keyed) == 1 and want_fail in keyed[0] and "under `metadata:`" in keyed[0]) if want_fail else not keyed) and \
+             ((len(warned) == 1 and warned[0].startswith(want_warn) and "`metadata.version`" in warned[0])
+              if want_warn else not warned)
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} frontmatter keys: {name}"
+              + ("" if ok else f" (fails {fails}, warnings {warned})"))
     for name, text, want in COMMAND_PATH_FIXTURES:
         ok = command_paths(text) == want
         bad += not ok; total += 1
@@ -3370,7 +3537,7 @@ def selftest():
                          ("--entries-to onto a non-empty file is refused, nothing written", scan_entries_refused_ok),
                          ("an argument after the root is refused by name, nothing written", scan_trailing_ok),
                          ("--entries-to leaving its file empty beside files: N > 0 is a broken run, exit 3", scan_entries_empty_ok),
-                         ("the end line names VERSION, equal to the skill's version:", scan_version_ok),
+                         ("the end line names VERSION, equal to the skill's metadata.version", scan_version_ok),
                          ("a root with no observation log under it is refused by name, nothing written", scan_wrong_root_ok),
                          ("a root named skill-observations/ holding the log scans its parent, with a NOTE", scan_child_root_ok),
                          ("the scan's commands off PATH: SCAN TOOLS MISSING, no checkpoint line", scan_tools_missing_ok),
@@ -3380,7 +3547,9 @@ def selftest():
                          ("the entries print before the sibling-log search's listing", scan_order_ok),
                          ("a stalled sibling-log search is cut at its time limit with a NOTE; the scan completes", scan_stall_ok),
                          ("a root whose parent is HOME: the home folder searched 4 levels, Library pruned, said on the line",
-                          scan_home_parent_ok)):
+                          scan_home_parent_ok),
+                         ("two spellings of one directory are one log in the sibling listing, the root in its pinned spelling",
+                          scan_spellings_ok)):
             ok, detail = fn()
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} scan script: {name}" + ("" if ok else f" ({detail})"))
@@ -3441,7 +3610,7 @@ def selftest():
             print(f"{'ok  ' if ok else 'FAIL'} diff-staged script: {name}"
                   + ("" if ok else f" (exit {rc}, out {out!r})"))
         for name, works, want_rc, want, want_err, lacks in DIFFSTAGED_NOPY_FIXTURES:
-            rc, out, err = diffstaged_nopy_case(works)
+            rc, out, err = diffstaged_nopy_case(works is True, meta=(works == "meta"))
             ok = (rc == want_rc and out.startswith(want) and out.count("\n") == 1
                   and want_err in err and lacks not in out + err)
             bad += not ok; total += 1
@@ -3621,11 +3790,11 @@ def check_repo_versions(repo_dir, fails):
             skill_md = found[0]
     if skill_md.is_file():
         fm = frontmatter(skill_md.read_text(encoding="utf-8")) or ""
-        m = re.search(r'(?m)^version:\s*["\']?([^"\'\s]+)["\']?\s*$', fm)
-        if not m:
-            fails.append("repo: SKILL.md frontmatter has no `version:` (it must equal the canonical version)")
-        elif m.group(1) != canonical:
-            fails.append(f"repo: SKILL.md frontmatter version {m.group(1)!r} != canonical {canonical!r}")
+        fv = frontmatter_version(fm)
+        if fv is None:
+            fails.append("repo: SKILL.md frontmatter has no `metadata.version` (or top-level `version:`); it must equal the canonical version")
+        elif fv != canonical:
+            fails.append(f"repo: SKILL.md frontmatter version {fv!r} != canonical {canonical!r}")
     mp = repo_dir / ".claude-plugin" / "marketplace.json"
     if mp.is_file():
         try:
