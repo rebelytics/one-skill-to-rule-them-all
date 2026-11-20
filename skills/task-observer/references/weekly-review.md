@@ -1605,6 +1605,18 @@ the summary carries.
    note (`depends-on: <that hunk's ids>`), and a restructure's pointer
    re-targets take the restructure's class, so the group travels together.
 
+   **No branch round while a public promise has no carrier.** Before
+   staging a round for the branch line, or cutting the branch, take from
+   the publishing process's hand-over (its triage table, its drafted and
+   posted replies, read as data) every repo item whose maintainer reply
+   promises the next review, test line or release, and find its carrier:
+   `grep -rlE -- '#<n>([^0-9]|$)' observation-log/ observation-log/archive/`
+   must name an observation whose `skill:` lists this skill. An item with
+   no hit stops the round until its carrier is written (How to Log) and
+   queued; the round's summary lists each promised item beside its carrier
+   id. A reply is not a queue: promised items with no carrier once missed
+   the very line their replies named.
+
 **Standing rule — the review that changes a published skill bumps its
 version.** When the staged skill is published, or built and awaiting its
 first push (however your publication process records that state), the
