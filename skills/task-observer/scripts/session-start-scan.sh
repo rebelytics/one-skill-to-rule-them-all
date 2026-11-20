@@ -26,6 +26,18 @@
 #                     directory: an existing non-empty file is refused (exit
 #                     2), because a redirect onto another session's file
 #                     followed by a read returns that session's scan.
+#   --pairing <YYYY-MM-DD|all>
+#                     read-only: instead of the scan, print the Session Start
+#                     items 4-5 pairing from skill-observations/
+#                     session-starts.log for the days from that date on (the
+#                     review's Step 1 passes last-review-date.txt), one line
+#                     per day and session label, `pairing <day> [<label>]:
+#                     scan N, 4-5 M`, and `UNPAIRED: …` where M < N. A scan
+#                     line repeated by the same label within 10 minutes with
+#                     no 4-5 line between is one session's re-run and is
+#                     folded, never counted twice; a 4-5 line with no label
+#                     (an older format) is pooled per day. Last line: `end of
+#                     pairing`. Writes nothing.
 #   TASK_OBSERVER_SEARCH_SECONDS
 #                     environment: the time limit, in whole seconds, of the
 #                     sibling-log search (default 10); a search cut there
@@ -138,14 +150,17 @@ VERSION="3.13.0"   # equal to the skill's frontmatter metadata.version; the end 
 
 entries=   # --entries-to target; empty = the entries print to stdout
 skill_dir= # --skill-dir: the installed skill directory; empty = the one this script sits in
+pairing=   # --pairing: the first day of the 4-5 pairing report; empty = run the scan
 while [ $# -gt 0 ]; do
   case $1 in
     (--entries-to) [ $# -ge 2 ] || { echo "--entries-to needs a file path" >&2; exit 2; }; entries="$2"; shift 2 ;;
     (--entries-to=*) entries="${1#--entries-to=}"; shift ;;
     (--skill-dir) [ $# -ge 2 ] || { echo "--skill-dir needs a directory" >&2; exit 2; }; skill_dir="$2"; shift 2 ;;
     (--skill-dir=*) skill_dir="${1#--skill-dir=}"; shift ;;
+    (--pairing) [ $# -ge 2 ] || { echo "--pairing needs a date (YYYY-MM-DD) or all" >&2; exit 2; }; pairing="$2"; shift 2 ;;
+    (--pairing=*) pairing="${1#--pairing=}"; shift ;;
     (--) shift; break ;;
-    (-*) echo "unknown option '$1' (the options are --entries-to <file> and --skill-dir <dir>)" >&2; exit 2 ;;
+    (-*) echo "unknown option '$1' (the options are --entries-to <file>, --skill-dir <dir> and --pairing <date|all>)" >&2; exit 2 ;;
     (*) break ;;
   esac
 done
@@ -203,6 +218,44 @@ if [ ! -d "$d" ]; then
         else why="skill-observations/ holds no observation-log/ — run the Workspace creation command (references/observation-log.md)"; fi ;;
   esac
   echo "no observation log under '$root': $why; nothing was scanned or written" >&2; exit 2
+fi
+
+# --- --pairing: the items 4-5 record per session label, read-only -----------
+# A per-day count raised a false finding when one session re-ran its scan,
+# and hid a missing line when another session's surplus filled the day. So
+# the pairing is per day AND label (the cwd's last segment both lines carry),
+# a quick same-label re-run is folded, and the script prints the verdict the
+# review reads instead of a count the reviewer makes.
+if [ -n "$pairing" ]; then
+  case $pairing in
+    (all) pairing= ;;
+    ([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
+    (*) echo "--pairing takes YYYY-MM-DD or all: got '$pairing'" >&2; exit 2 ;;
+  esac
+  ss="$root/skill-observations/session-starts.log"
+  [ -f "$ss" ] || { echo "end of pairing: no session-starts.log under $root/skill-observations — nothing to pair"; exit 0; }
+  tr -d '\r' < "$ss" | awk -v since="$pairing" '
+    function mins(s) { return substr(s, 12, 2) * 60 + substr(s, 15, 2) }
+    !/^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9] / { next }
+    { day = substr($ 0, 1, 10); if (since != "" && day < since) next
+      lab = ""; rest = substr($ 0, 17)
+      if (substr(rest, 1, 2) == " [") { e = index(rest, "] "); if (e > 0) { lab = substr(rest, 3, e - 3); rest = substr(rest, e + 1) } }
+      days[day] = 1 }
+    rest ~ /^ session start: / { k = day SUBSEP lab; keys[k] = 1
+      if (last[k] == "scan" && mins($ 0) - lastt[k] <= 10) { folded[k]++ } else { scan[k]++ }
+      last[k] = "scan"; lastt[k] = mins($ 0); next }
+    rest ~ /^ session start 4-5:/ { if (lab == "") { pool[day]++; next }
+      k = day SUBSEP lab; keys[k] = 1; four[k]++; last[k] = "45"; next }
+    END { u = 0; g = 0
+      for (k in keys) { split(k, a, SUBSEP); g++; ds[a[1]] += scan[k] + 0; df[a[1]] += four[k] + 0
+        line = "pairing " a[1] " [" a[2] "]: scan " (scan[k] + 0) ", 4-5 " (four[k] + 0) (folded[k] ? " (" folded[k] " re-run scan line(s) folded)" : "")
+        if (four[k] + 0 < scan[k] + 0) { if (!(a[1] in pool)) { line = "UNPAIRED: " substr(line, 9) " — items 4 and 5 not recorded for this label: a Log integrity finding"; u++ } else { short[a[1]] = 1 } }
+        print line | "sort" }
+      close("sort")
+      for (d in pool) { print "pairing " d " [no label]: 4-5 " pool[d] " (older line format, pooled for the day)"
+        if (short[d] && df[d] + pool[d] < ds[d]) { print "UNPAIRED: " d ": scan " ds[d] ", 4-5 " (df[d] + pool[d]) " counting " pool[d] " unlabelled — a Log integrity finding"; u++ } }
+      print "end of pairing: from " (since == "" ? "the first line" : since) ", " g " day-label group(s), " u " unpaired" }'
+  exit 0
 fi
 
 # --- the tools: a missing command is a broken scan, never an empty log -------

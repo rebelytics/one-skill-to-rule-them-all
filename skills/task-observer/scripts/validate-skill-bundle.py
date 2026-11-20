@@ -2279,6 +2279,45 @@ def _scan_run(args, cwd, home, extra_env=None, path_prefix=None):
     return r.returncode, r.stdout, r.stderr, time.monotonic() - t0
 
 
+def scan_pairing_ok():
+    """--pairing: the items 4-5 record per day and session label. A same-label
+    scan re-run within 10 minutes is folded; a label with fewer 4-5 lines than
+    scan lines is UNPAIRED even when another label's lines would fill the
+    day's count; an unlabelled (older) 4-5 line is pooled per day; nothing is
+    written. Returns (ok, detail)."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        root = pathlib.Path(d) / "ws"
+        _scan_ws(root)
+        so = root / "skill-observations"
+        (so / "session-starts.log").write_text(
+            "2030-01-01 08:00 [old] session start: 1 storage=ok\n"
+            "2030-01-02 10:45 [proj] session start: 1 storage=ok\n"
+            "2030-01-02 10:46 [proj] session start: 1 storage=ok\n"
+            "2030-01-02 10:47 [proj] session start 4-5: activation=ok concurrency=ok\n"
+            "2030-01-02 11:00 [other] session start: 1 storage=ok\n"
+            "2030-01-02 12:00 [third] session start: 1 storage=ok\n"
+            "2030-01-02 12:01 [third] session start 4-5: activation=ok concurrency=ok\n"
+            "2030-01-02 12:30 [third] session start 4-5: activation=ok concurrency=ok\n"
+            "2030-01-03 09:00 [late] session start: 1 storage=ok\n"
+            "2030-01-03 09:30 [late] session start: 1 storage=ok\n"
+            "2030-01-03 09:31 session start 4-5: activation=ok concurrency=ok\n", encoding="utf-8")
+        before = sorted(p.name for p in so.iterdir())
+        rc, out, err, _ = _scan_run(["--pairing", "2030-01-02", root], d, d)
+        after = sorted(p.name for p in so.iterdir())
+        rc2, _, err2, _ = _scan_run(["--pairing", "soon", root], d, d)
+    lines = out.splitlines()
+    ok = (rc == 0 and before == after and rc2 == 2 and "YYYY-MM-DD or all" in err2
+          and "pairing 2030-01-02 [proj]: scan 1, 4-5 1 (1 re-run scan line(s) folded)" in lines
+          and any(l.startswith("UNPAIRED: 2030-01-02 [other]: scan 1, 4-5 0") for l in lines)
+          and "pairing 2030-01-02 [third]: scan 1, 4-5 2" in lines
+          and "pairing 2030-01-03 [late]: scan 2, 4-5 0" in lines
+          and any(l.startswith("UNPAIRED: 2030-01-03: scan 2, 4-5 1 counting 1 unlabelled") for l in lines)
+          and not any("2030-01-01" in l for l in lines)
+          and lines[-1] == "end of pairing: from 2030-01-02, 4 day-label group(s), 2 unpaired")
+    return ok, f"exit {rc}/{rc2}, written {sorted(set(after) - set(before))}, out {out!r}, err {err!r}"
+
+
 def scan_order_ok():
     """The entries print BEFORE the sibling-log search's listing: a
     stalled search can no longer hold them back."""
@@ -3590,6 +3629,8 @@ def selftest():
                          ("the end line names the bytes above it; a halted run still prints", scan_bytes_ok),
                          ("an actioned entry lacking a skill: member's disposition is named", scan_disp_ok),
                          ("the entries print before the sibling-log search's listing", scan_order_ok),
+                         ("--pairing: items 4-5 per day and label, a quick re-run folded, nothing written",
+                          scan_pairing_ok),
                          ("a stalled sibling-log search is cut at its time limit with a NOTE; the scan completes", scan_stall_ok),
                          ("a root whose parent is HOME: the home folder searched 4 levels, Library pruned, said on the line",
                           scan_home_parent_ok),

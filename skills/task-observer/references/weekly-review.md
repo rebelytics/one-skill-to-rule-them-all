@@ -488,9 +488,12 @@ task-observer` line in `checkpoints.log` has a `session start:` line of the
 same day, and a load without one — the protocol loaded but not
 run — is a Log integrity finding. Each `session start:` line, which the
 scan writes, has the session's own `session start 4-5:` line (activation
-and concurrency) beside it; parallel sessions interleave in this file, so
-count per day: fewer 4-5 lines than scan lines — items 4 and 5 not
-recorded — is a Log integrity finding too, with both counts.
+and concurrency) beside it. Parallel sessions interleave in this file and
+a re-run repeats a scan line, so never count by hand: run `bash
+scripts/session-start-scan.sh --pairing <last review date> <root>`, which
+pairs the lines per day and session label and folds a quick same-label
+re-run; each `UNPAIRED:` line it prints — items 4 and 5 not recorded — is
+a Log integrity finding too, with both counts.
 
 **Drain the observation inbox before the work queue is built.** Where this
 run can read the user-scoped store that sessions without the log park
@@ -1927,7 +1930,14 @@ well as returned, so a hand-back lost with an interrupted conversation is
 recovered by reading the file, not by resuming the agent. Where the
 harness refuses a subagent's report file, the parent writes each hand-back
 to the scratch area on receipt, one write per report, before it reads the
-next. After an interruption, re-list the staged tree against the
+next. **The call that records a return also writes its checkpoint line**
+(the deliverable-event flush, SKILL.md: a flush the reviewer must notice
+fails at fan-out scale): the one command that saves the report, or checks
+the file the delegate wrote, appends in the same call
+`<date> <time> [<label>] hand-back <cluster>: no observations` to
+`checkpoints.log`, or the ids of the observations written for the
+friction it reports (`cp … && printf … >> checkpoints.log`). A return
+recorded by a call without that line is not recorded. After an interruption, re-list the staged tree against the
 pre-dispatch snapshot
 before dispatching anything again, and treat an unexplained change as a
 prior run of that cluster, never as clean seed. Where the harness offers
