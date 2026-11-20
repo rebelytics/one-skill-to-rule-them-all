@@ -114,10 +114,13 @@ names on a fresh install or a repaired one. Creation is otherwise the one
 session-start action nothing records: when a review finds the principles
 file missing, a step 1 that never ran and a file deleted later look the
 same, and only the trace tells them apart.
-Other files created at session start on the same terms, for a test plan
-rather than this command: `starter-principles-reviewed.txt` (starter-set
-reconciliation) and `skill-families.md` (created when the first family
-is named).
+**Absent by design is not a skipped step.** The command neither creates
+nor asserts the files other steps write when they first apply:
+`starter-principles-reviewed.txt` once the starter offer is answered (and
+`starter-principles-deferred.md` after a partial import), `skill-families.md`
+once a first family is named, `skill-updates/` and its `PENDING.md` once a
+review stages something. `created=none` with them missing is a healthy
+install; never report their absence as setup not run.
 
 **A read-only or permission error is one of two cases — tell them apart
 before naming a remedy.** When this command fails with `Read-only file
