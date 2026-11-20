@@ -35,8 +35,10 @@ A listing is not a security review: read a skill before you install it. This pag
 
 | Skill | What it does | Licence | Last skill update |
 |---|---|---|---|
+| [international-llms-txt-build](https://github.com/rebelytics/international-llms-txt-build) | Builds international and multilingual llms.txt structures for websites with multiple country or language versions. | CC BY 4.0 | 2026-11 |
 | [pagination-independence-architecture](https://github.com/rebelytics/pagination-independence-architecture) | Designs category and listing architecture so a site's indexable value does not depend on paginated pages. | CC BY 4.0 | 2026-11 |
 | [redirect-verification](https://github.com/rebelytics/redirect-verification) | Checks a reported redirect or link fix against its spec, using crawl data and targeted live requests. | CC BY 4.0 | 2026-11 |
+| [schema-implementation](https://github.com/rebelytics/schema-implementation) | Implements schema.org structured data across a website, from page type analysis through developer-ready tickets to post-deployment verification. | CC BY 4.0 | 2026-11 |
 | [title-meta-gap-fill](https://github.com/rebelytics/title-meta-gap-fill) | Completes title tags and meta descriptions across a large page set without rewriting what already works. | CC BY 4.0 | 2026-11 |
 | [translation-audit](https://github.com/rebelytics/translation-audit) | Audits translated titles, headings, descriptions and body content across the language versions of a website. | CC BY 4.0 | 2026-11 |
 
