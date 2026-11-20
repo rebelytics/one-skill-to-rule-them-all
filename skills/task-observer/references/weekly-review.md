@@ -79,12 +79,10 @@ workspace denied by the session sandbox; grant [ABSOLUTE PATH] in the
 task definition" (`references/environments.md`, "The access grant is
 part of the task definition") — because an offline note for a policy
 denial sends the reader to wait for a machine that is already on; (3)
-when setting up a scheduled
-review, bake this policy into the scheduled task's prompt, so fresh
+when setting up a scheduled review, bake this policy into the scheduled task's prompt, so fresh
 sessions inherit it without rediscovery. A permission failure mid-run —
 after the probe has succeeded — is handled the same way: skip the gated
-step, record it as a manual
-follow-up, and still emit the final report — a blocked step N must never
+step, record it as a manual follow-up, and still emit the final report — a blocked step N must never
 cost the report for steps 1 through N-1. None of this covers a run that
 stops before Step 1: a session that goes idle after its first call
 writes no timestamp, stages nothing, emits no summary, and the scheduler
@@ -230,16 +228,14 @@ tool that generates it, if one does. Where the premise is genuinely
 remote (does the section still exist at upstream HEAD, is the PR still
 open), the review must not depend on reaching the network (the opt-in
 version check at Step 2 and a named feedback tracker at Step 1 are the
-fetches it may start): present the
-option with that half named as unverified, and leave the remote check to
+fetches it may start): present the option with that half named as unverified, and leave the remote check to
 the feedback pre-flight in `references/skill-authoring.md`, which runs
 once the user has chosen to contribute. Forked files need the check at
 two levels: file-level provenance ("this skill is foreign-maintained")
 and section-level provenance ("the section this observation extends is a
 local addition") are separate statements, both answerable from the local
 copy, and routing to upstream-vs-fork depends on the second, asked per
-edit at the Step 5 presence check.
-A declined or dismissed approval prompt is NOT approval — and it is not a
+edit at the Step 5 presence check. A declined or dismissed approval prompt is NOT approval — and it is not a
 request to skip the asking and proceed either. Treat it as a stop signal
 for the gated actions: halt, then ask in plain chat text what the user
 wants. Only an explicit go (blanket or per-item) authorizes applying;
@@ -1670,8 +1666,7 @@ below is defined against a staged copy of the *live* file, so it is
 structurally blind to a draft that never went live, and that is the work
 most at risk of being lost: a skill authored "from scratch" while an
 uninstalled draft of the same name already carries rules the new file
-lacks. A hit in state (c) of the
-reconciliation gate is the base for this staging, as the gate says; a
+lacks. A hit in state (c) of the reconciliation gate is the base for this staging, as the gate says; a
 hit in state (d) is merged onto live first, and the merge is the base.
 
 Choose the anchor first, by claiming it. Where `[today]/[skill-name]` holds
@@ -1684,7 +1679,11 @@ rounds that each pick the first free name by inspection both take it. One
 claim per round, whatever it stages; a round that stages no skill leaves its
 `_target-files/` or a one-line pointer in the anchor, so the gate's liveness
 read finds a file under it. The guard line still refuses to seed over an
-existing skill directory.
+existing skill directory. A published skill's round that classified its
+changes (pass 4) seeds both copies from live in this step, `<skill>` for the
+branch and `<skill>.main` for main, so the main staging cannot be skipped
+(the validator's name check reads the directory: validate and pack
+`<skill>.main` from a copy named `<skill>`).
 
 ```bash
 u="[workspace folder]/skill-updates"; a=; i=1
@@ -2113,6 +2112,7 @@ it: **"keep-two (as of HH:MM): N copies pruned, N kept as uninstalled, N
 pending a grant"** — the keep-two prune (Delivery) is a fixed step of every review,
 over the whole `skill-updates/` tree rather than only this round's skills,
 and a review that skipped it cannot write the line. Both are measured:
+a published skill's classified round counts two staged (main and branch),
 staged from the bundles this run packed, presented from the delivered-file
 list the presentation call returns (where the environment has no such
 call, from the staged paths listed in chat; on the skill-card route, a
