@@ -309,8 +309,9 @@ already made returns their answer as a question and costs a cycle in
 which the skill stays knowingly wrong.
 
 **The published case is applied too, with its ceremony attached.** A
-restructure of a published skill needs a release branch, a test plan and
-a version bump, which an unattended run cannot decide alone — but
+restructure of a published skill needs a version bump and, for a skill
+your publishing process lists as using test branches, a release branch
+and a test plan (any other skill ships it on `main`), which an unattended run cannot decide alone — but
 "escalate without applying" is the wrong shape for that protection,
 because staging is not publishing: nothing reaches the repository until
 your publishing step, which already holds on `under_test` and on its
@@ -320,7 +321,7 @@ published skill IS applied by the scheduled run, as a staged copy that
 diff in the summary with the explicit line "published skill — install and
 the release are your call"; (c) carries a manifest entry that names it as
 a restructure, so your publishing step routes it to a release branch with a
-test plan under the standing rule for branches (Step 5); and (d) leaves
+test plan under the standing rule for branches (Step 5) where it lists the skill for them; and (d) leaves
 the observation `open`, with the staged path in a `reference:` note, so
 the next review's presence check closes it once the copy is installed
 rather than re-applying it. What stays escalated is the decision the run
@@ -1549,8 +1550,13 @@ the summary carries.
    summary so the maintainer sees what changed; anything of the same class
    the maintainer alone would notice (a "recommended by" list, a
    supported-platform list) is checked in the same pass.
-4. **Classify every change, and stage twice.** Each change going into
-   this week's version — community item or observation — is
+4. **Classify every change, and stage twice — for a test-branch skill.**
+   This pass, and the release branch it feeds, apply only to a skill your
+   publishing process lists as using test branches (skill-publishing: the
+   configuration's `test_branch_skills:` line; none when it is absent);
+   every other published skill is staged once, for `main`,
+   with its version bump, a restructure included. For a listed skill, each
+   change going into this week's version — community item or observation — is
    **safe-to-main** (doc-level fixes, bug fixes with a clear spec,
    changes consistent with the current rules) or **needs-test**
    (behavioural changes to snippets, procedures or activation, and
@@ -2596,7 +2602,7 @@ version bump for published skills (the new version, or the intended
 bump where the version lives only in the repo's manifest) — and, where
 the staging is a user-decided restructure of a published skill (Approval
 policy), the word `restructure`, so your publishing step routes it to a
-release branch with a test plan rather than to `main`. The manifest is
+release branch with a test plan rather than to `main` where it lists the skill for test branches. The manifest is
 what the Session Start Protocol reads to announce "N staged updates
 awaiting review", so staged work is never quietly forgotten; the
 per-change summary is what lets the user review a full-file diff
