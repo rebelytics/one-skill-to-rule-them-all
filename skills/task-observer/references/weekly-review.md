@@ -828,6 +828,15 @@ entry stays, and the copy is never (a), whatever the live diff says.
   result and none is duplicated; the merged copy then takes (c)'s
   bookkeeping (surface it, list its observations, count its reviews).
 
+**A `{skill}-extras` companion is reported as a pair.** Its delivery is
+two writes in two files, the copy and the routing entry in the
+instruction file, and the compare sees only the first. For each staged
+or installed `{skill}-extras`, grep the activation file(s) for its name
+and report copy present or absent × routing entry present or absent;
+"installed, not routed" is listed first, since from every other angle it
+looks like success. An un-routed companion's second-review decision
+counts reviews from the review that staged it, as state (c) does.
+
 **A compare that did not run is not a fifth state, it is no state.** An
 `ERROR` line from `diff-staged.sh` — a missing path, a file where a
 directory belongs, a failed normalisation — is reported "not reconciled:
@@ -1067,7 +1076,9 @@ holding only the delta **plus** a routing entry in the user's instruction
 file (state plainly that without the routing entry nothing ever loads the
 companion — a fix routed somewhere nothing loads is not a fix); or routing
 the content straight into the instruction file, which loads
-unconditionally. For (b) with a declared upstream, the default route is
+unconditionally. The offer states each route's writes — the companion
+two (its copy and the routing entry), the instruction file one — and
+prefers the instruction file for a delta small enough to sit there. For (b) with a declared upstream, the default route is
 an upstream issue or PR per the source and feedback line — the feedback
 pre-flight in `references/skill-authoring.md` runs at Step 5 — with a
 `{skill}-extras` companion only for a delta specific to this install
