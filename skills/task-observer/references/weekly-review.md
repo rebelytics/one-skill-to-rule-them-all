@@ -998,8 +998,7 @@ a missing entry, but catching it is a finding, not a repair: a
 release-branch staging is cut together with its manifest entry, its hold
 and its test plan (Step 5, standing rule), and the entry's absence means the
 cutting act skipped its writes, so the hold and the test plan are suspect
-too. Name the
-directory, name the missing writes, and treat the copy as state (c); if
+too. Name the directory, name the missing writes, and treat the copy as state (c); if
 the run reconstructs the entry so the rest of the gate can proceed, the
 first line says so and says what was written — a repair the summary does
 not mention is the silent reconstruction this rule forbids.
@@ -1549,23 +1548,24 @@ the summary carries.
    changes consistent with the current rules) or **needs-test**
    (behavioural changes to snippets, procedures or activation, and
    anything that changes what an agent does at session start). That
-   produces two artefacts, not one: the **main staging** (safe changes
-   only) and the **release-branch staging** (safe plus needs-test),
-   named `release/vX.Y.Z` for the version the branch will become, and it
-   is the release-branch staging that is installed locally for the test
-   week. Both are staged copies under `skill-updates/` with their own
-   manifest entries; neither is pushed by the review. For a skill under
-   test the review also writes each round's per-file diff against the
-   branch line beside the staging — `<anchor>/<skill>.round.diff`, built
-   with `diff -ruN` (never `-ru`: without `-N` a file added in the round
-   is an `Only in` line no label can carry, so a new script silently
-   leaves the classified diff), every
+   produces two artefacts: the **main staging** (safe changes only) and
+   the **release-branch staging** (safe plus needs-test, named
+   `release/vX.Y.Z` for the version the branch will become), the one
+   installed for the test week; both are staged copies under
+   `skill-updates/` with their own manifest entries, and neither is
+   pushed by the review. **A skill under test is no reason to hold a
+   change:** safe ones go to the main staging, needs-test ones onto the
+   current branch, or onto the next when its merge review is too close
+   for a test period; only an item that needs a user decision waits. For
+   a skill under test the review also writes each round's per-file diff
+   against the branch line beside the staging —
+   `<anchor>/<skill>.round.diff`, built with `diff -ruN` (with `-N`, or a
+   file the round adds is an `Only in` line no label can carry), every
    hunk labelled with its class and its observation id — and the
    PUBLISHING session commits it, one commit per classified change; the
-   review stays clone-free. Where a hunk would mix two observations'
-   lines, write the file so each observation's lines sit in their own
-   hunk (a context-breaking blank line, or the order of the edits) rather
-   than labelling the hunk by its larger half.
+   review stays clone-free. A hunk that would mix two observations' lines
+   is split by the file's layout (a context-breaking blank line, or the
+   edit order), never labelled by its larger half.
 
    The label has one form, the line the merge parses: before every `@@`
    hunk header, `### [<class>] <ids> — <note>`, class `safe-to-main` or
