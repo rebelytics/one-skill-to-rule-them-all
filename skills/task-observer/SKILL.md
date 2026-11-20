@@ -136,7 +136,7 @@ The `- [ ]` items under How to Log are ticked in the reply of the turn that writ
    whenever `skill-observations/starter-principles-reviewed.txt` is absent
    or holds a starter-set version older than the one in
    `references/starter-principles.md`: offered only in a review or a session
-   the user opened for skill work, never pre-populated silently (that file,
+   the user opened for skill work, as its own question — never bundled with the review offer or appended to a task report — never pre-populated silently (that file,
    "Reconciliation"). The step 2 scan prints a `DUE:` line for either duty still owed. Name the loaded skill's
    `metadata.version` (a top-level `version:` on an older install) in the start-up lines — read from the file, never
    fetched — and list the skill's own directory with its `references/` and
