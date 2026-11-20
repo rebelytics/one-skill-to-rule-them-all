@@ -2657,6 +2657,10 @@ BINCHECK_FIXTURES = [
     ("no installed version anywhere: gate skipped with a note, digests decide", "match", 0, "hello a b", "version gate skipped"),
     ("an indented metadata.version line in the digests file is read: newer than verified_against, refused",
      "metaolder", 3, "", "installed 3.9.0 is newer than .bin/MANIFEST verified_against 3.8.0"),
+    ("a script name with ../ is refused before the file outside .bin/ runs", "traverse", 3, "",
+     "BIN REFUSED — '../outside.sh' is not a plain script name"),
+    ("an absolute script path is refused, nothing runs", "abspath", 3, "", "is not a plain script name"),
+    ("a name outside the .sh/.py set the digests cover is refused", "noext", 3, "", "is not a .sh or .py file"),
 ]
 
 
@@ -2675,6 +2679,8 @@ def bincheck_case(scenario):
             (bin_dir / "hello.sh").write_text('echo hello "$@" # older\n', encoding="utf-8")
         if scenario == "extra":
             (bin_dir / "extra.py").write_text("print(1)\n", encoding="utf-8")
+        outside = bin_dir.parent / "outside.sh"   # beside .bin/, never verified
+        outside.write_text('echo ran outside "$@"\n', encoding="utf-8")
         dig = pathlib.Path(tmp) / "installed.sha256"
         sums = "".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p}\n"
                        for p in sorted(installed.iterdir()))
@@ -2690,7 +2696,8 @@ def bincheck_case(scenario):
         flag = ["--installed-version", "3.10.0"] if scenario == "flag" else []
         args = ["bash", str(BINCHECK_SCRIPT), *flag, str(root),
                 str(dig if scenario != "nodig" else pathlib.Path(tmp) / "none"),
-                "gone.sh" if scenario == "absent" else "hello.sh", "a", "b"]
+                {"absent": "gone.sh", "traverse": "../outside.sh", "abspath": str(outside), "noext": "MANIFEST"}.get(scenario, "hello.sh"),
+                "a", "b"]
         r = subprocess.run(args, cwd=tmp, capture_output=True, text=True, encoding="utf-8", errors="replace")
         return r.returncode, r.stdout, r.stderr
 
