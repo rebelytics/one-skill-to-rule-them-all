@@ -766,7 +766,13 @@ staging directories without a manifest entry: …". After the four-way
 classification below, mark in that line each reported directory that
 holds only copies classified (a) or (b) and their `.skill` packages —
 the installed copies keep-two retains — as `retained`, so the unmarked
-names are the ones nothing explains. Enumerate the listing rather than
+names are the ones nothing explains. **An unmarked directory dated on or
+after `last-review-date.txt` is an interrupted run** (a review that staged
+and ended before its bookkeeping): before Step 3 builds the queue,
+presence-check the open observations of each skill it holds against that
+copy, report the ones it carries as "already staged in <path>, not
+re-applied", and seed any further staging of that skill from that copy,
+never from live. Enumerate the listing rather than
 matching a date-shaped name: discriminated anchors (`<date>-<slug>`,
 `<date>.2`) and hand-over material are valid names, and an index shows
 only what someone entered. Then the same listing for every previous root
