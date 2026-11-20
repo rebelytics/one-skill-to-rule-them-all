@@ -121,6 +121,20 @@ with `0 imported` for a start-empty answer. The step 2 scan prints `DUE:
 starter-set import lost` when that line records imports and the Active
 Principles hold none.
 
+**A skipped entry is recorded with what would make it apply, in the
+marker's write.** A partial import is the expected outcome, and its
+commonest reason is "not applicable yet": a condition that changes in the
+adopter's work, never in this file's version, so the version-keyed
+re-offer cannot fire for it, and a deferral recorded nowhere reads
+exactly like a rejection. So the step that writes the marker also writes
+`skill-observations/starter-principles-deferred.md`, one line per offered
+entry not imported: `#N <title> — deferred until <condition>`, a
+condition that can be named and can occur (a first published skill, a
+first scheduled task), or `#N <title> — declined`. The review re-checks
+each condition against the work since (`weekly-review.md`, Step 1) and
+re-offers an entry whose condition has fired, one line each; the marker
+still records the answered version.
+
 **Extend `Origin:` with the evidence that justified the entry** — one line
 naming the local artefact, after the `imported from starter set (#N)` part:
 
