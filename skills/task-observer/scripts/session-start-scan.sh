@@ -80,8 +80,9 @@
 # its checkpoints.log's last date and any log.md beside it, with any finding
 # that search makes (another root's SPLIT STORE, a NOTE when the search hit
 # its limit); then the summary
-# block: every finding line (DUE / NOTE / LOST ENTRIES / UNFILLED / DUPLICATE
-# ID / RESURRECTED / SPLIT STORE / GAP) repeated VERBATIM, and LAST one `end of scan` line
+# block: the `staged:` and `review:` lines again, every finding line (DUE /
+# NOTE / LOST ENTRIES / UNFILLED / DUPLICATE ID / RESURRECTED / SPLIT STORE /
+# GAP) repeated VERBATIM, and LAST one `end of scan` line
 # repeating the counts, how many finding lines stand above the entries, how
 # many bytes stdout carried above it, and this script's version (VERSION below, equal to the skill's `metadata.version`), so
 # a run can tell a script that lacks a feature from one that is broken. The findings
@@ -524,9 +525,10 @@ done <<< "$cands"
 ls_old="$root/skill-observations/skill-updates"
 su="$root/skill-updates"
 su_n=0; [ -d "$su" ] && su_n=$(find "$su" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
-if [ -f "$su/PENDING.md" ]; then printf 'staged: manifest at %s/PENDING.md (%s non-blank lines), %s directories under it\n' "$su" "$(grep -c . "$su/PENDING.md" | tr -d ' ')" "$su_n"
-elif [ -d "$su" ]; then printf 'staged: no manifest at %s/PENDING.md, %s directories under it\n' "$su" "$su_n"
-else printf 'staged: no skill-updates/ at %s/\n' "$root"; fi
+if [ -f "$su/PENDING.md" ]; then stg_l=$(printf 'staged: manifest at %s/PENDING.md (%s non-blank lines), %s directories under it' "$su" "$(grep -c . "$su/PENDING.md" | tr -d ' ')" "$su_n")
+elif [ -d "$su" ]; then stg_l=$(printf 'staged: no manifest at %s/PENDING.md, %s directories under it' "$su" "$su_n")
+else stg_l=$(printf 'staged: no skill-updates/ at %s/' "$root"); fi
+printf '%s\n' "$stg_l"
 if [ -d "$ls_old" ] && [ -d "$su" ]; then
   finding "NOTE: SPLIT STAGING — staged work under both $su/ and skill-observations/skill-updates/ ($(find "$ls_old" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ') round directories); step 6 reads only the first: move the legacy rounds and their PENDING entries into it by hand, then remove the legacy root"
 elif [ -d "$ls_old" ]; then
@@ -567,12 +569,13 @@ if [ -n "$since" ]; then
       if (m < 3) { y--; m += 12 }
       return 365 * y + int(y / 4) - int(y / 100) + int(y / 400) + int((153 * (m - 3) + 2) / 5) + d }
     BEGIN { print dn(today) - dn(last) }')
-  printf 'review: last %s, %s days ago; %s open entries dated after it or undated, never reviewed\n' "$since" "$rage" "$unrev"
+  rev_l=$(printf 'review: last %s, %s days ago; %s open entries dated after it or undated, never reviewed' "$since" "$rage" "$unrev")
 elif [ "$rvd" = never ]; then
-  printf 'review: none recorded (last-review-date.txt reads never); %s open entries, never reviewed\n' "$unrev"
+  rev_l=$(printf 'review: none recorded (last-review-date.txt reads never); %s open entries, never reviewed' "$unrev")
 else
-  printf 'review: last-review-date.txt absent or not a date (read "%s"); %s open entries\n' "${rvd:-}" "$unrev"
+  rev_l=$(printf 'review: last-review-date.txt absent or not a date (read "%s"); %s open entries' "${rvd:-}" "$unrev")
 fi
+printf '%s\n' "$rev_l"
 
 # --- gap: days since the previous session-start scan --------------------------
 # Read before this run's trace line is appended. The previous scan's date is
@@ -784,9 +787,11 @@ printf 'logs at the plausible anchors (report; never consolidate from here%s):%s
 # finding, and a run that cut the output anyway finds them on disk. The end
 # line repeats the counts, says how many finding lines stand above the
 # entries, and names the sidecar; it is a pointer to the whole output, never
-# its replacement.
+# its replacement. The `staged:` and `review:` lines open the block: steps 3
+# and 6 read them, and a view cut by `tail` would otherwise lose both.
 sc="$sidecar"
 printf '%s' "$findings" > "$sidecar" 2>/dev/null || sc="$sidecar (write failed)"
+printf '%s\n%s\n' "$stg_l" "$rev_l"
 printf '%s' "$findings"
 st=; [ "$rc" -eq 0 ] || st="; content print exited $rc"
 [ -n "${empty_ent:-}" ] && st="; the entries file is EMPTY (exit 3)"

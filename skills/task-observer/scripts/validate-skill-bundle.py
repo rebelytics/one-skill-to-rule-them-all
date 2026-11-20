@@ -2106,6 +2106,19 @@ SCAN_REPEAT_FIXTURES = [
 ]
 
 
+def scan_tail_lines_ok():
+    """The `staged:` and `review:` lines print twice: in place, and again
+    after the entries and the sibling-log line, above the end line, so a
+    view cut to its last lines keeps both. Returns (ok, detail)."""
+    rc, out, *_ = scan_case("idmis", True)
+    lines = out.splitlines()
+    pos = {k: [i for i, l in enumerate(lines) if l.startswith(k)] for k in ("staged: ", "review: ")}
+    anchors = [i for i, l in enumerate(lines) if l.startswith("logs at the plausible anchors")]
+    ok = rc == 0 and len(anchors) == 1 and lines[-1].startswith("end of scan") and all(
+        len(v) == 2 and lines[v[0]] == lines[v[1]] and v[0] < anchors[0] < v[1] for v in pos.values())
+    return ok, f"positions {pos}, anchors {anchors}"
+
+
 def scan_entries_ok():
     """--entries-to: the per-entry headers land in the file and leave stdout;
     the findings, counts and summary stay on stdout; the end line names the
@@ -3557,6 +3570,7 @@ def selftest():
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} scan script: {name}" + ("" if ok else f" ({detail})"))
         for name, fn in (("--entries-to splits the entries off stdout and the end line names the file", scan_entries_ok),
+                         ("the staged: and review: lines are repeated after the entries, above the end line", scan_tail_lines_ok),
                          ("one line per entry, parked last; the full headers go to last-scan-headers.txt", scan_compact_ok),
                          ("--entries-to onto a non-empty file is refused, nothing written", scan_entries_refused_ok),
                          ("an argument after the root is refused by name, nothing written", scan_trailing_ok),
