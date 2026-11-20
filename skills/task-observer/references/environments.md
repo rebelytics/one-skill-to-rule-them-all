@@ -259,10 +259,19 @@ loads, not only the sessions a person watches: scripts calling the CLI
 app's scheduled tasks. A run with a narrow tool allowlist can write no
 file; one in default permission mode stops at the protocol's first
 command and waits for an approval nobody reads. So list every such
-consumer with its permission mode and tool allowlist first, and for each
-that cannot write or get an approval answered, put its run-output path
-into the `[RUN OUTPUT PATHS]` configuration line, so the review knows where to
-harvest. A consumer the list missed shows up later as a job that stalls
+consumer with its permission mode and tool allowlist first, and sort each
+that cannot write or get an approval answered by what its output is. A
+run whose final message is a report (a job log, a run file a person
+reads) gets its run-output path in the `[RUN OUTPUT PATHS]` configuration
+line, so the review knows where to harvest. A run whose output another
+program stores or parses as data (a summariser, a classifier, a
+commit-message generator) must never see the block, or its notes section
+or first-reply line lands in that data: place the block where that run's
+file discovery does not reach (in Claude Code, a CLAUDE.md in a parent
+folder of the user's work instead of the user-level file, when the run's
+working directory lies outside it), and only where no such placement
+exists, add an exclusion line beside the block naming the run — never a
+run-output path. A consumer the list missed shows up later as a job that stalls
 at the protocol's first call — a missing entry here, not a defect in the block.
 
 On Windows, pin the drive-letter form (`C:/Users/<user>/...`): PowerShell,
