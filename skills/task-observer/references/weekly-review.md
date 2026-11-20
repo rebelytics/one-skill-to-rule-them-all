@@ -341,19 +341,20 @@ a body citing the id as settled): a hold whose release condition a later
 decision met is a settled question, never an open one.
 
 **An escalation is recorded on the entry, and silence never decides it.**
-An entry the user has been asked about and has not answered looks unseen
-from its header, and refills every "N oldest" slice. So: (1) the first ask
-appends `- YYYY-MM-DD <the one-line question>` to the entry's `escalated:`
-field; a bounded slice skips an entry asked and unanswered, and the record
-lists such entries once, under "Waiting for the user"; (2) one review later
-the question comes back as a binary choice with the recommendation stated
-— to make answering cheap, never as a default; (3) still unanswered, the
-entry is parked with `parked_until: "the user answers: <the one-line
-question>"`: it leaves the work queue, its substance stays undecided and
-the question stays on the parked list. Nothing is ever applied by silence.
-(4) Before any re-ask, search where answers land — decision records,
-review records, observation bodies — and close a question already
-answered, citing where.
+An entry asked about and unanswered looks unseen from its header and
+refills every "N oldest" slice. So: (1) the first ask appends
+`- YYYY-MM-DD <the one-line question>` to the entry's `escalated:` field
+in the same act that lists it; a bounded slice skips an entry asked and
+unanswered, and the record's "Waiting for the user" list is derived from
+those fields, never carried by hand (a carried entry with no item gets
+its first ask written now, dated by the record that first carried it);
+(2) one review later the question returns as a binary choice with the
+recommendation stated — cheap to answer, never a default; (3) still
+unanswered, the entry is parked with `parked_until: "the user answers:
+<the one-line question>"`: it leaves the work queue undecided and stays
+on the parked list. Nothing is ever applied by silence. (4) Before any
+re-ask, search where answers land (decision and review records,
+observation bodies) and close a question already answered, citing where.
 
 Escalate one decision per cluster (Step 3).
 
@@ -476,8 +477,7 @@ Skill invocation in the same batch, and an invocation with no `loaded`
 line from its batch. A `loaded` line followed by its `NOT loaded` line
 (`--correct`) is not a finding; a refused or failed Skill call in the
 transcript with no such line after it is. Without transcripts, compare
-each session's `loaded`
-lines against the skills that session reports loading, and flag a skill
+each session's `loaded` lines against the skills that session reports loading, and flag a skill
 with no line. A batch split recorded in the start-up lines as a deferred
 probe tool (`references/environments.md`, "A deferred probe tool moves the
 probe to batch 2") is not a finding. The failure shape: a late lookup
@@ -2165,8 +2165,8 @@ skills", pass 1); or "no comparison"]
 whose condition has been met and was returned to the queue this review]
 
 ### Waiting for the user
-[one line each: #id — the one-line question — asked [dates] (Approval
-policy, "An escalation is recorded on the entry"); or "none"]
+[one line each, from the entries' `escalated:` fields: #id — the question
+— asked [dates] (Approval policy, "An escalation is recorded"); or "none"]
 
 ### Arrived during this run
 [from the Step 6 re-scan: #id — title — folded into [skill] / left OPEN
