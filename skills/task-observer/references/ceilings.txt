@@ -12,15 +12,15 @@
 # released core ceiling: 600 (v3.12.0)
 # SKILL.md core_max_lines 600: the every-session rules, the session-start checklist and the pointer list into the references; episodic detail lives in the reference files
 # activation block: 31 lines (environments.md, "The activation block": the fenced text block, stamp line included; checked by hand, not by the validator)
-environments.md 2210 activation per host, workspace anchoring and scope, bridged sessions and the device script copy, hooks and their samples, scheduled prompts, install checks and the backfill; split by episode pending
+environments.md 2219 activation per host, workspace anchoring and scope, bridged sessions and the device script copy, hooks and their samples, scheduled prompts, install checks and the backfill; a consumer whose output is data kept out of the block's reach; split by episode pending
 # split_pending: environments.md the next split by episode
 migration.md 262 the pre-3.0 log conversion and a split store: a log.md beside the observation directory
 acting-on-observations.md 82 using an open observation in the current task, the skill-save control, acting in-session
 review-slice.md 51 the bounded slice's own entry file, loaded instead of weekly-review.md
-observation-log.md 1024 the log layout and frontmatter fields, the id, field and extend helpers with their refusals, archival, quoting, tracked tickets and the quick reference table
+observation-log.md 1027 the log layout and frontmatter fields, the id, field and extend helpers with their refusals, archival, quoting, tracked tickets and the quick reference table; the paths absent by design on a healthy install
 observation-scan.md 569 the session-start scan, its guards, refusals and output shape, the bridged and capped-channel scan, the per-skill lookup at every load, flush triggers
 observation-families.md 205 skill families, the sibling check and its fast test, the carrier pattern and its short form
 signals.md 241 the signals worth logging, why a first violation is logged and why a second needs a barrier
 skill-authoring.md 1530 structure and ceilings, licensing and attribution, confidentiality layers, timelessness, editing and delivery rules, trial design, new and retired skills
-starter-principles.md 528 the starter principle set, its import and reconciliation, the reply marker and its format
-weekly-review.md 2621 the comprehensive review: approval policy, every step with its gates, published-skill passes, the record template and delivery
+starter-principles.md 542 the starter principle set, its import and reconciliation, the reply marker and its format; a skipped entry recorded with the condition that would make it apply
+weekly-review.md 2670 the comprehensive review: approval policy, every step with its gates, published-skill passes, the record template and delivery; the interrupted-run staging, the extras pair, deferred starter entries, the scripted 4-5 pairing, the hand-back checkpoint in the recording call, no branch round without a carrier, test branches only for listed skills
