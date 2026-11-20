@@ -1165,7 +1165,7 @@ grant precondition above ("A grant names a path; it does not create
 one"); it does not resolve → a missing mount, and the folder picker is
 the first response. The per-skill lookups that rode in the probe's batch
 ran against no log: after a first-run creation, re-run the lookup once
-per skill loaded in that batch, so `checkpoints.log` holds the
+per skill loaded in that batch, one call each, so `checkpoints.log` holds the
 `workspace: created=…` line followed by one `loaded` line per skill.
 
 **A missing mount in a bridged session is asked for in the same turn, and

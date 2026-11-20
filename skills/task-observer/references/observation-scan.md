@@ -148,16 +148,17 @@ call. A skill loaded by the user's slash command, with no Skill call of
 your own, gets the same lookup in the first batch after the command
 arrives. On a first run the log does not exist yet (Session Start step 1
 creates it): the call says so and exits 0 with no checkpoint line; re-run
-it once per skill loaded in that batch after the Workspace creation
-command.
+it once per skill loaded in that batch, one call each, after the Workspace
+creation command.
 
 The converse holds too: the lookup, and any checkpoint line recording the
 load, run only in the same batch as the Skill invocation, and take the
 skill name from a load that has actually happened — never from a list of
-skills you built to load. A checkpoint line written without the load is a
-false record. Before writing to any file a skill reads at run time (a
-state file), load that skill: a state file that describes itself is not a
-substitute for the skill that owns it.
+skills you built to load, nor from a loop over one (a second `loaded` line
+from the same shell within seconds is BATCH REFUSED). A checkpoint line
+written without the load is a false record. Load a skill before writing a
+file it reads at run time: a state file that describes itself does not
+replace the skill that owns it.
 
 Where the harness cannot run a script, the lookup is a `find … grep`,
 with its checkpoint line written by hand in the same batch (the inline id
@@ -269,8 +270,7 @@ the highest id *issued*, but an id can be issued without its file ever
 being created (an older snippet wrote the floor before the create, and a
 legacy monolithic archive holds ids no filename carries), so a computed
 maximum below the floor is reported, and the id taken above the floor,
-rather than halted on. And never write a
-suspect reading back into the persistent source it came from; a guard
+rather than halted on. And never write a suspect reading back into the persistent source it came from; a guard
 placed after that write has protected nothing, and the floor that exists
 to stop the counter rewinding becomes the thing that rewinds it.
 

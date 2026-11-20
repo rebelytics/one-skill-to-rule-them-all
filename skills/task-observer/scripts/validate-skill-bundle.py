@@ -2534,6 +2534,30 @@ def load_query_ok():
     return ok, f"exits {rc0}/{rc1}/{rc2}, checkpoint lines {ck0}/{ck1}/{ck2}, out {out1!r}"
 
 
+def load_loop_ok():
+    """Two loads chained in one shell: the second is BATCH REFUSED, exit 2,
+    one `loaded` line; the same two loads from two separate shells both
+    write. `; true` keeps each `bash -c` a shell rather than an exec."""
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / "work space"
+        log = root / "skill-observations" / "observation-log"
+        log.mkdir(parents=True)
+        (log / "0001-a.md").write_text("---\nid: 1\nskill: [x]\nstatus: open\n---\n", encoding="utf-8")
+        ck = root / "skill-observations" / "checkpoints.log"
+        ck.write_text("", encoding="utf-8")
+        cmd = 'bash "$0" "$1" x; bash "$0" "$1" y; echo "rc=$?"'
+        r = subprocess.run(["bash", "-c", cmd, str(LOAD_SCRIPT), str(root)], cwd=tmp, capture_output=True,
+                           text=True, encoding="utf-8", errors="replace")
+        n1 = len(ck.read_text(encoding="utf-8").splitlines())
+        for s in ("x", "y"):
+            subprocess.run(["bash", "-c", 'bash "$0" "$1" "$2"; true', str(LOAD_SCRIPT), str(root), s], cwd=tmp,
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+        n2 = len(ck.read_text(encoding="utf-8").splitlines())
+        ok = "rc=2" in r.stdout and "BATCH REFUSED" in r.stderr and n1 == 1 and n2 == 3
+        return ok, f"chained: {r.stdout.strip()!r} {r.stderr.strip()[:80]!r}, lines {n1} then {n2}"
+
+
 # skill-load.sh --correct, the line that follows a refused Skill call:
 # (name, run the lookup first?, reason, exit status, checkpoint lines in order).
 LOAD_CORRECT_FIXTURES = [
@@ -3585,6 +3609,10 @@ def selftest():
         ok, detail = load_query_ok()
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} skill-load script: --query-only prints the same lookup and appends nothing"
+              + ("" if ok else f" ({detail})"))
+        ok, detail = load_loop_ok()
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} skill-load script: a second load chained in one shell is BATCH REFUSED; separate shells both write"
               + ("" if ok else f" ({detail})"))
         ok, detail = tools_missing_ok(LOAD_SCRIPT, False)
         bad += not ok; total += 1
