@@ -80,10 +80,11 @@ OVERRIDE_TEXT_KEYS = {"title", "status", "type", "area", "date", "session_contex
                       "siblings_checked", "parked_until", "commands_verified"}
 OVERRIDE_KEYS = OVERRIDE_LIST_KEYS | OVERRIDE_TEXT_KEYS | {"skill_qualifiers"}
 
-# Fields the target format requires on every file (SKILL.md, File format).
-# Reported, never fabricated: a placeholder would hide the missing judgement
-# the field exists to make visible.
-MANDATORY_TARGET_FIELDS = ("status", "siblings_checked")
+# Fields the target format carries on every file (SKILL.md, File format),
+# all of them, not only the ones the conversion sets: a count of one field
+# cannot see damage to the lines around it. Reported, never fabricated: a
+# placeholder would hide the missing judgement the field exists to make visible.
+MANDATORY_TARGET_FIELDS = ("id", "title", "status", "type", "skill", "siblings_checked", "date")
 
 ENTRY_RE = re.compile(r"^### Observation (\d+):[ \t]*(.*)$")
 LABEL_RE = re.compile(r"^\*\*([A-Za-z][A-Za-z /-]*):\*\*[ \t]*(.*)$")

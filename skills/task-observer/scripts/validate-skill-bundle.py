@@ -1816,7 +1816,7 @@ SCAN_FIXTURES = [
     ("healthy log scans: counts line, one checkpoint line", "healthy", True, 0,
      "files: 2  parsed: 2  suspect (awk, a floor): 1", 1, "NOTE: pointer"),
     ("the suspect-YAML NOTE names each file with its rule and key, archive/ included", "susarch", True, 0,
-     "a colon in an unquoted list entry): 0002-b.md rule 3 title, archive/0009-z.md rule 5 source — quote", 1, "`x`"),
+     "or a comment): 0002-b.md rule 3 title, archive/0009-z.md rule 5 source — quote", 1, "`x`"),
     ("no header parses: guard halts before the checkpoint", "broken", True, 1,
      "SCAN COMMAND BROKEN", 0, ""),
     ("no workspace root: refused, nothing written", "healthy", False, 2, "", 0, ""),
@@ -1835,6 +1835,8 @@ SCAN_FIXTURES = [
      "SPLIT STORE — log.md holds 2 observations not in observation-log/", 1, ""),
     ("use_evidence and next_actor in a header: parsed, not suspect", "fields", True, 0,
      "files: 2  parsed: 2  suspect (awk, a floor): 0", 1, "NOTE:"),
+    ("a header with no date: line and a line with no key: the date NOTE and rule 8", "nodate", True, 0,
+     "0002-b.md rule 8 (a line with no key)", 1, "\x01"),
     ("a sync tool's conflict copy: a NOTE, left out of the count and the DUPLICATE ID check", "conflict", True, 0,
      "NOTE: sync-conflict copy in the log — a sync tool's second version of an entry, left out of every count "
      "and of the entries below: 0002-b.sync-conflict-20260101-120000-ABC.md", 1, "DUPLICATE ID — 0002"),
@@ -2007,7 +2009,8 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
             rest = {"skeleton": [("0002-b.md", '---\nid: 2\ntitle: ""\nstatus: open\nskill: []\n---\n')],
                     "idmis": [("0002-b.md", '---\nid: 1\ntitle: "retyped"\n---\n')],
                     # the two optional fields: a bare word, and an append-only list
-                    "fields": [("0002-b.md", '---\nid: 2\ntitle: "DECIDED: fields"\nstatus: open\n'
+                    "fields": [("0001-a.md", '---\nid: 1\ntitle: "ok"\ndate: 2026-01-01\n---\nbody\n'),
+                               ("0002-b.md", '---\nid: 2\ntitle: "DECIDED: fields"\nstatus: open\ndate: 2026-01-01\n'
                                 'next_actor: review\nuse_evidence:\n'
                                 '  - 2026-01-02 accepted — one line of context\n'
                                 '  - 2026-01-03 used — unattended run\n---\n')],
@@ -2016,6 +2019,8 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
                                ("0003-c.md", '---\nid: 3\ntitle: "plain"\n---\n'),
                                ("0004-d.md", '---\nid: 5\ntitle: "wrong"\n---\n')],
                     "dupid": [("0002-b.md", '---\nid: 2\ntitle: "new"\n---\n')],
+                    # a date: line replaced by a stray line that holds a control character
+                    "nodate": [("0002-b.md", '---\nid: 2\ntitle: "damaged"\nstatus: open\n\x01 2026-01-01\n---\n')],
                     "conflict": [("0002-b.md", '---\nid: 2\ntitle: "b"\ndate: 2026-01-01\n---\n'),
                                  ("0002-b.sync-conflict-20260101-120000-ABC.md", '---\nid: 2\ntitle: "b"\ndate: 2026-01-01\n---\n')],
                     "dupkey": [("0002-b.md", '---\nid: 2\ntitle: "twice"\nresolved:\nresolved: 2026-01-01\n---\n')],

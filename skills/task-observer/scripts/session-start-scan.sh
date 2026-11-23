@@ -59,7 +59,8 @@
 # Principles hold none marked as imported;
 # UNFILLED: a header whose title: is empty — the skeleton new-observation.sh
 # writes at create time, a write in progress or abandoned; NOTE: id: … when
-# a header's id does not read as its filename prefix; DUPLICATE ID — NNNN:
+# a header's id does not read as its filename prefix; NOTE: date: … when it
+# has no date: reading YYYY-MM-DD;
 # NOTE: sync-conflict copy … for a sync tool's conflict copy in the log
 # (`*.sync-conflict-*`, `* (… conflicted copy …).md`), left out of every
 # count and the entries; DUPLICATE ID — NNNN:
@@ -320,6 +321,9 @@ if [ -n "$bad" ]; then echo "SCAN COMMAND BROKEN — the counts did not read as 
 #   5. a value opening with a backtick, @ or %
 #   6. a double-quoted value holding an escape YAML does not define
 #   7. a [ … ] list whose unquoted part holds a colon
+#   8. a line that is none of: a key and its value, a `- ` list item, an
+#      indented continuation, a comment, a blank line (a stray line that
+#      lost its key — rules 3-7 read only `key:` lines)
 # A hit prints `<file> TAB <rule> TAB <line>`; the scan names each file with
 # its rule and key in the NOTE, the creation helper names the rule and the
 # line in its refusal.
@@ -352,7 +356,8 @@ sus='FNR==1 {sub(/^\357\273\277/, ""); fm = (/^---[[:space:]]*$/ ? 1 : 0); if (!
   fm && /'"$key"'("([^"\\]|\\.)*"[[:space:]]*[^[:space:]#]|\047([^\047]|\047\047)*\047([[:space:]]+[^[:space:]#]|[^[:space:]#\047]))/ {print FILENAME "\t4\t" $0; nextfile}
   fm && /'"$key"'[`@%]/ {print FILENAME "\t5\t" $0; nextfile}
   fm && /'"$key"'"([^"\\]|('"$esc_ok"'))*\\('"$esc_bad"')/ {print FILENAME "\t6\t" $0; nextfile}
-  fm && /^[a-z_]+:[ ]+\[/ {v=$0; sub(/^[a-z_]+:[ ]+/,"",v); gsub(/"([^"\\]|\\.)*"/,"",v); gsub(/\047[^\047]*\047/,"",v); sub(/[[:space:]]#.*/,"",v); if (v ~ /:/) {print FILENAME "\t7\t" $0; nextfile}}'
+  fm && /^[a-z_]+:[ ]+\[/ {v=$0; sub(/^[a-z_]+:[ ]+/,"",v); gsub(/"([^"\\]|\\.)*"/,"",v); gsub(/\047[^\047]*\047/,"",v); sub(/[[:space:]]#.*/,"",v); if (v ~ /:/) {print FILENAME "\t7\t" $0; nextfile}}
+  fm && !/^([A-Za-z_][A-Za-z0-9_-]*:|-)[[:space:]]/ && !/^([A-Za-z_][A-Za-z0-9_-]*:|-)?$/ && !/^[[:space:]#]/ {print FILENAME "\t8\t" $0; nextfile}'
 # <<< sus
 # The dispositions program, shared with set-fields.sh (which refuses the
 # change it reports): an actioned entry whose resolution: gives a listed
@@ -384,8 +389,8 @@ s_hits=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" -exec awk "
 a_hits=; [ -d "$d/archive" ] && a_hits=$(LC_ALL=C find "$d/archive" -maxdepth 1 -name '*.md' "${xc[@]}" -exec awk "$sus" {} +)   # archive/ may not exist yet
 suspect=$(printf '%s\n' "$s_hits" | grep -c .)
 a_sus=$(printf '%s\n' "$a_hits" | grep -c .)
-sus_names=$( { printf '%s\n' "$s_hits" | awk -F '\t' 'NF >= 3 {f = $1; sub(/.*\//, "", f); k = $3; sub(/:.*/, "", k); print f " rule " $2 " " k}'
-  printf '%s\n' "$a_hits" | awk -F '\t' 'NF >= 3 {f = $1; sub(/.*\//, "", f); k = $3; sub(/:.*/, "", k); print "archive/" f " rule " $2 " " k}'; } | LC_ALL=C sort | awk '{printf "%s%s", (NR > 1 ? ", " : ""), $0}')
+sus_names=$( { printf '%s\n' "$s_hits" | awk -F '\t' 'NF >= 3 {f = $1; sub(/.*\//, "", f); k = $3; sub(/:.*/, "", k); if ($2 == 8) k = "(a line with no key)"; print f " rule " $2 " " k}'
+  printf '%s\n' "$a_hits" | awk -F '\t' 'NF >= 3 {f = $1; sub(/.*\//, "", f); k = $3; sub(/:.*/, "", k); if ($2 == 8) k = "(a line with no key)"; print "archive/" f " rule " $2 " " k}'; } | LC_ALL=C sort | awk '{printf "%s%s", (NR > 1 ? ", " : ""), $0}')
 
 # --- principles: count the headings under `## Active Principles` --------------
 # A fenced block is skipped, so a template inside the file is not a principle.
@@ -465,15 +470,20 @@ cf=$( { find "$d" -maxdepth 1 -name '*.md' \( -name '*.sync-conflict-*' -o -name
 # LOST (it holds its id); I <file> <id> for a header whose id: does not
 # read as the filename prefix (a retyped id, or a body written into another
 # entry's file). The id may be padded or not — both forms exist in live
-# logs — so the comparison is numeric.
+# logs — so the comparison is numeric. D <file> TAB <value> for a header
+# with no date: reading YYYY-MM-DD (missing, empty, or a damaged line):
+# every count and the review trigger read it, and a missing one parses.
 hd=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" -exec awk 'FNR==1 {sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; ti=0; idv="none"; f=FILENAME; sub(/.*\//, "", f); pre=substr(f, 1, match(f, /[^0-9]/) - 1); if (!fm) nextfile; next}
-  fm && /^---[[:space:]]*$/ {if (ti) print "U " f; if (idv !~ /^0*[1-9][0-9]*$/ || idv + 0 != pre + 0) print "I " f " " idv; nextfile}
+  fm && /^---[[:space:]]*$/ {if (ti) print "U " f; if (idv !~ /^0*[1-9][0-9]*$/ || idv + 0 != pre + 0) print "I " f " " idv; if (df != FILENAME) print "D " f "\tnone"; else if (dv !~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/) print "D " f "\t" (dv == "" ? "empty" : substr(dv, 1, 40)); nextfile}
+  fm && /^date:/ {df=FILENAME; dv=$0; sub(/^date:[[:space:]]*/, "", dv); sub(/[[:space:]]+#.*$/, "", dv); gsub(/["\047\r]/, "", dv); sub(/[[:space:]]+$/, "", dv)}
   fm && /^title:/ {v=$0; sub(/^title:[[:space:]]*/, "", v); sub(/[[:space:]]+$/, "", v); ti=(v == "" || v == "\"\"" || v == "\047\047")}
   fm && /^id:/ {idv=$2; gsub(/["\047\r]/, "", idv)}' {} +)
 unfilled=$(printf '%s\n' "$hd" | sed -n 's/^U //p' | LC_ALL=C sort | tr '\n' ' ')
 [ -n "$unfilled" ] && finding "UNFILLED — a header with an empty title: the helper's skeleton, a write in progress or abandoned; it holds its id, so fill it or decline it, never reuse or delete: $unfilled"
 idmis=$(printf '%s\n' "$hd" | sed -n 's/^I \(.*\) \(.*\)$/\1 (id: \2)/p' | LC_ALL=C sort | tr '\n' ' ')
 [ -n "$idmis" ] && finding "NOTE: id: does not read as the filename prefix — another entry's id retyped, or a body written into the wrong file; fix the field, never the filename, after reading the body: $idmis"
+datemis=$(printf '%s\n' "$hd" | sed -n 's/^D //p' | LC_ALL=C sort | awk -F '\t' '{s = s (NR > 1 ? " " : "") $1 " (date: " $2 ")"} END {print s}')
+[ -n "$datemis" ] && finding "NOTE: date: missing or not YYYY-MM-DD — a header line lost or damaged by an edit; restore it from the entry's history or body, never today's date: $datemis"
 # Duplicate numeric prefixes across observation-log/ and archive/: two files
 # sharing one id are a write that went around the snippet's prefix guard
 # (the guard lives on one write path; this check reads them all). The
@@ -539,7 +549,7 @@ if [ "$parsed" -lt "$n" ]; then
   unparsed=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" -exec awk 'FNR==1 {if (NR>1 && fm) print f; f=FILENAME; sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) {print f; nextfile}; next} fm && /^---[[:space:]]*$/ {fm=0; nextfile} END {if (fm) print f}' {} + | sed 's|.*/||' | LC_ALL=C sort | tr '\n' ' ')
   finding "NOTE: $((n - parsed)) of $n headers did not parse (no opening or no closing ---): $unparsed"
 fi
-[ "$suspect" -gt 0 ] || [ "$a_sus" -gt 0 ] && finding "NOTE: $suspect of $n headers (and $a_sus in archive/) look like invalid YAML (rule 3 an unquoted ': ', 4 text after a closing quote, 5 a value opening with a backtick, @ or %, 6 an undefined escape, 7 a colon in an unquoted list entry): $sus_names — quote or fix them (File format)"
+[ "$suspect" -gt 0 ] || [ "$a_sus" -gt 0 ] && finding "NOTE: $suspect of $n headers (and $a_sus in archive/) look like invalid YAML (rule 3 an unquoted ': ', 4 text after a closing quote, 5 a value opening with a backtick, @ or %, 6 an undefined escape, 7 a colon in an unquoted list entry, 8 a line that is not key: value, a list item, an indented continuation or a comment): $sus_names — quote or fix them (File format)"
 printf 'files: %s  parsed: %s  suspect (awk, a floor): %s  archive-suspect: %s  resurrected: %s\n' "$n" "$parsed" "$suspect" "$a_sus" "$nres"
 
 # --- split store: a pre-3.0 log.md beside the directory -----------------------
