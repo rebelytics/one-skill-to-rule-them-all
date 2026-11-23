@@ -1426,6 +1426,24 @@ different shelf lives; retiring them together discards the durable half
 at the moment its cost is already sunk, and the loss is invisible because
 nothing errors.
 
+**Then sweep what still routes to it: a retirement is complete when the
+name resolves nowhere.** Before planning any repoint, search for the
+skill's name recursively across every skills root and command directory,
+`evals/` and `references/` included — a sweep of top-level files reports a
+clean result it has not earned — and plan the repoints from its hits, never
+from the ones expected. Sweep separately what fires on the skill's
+artefacts: hooks, scheduled jobs, wrapper scripts, and any matcher keyed on
+a state file the skill wrote (disarming that matcher usually means removing
+the state files, after a backup). Retire the directory by moving it out of
+every discovery path, never by renaming it in place: a loader that keys on
+the frontmatter `name:`, or a census that lists every directory, still
+finds the renamed copy. The same check runs at install: every skill name in
+a newly installed third-party skill's "not for / use instead" sentences is
+resolved against the installed set, since a route to an absent skill sends
+work nowhere. Example: a neighbour's `evals/negative.md` still routing
+"summarise a contract" to a retired `contract-digest` is found by
+`grep -rl contract-digest <skills root>`, never by a glob over `*/SKILL.md`.
+
 ## Principle Propagation
 
 When an observation's Principle applies to skills in general, log it with

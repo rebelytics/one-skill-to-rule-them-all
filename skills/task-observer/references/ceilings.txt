@@ -21,6 +21,6 @@ observation-log.md 1027 the log layout and frontmatter fields, the id, field and
 observation-scan.md 569 the session-start scan, its guards, refusals and output shape, the bridged and capped-channel scan, the per-skill lookup at every load, flush triggers
 observation-families.md 205 skill families, the sibling check and its fast test, the carrier pattern and its short form
 signals.md 241 the signals worth logging, why a first violation is logged and why a second needs a barrier
-skill-authoring.md 1530 structure and ceilings, licensing and attribution, confidentiality layers, timelessness, editing and delivery rules, trial design, new and retired skills
+skill-authoring.md 1548 structure and ceilings, licensing and attribution, confidentiality layers, timelessness, editing and delivery rules, trial design, new and retired skills; the routing sweep that completes a retirement
 starter-principles.md 542 the starter principle set, its import and reconciliation, the reply marker and its format; a skipped entry recorded with the condition that would make it apply
 weekly-review.md 2670 the comprehensive review: approval policy, every step with its gates, published-skill passes, the record template and delivery; the interrupted-run staging, the extras pair, deferred starter entries, the scripted 4-5 pairing, the hand-back checkpoint in the recording call, no branch round without a carrier, test branches only for listed skills
