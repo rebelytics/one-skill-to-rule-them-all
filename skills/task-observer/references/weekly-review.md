@@ -1034,7 +1034,13 @@ line carrying the installed frontmatter version (`metadata.version`, or a
 top-level `version:` on an older install), the date, and one
 `sha256  <file>` line per installed script, none omitted — no prose that
 reads as a verification result, since `bin-check.sh` refuses a copy whose
-`verified_against:` is older than the installed version. Verify by
+`verified_against:` is older than the installed version. The same refresh
+copies the installed `references/starter-principles.md` to
+`skill-observations/references/starter-principles.md`, where a `.bin/` scan
+looks for the shipped set (a device shell cannot reach `--skill-dir`), with
+its own line `sha256  ../references/starter-principles.md` in the MANIFEST;
+`bin-check.sh` digests only the files in `.bin/`, so that line never
+refuses a run. Verify by
 re-hashing `.bin/` against the manifest before the summary names it. The
 manifest is the contract sessions check; a `.bin/` without one is not
 used, and a stale one fails its own digest check in every bridged session.

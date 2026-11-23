@@ -1715,8 +1715,9 @@ and with neither the version gate is skipped with a note. The check runs at sess
 first `.bin/` script — the scan included — never at the next review: on a
 refusal, or where `.bin/` holds no `bin-check.sh` (compare the installed
 digests with `.bin/MANIFEST` instead), refresh `.bin/` and its MANIFEST from
-the installed scripts in the same batch (`weekly-review.md`, Step 1 gate,
-names the refresh), then run the scan. Where `.bin/` is absent or cannot be
+the installed scripts in the same batch, with the starter set beside it at
+`skill-observations/references/` (`weekly-review.md`, Step 1 gate, names the
+refresh), then run the scan. Where `.bin/` is absent or cannot be
 refreshed, look for another copy in the workspace — a
 staged copy under `skill-updates/*/task-observer/scripts/` — and compare its
 digest (`md5sum` or `sha256sum`, run on both sides) with the installed
@@ -1768,7 +1769,7 @@ without one.
 | Scheduled review | the app's scheduled tasks (cloud-default: run remotely; legacy local mode: run on the user's machine, only while it is on — see the execution-mode note above) | cron / an account-level scheduler that can reach the workspace — headless invocations carry the workspace grant (`--add-dir`) in the task definition; a `SessionStart` hook reports the review state, it does not run the review | calendar reminder + manual trigger |
 | Session-start hook | none | `SessionStart` hook (`hookSpecificOutput.additionalContext`) | none |
 | Local-vs-cloud tell | `allow_cowork_file_delete` present ⇒ local session | n/a | n/a |
-| Refresh the digests `bin-check.sh` reads ("Where the scripts are not on the device") | cloud session bridged to the device: `{ grep -m1 -E '^[[:space:]]*version:' "<skill directory>"/SKILL.md | sed 's/^[[:space:]]*//'; sha256sum "<skill directory>"/scripts/*; } > digests.txt` in the container, then the device file-commit tool carries that file to `[ABSOLUTE PATH]/skill-observations/.bin/digests.txt`; local session: the scripts are on the device, so `sha256sum` writes the file there directly | `{ grep -m1 -E '^[[:space:]]*version:' "<skill directory>"/SKILL.md | sed 's/^[[:space:]]*//'; sha256sum "<skill directory>"/scripts/*; } > "[ABSOLUTE PATH]/skill-observations/.bin/digests.txt"` — one shell, nothing to carry | n/a |
+| Refresh the digests `bin-check.sh` reads ("Where the scripts are not on the device") | cloud session bridged to the device: `{ grep -m1 -E '^[[:space:]]*version:' "<skill directory>"/SKILL.md | sed 's/^[[:space:]]*//'; sha256sum "<skill directory>"/scripts/*; } > digests.txt` in the container, then the device file-commit tool carries that file to `[ABSOLUTE PATH]/skill-observations/.bin/digests.txt` (a `.bin/` refresh carries the installed `references/starter-principles.md` the same way, to `[ABSOLUTE PATH]/skill-observations/references/starter-principles.md`); local session: the scripts are on the device, so `sha256sum` writes the file there directly | `{ grep -m1 -E '^[[:space:]]*version:' "<skill directory>"/SKILL.md | sed 's/^[[:space:]]*//'; sha256sum "<skill directory>"/scripts/*; } > "[ABSOLUTE PATH]/skill-observations/.bin/digests.txt"` — one shell, nothing to carry | n/a |
 
 **The Claude Code column is the terminal CLI; the desktop app has a
 scheduler of its own.** Claude Code run inside the desktop app exposes

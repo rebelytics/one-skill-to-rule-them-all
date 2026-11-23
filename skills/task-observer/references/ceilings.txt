@@ -12,7 +12,7 @@
 # released core ceiling: 600 (v3.12.0)
 # SKILL.md core_max_lines 600: the every-session rules, the session-start checklist and the pointer list into the references; episodic detail lives in the reference files
 # activation block: 31 lines (environments.md, "The activation block": the fenced text block, stamp line included; checked by hand, not by the validator)
-environments.md 2219 activation per host, workspace anchoring and scope, bridged sessions and the device script copy, hooks and their samples, scheduled prompts, install checks and the backfill; a consumer whose output is data kept out of the block's reach; split by episode pending
+environments.md 2285 activation per host, workspace anchoring and scope, bridged sessions and the device script copy, hooks and their samples, scheduled prompts, install checks and the backfill; a consumer whose output is data kept out of the block's reach; split by episode pending; the skill-load hook on the Skill tool, the file-tool write path for a bridged session with no device shell, the starter set copied beside .bin/
 # split_pending: environments.md the next split by episode
 migration.md 270 the pre-3.0 log conversion and a split store: a log.md beside the observation directory; the conformance count over every field the format carries, re-run after a bulk edit
 acting-on-observations.md 82 using an open observation in the current task, the skill-save control, acting in-session
@@ -23,4 +23,4 @@ observation-families.md 205 skill families, the sibling check and its fast test,
 signals.md 241 the signals worth logging, why a first violation is logged and why a second needs a barrier
 skill-authoring.md 1548 structure and ceilings, licensing and attribution, confidentiality layers, timelessness, editing and delivery rules, trial design, new and retired skills; the routing sweep that completes a retirement
 starter-principles.md 542 the starter principle set, its import and reconciliation, the reply marker and its format; a skipped entry recorded with the condition that would make it apply
-weekly-review.md 2670 the comprehensive review: approval policy, every step with its gates, published-skill passes, the record template and delivery; the interrupted-run staging, the extras pair, deferred starter entries, the scripted 4-5 pairing, the hand-back checkpoint in the recording call, no branch round without a carrier, test branches only for listed skills
+weekly-review.md 2676 the comprehensive review: approval policy, every step with its gates, published-skill passes, the record template and delivery; the interrupted-run staging, the extras pair, deferred starter entries, the scripted 4-5 pairing, the hand-back checkpoint in the recording call, no branch round without a carrier, test branches only for listed skills; the starter set copied with the .bin/ refresh

@@ -14,7 +14,9 @@
 #   --skill-dir <dir>
 #                     the installed skill directory, read for the shipped
 #                     starter set; default: the directory above this script.
-#                     A copy run from skill-observations/.bin/ passes it.
+#                     A copy run from skill-observations/.bin/ reads it from
+#                     skill-observations/references/, where the .bin/ refresh
+#                     copies it (a device shell cannot reach the install).
 #   --brief           the short form, for a re-run that needs only the
 #                     findings, the counts and the entries: stdout carries
 #                     the finding lines, the counts line, one line per entry
@@ -433,6 +435,10 @@ sp="${skill_dir:-$(dirname "$0")/..}/references/starter-principles.md"
 ship=; [ -r "$sp" ] && ship=$(sed -n 's/^Starter set version:[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$sp" | head -n 1)
 if [ ! -e "$mk" ]; then
   finding "DUE: starter-set reconciliation — skill-observations/starter-principles-reviewed.txt is absent; offer once, in a review or a session opened for skill work, never in another task's reply (references/starter-principles.md, Reconciliation)"
+elif [ -z "$ship" ] && [ -z "$skill_dir" ] && case $(dirname "$0") in (*/skill-observations/.bin) true ;; (*) false ;; esac; then
+  # From .bin/ the install is out of reach (a device shell sees only the
+  # workspace), so --skill-dir is no remedy there: the refresh's copy is.
+  finding "NOTE: shipped starter set not found at $sp — the marker cannot be compared with it; this copy runs from skill-observations/.bin/, where --skill-dir cannot reach the install: refresh .bin/, which copies the installed references/starter-principles.md to skill-observations/references/ (references/weekly-review.md, Step 1 gate)"
 elif [ -z "$ship" ]; then
   finding "NOTE: shipped starter set not found at $sp — the marker cannot be compared with it; pass --skill-dir <installed skill directory> (a copy run from skill-observations/.bin/ has no references/ beside it)"
 else
