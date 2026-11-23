@@ -75,9 +75,13 @@
 # loaded cannot be recorded in one call. A shell loop of single-name calls
 # passes that check, so the barrier detects the batch instead: calls made
 # from one tool call share their parent shell, separate tool calls do not.
-# Each `loaded` write leaves the parent's pid and time in
+# Each `loaded` write leaves a key for the parent shell and the time in
 # skill-observations/.skill-load-last, and a second write from the same
-# parent shell within 10 seconds is refused. Only a parent that is a shell
+# parent shell within 10 seconds is refused. The key is the parent's pid,
+# its start time and $HOME folded by cksum, never the pid alone: a host
+# that runs every call in a fresh sandbox gives each call's shell the same
+# pid (2 under bwrap), and two sessions on one workspace have different
+# homes. A loop inside one call shares all three. Only a parent that is a shell
 # counts — a host that execs the command from its own process gives every
 # call one parent — and without `ps` the check is skipped.
 #
@@ -169,10 +173,15 @@ if [ -z "$mode" ] && command -v ps >/dev/null 2>&1; then
   pc=$(ps -o comm= -p "$PPID" 2>/dev/null | tr -d ' '); pc=${pc##*/}; pc=${pc#-}
   case "$pc" in (bash|sh|zsh|dash|ksh) pshell=$PPID ;; esac
 fi
+pkey=
+if [ -n "$pshell" ]; then
+  pst=$(ps -o lstart= -p "$PPID" 2>/dev/null)
+  pkey=$(printf '%s|%s|%s' "$PPID" "$pst" "${HOME:-}" | cksum | cut -d' ' -f1)
+fi
 if [ -n "$pshell" ] && [ -r "$last" ]; then
   read -r lp lt _ < "$last" 2>/dev/null
   case "${lp:-}${lt:-}" in (*[!0-9]*|"") ;; (*)
-    if [ "$lp" = "$pshell" ] && [ $((now - lt)) -lt 10 ]; then
+    if [ "$lp" = "$pkey" ] && [ $((now - lt)) -lt 10 ]; then
       echo "BATCH REFUSED — a second 'loaded' write from the same shell (pid $pshell) within 10 seconds: a loop or chain of calls records loads no Skill call made; nothing written for '$name'. Run one call per Skill invocation, in that invocation's batch" >&2; exit 2
     fi ;;
   esac
@@ -223,5 +232,5 @@ printf '%s: %s open observations\n' "$name" "$count"
 
 printf '%s loaded %s — %s open observations\n' "$(date '+%F %H:%M')" "$name" "$count" \
   >> "$root/skill-observations/checkpoints.log"
-[ -n "$pshell" ] && printf '%s %s\n' "$pshell" "$now" > "$last" 2>/dev/null
+[ -n "$pkey" ] && printf '%s %s\n' "$pkey" "$now" > "$last" 2>/dev/null
 exit 0
