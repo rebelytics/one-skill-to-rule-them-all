@@ -13,6 +13,7 @@ in an environment without filesystem access.
   - A session-start hook (Claude Code and similar harnesses)
   - A stop hook — the per-task backstop as a harness event
   - A plan-tool counter — the 3rd-completion checkpoint as a harness event
+  - A skill-load hook — the per-skill lookup as a harness event
   - A pre-tool hook — the only write path as a barrier
   - A skill-file write gate — the skill-authoring load as a harness event
   - Verify activation in a NEW session — the installing session cannot prove it
@@ -865,6 +866,51 @@ its fields; a field the hook does not read counts nothing, silently. Arm it
 like any trigger: three single completions remind once, one call
 completing two items after one completion reminds, a list re-sent with
 no new completion stays silent, and a subagent call reminds every time.
+
+### A skill-load hook — the per-skill lookup as a harness event
+
+The per-skill lookup rides in the Skill call's batch by a rule (SKILL.md,
+Session Start step 2), and a batch is composed around the goal in front of
+the agent: a host rule that also claims the first call, or a batch already
+full of right-looking calls, pushes the lookup one batch late, and the slip
+leaves no trace because its result still arrives in time. Where the harness
+has a post-tool event, run the lookup there: the hook fires on the Skill
+call itself, takes the skill name from the call's input and runs
+`scripts/skill-load.sh` out of model. Node, no dependencies; substitute
+`[ABSOLUTE PATH]` and `<skill directory>` (the installed task-observer) as
+elsewhere, and register it on the skill tool (in Claude Code, matcher
+`Skill`) with the interpreter in the command, as above:
+
+```js
+// PostToolUse hook (matcher "Skill"): run the per-skill lookup for the skill
+// just invoked out of model, and hand its output to the agent as context.
+const fs = require('node:fs'), path = require('node:path'), { spawnSync } = require('node:child_process');
+const ws = '[ABSOLUTE PATH]';                                  // the pinned workspace
+const script = path.join('<skill directory>', 'scripts', 'skill-load.sh'); // the installed task-observer
+let input = {};
+try { input = JSON.parse(fs.readFileSync(0).toString('utf8') || '{}'); } catch { process.exit(0); }
+const name = String((input.tool_input || {}).skill || '');
+if (!/^[A-Za-z0-9:._/-]+$/.test(name)) process.exit(0);        // skill-load.sh's own name rule
+const say = (text) => { console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: text } })); process.exit(0); };
+if (!fs.existsSync(script)) say(`task-observer: skill-load hook found no ${script}; run the per-skill lookup for ${name} in this turn.`);
+const r = spawnSync('bash', [script, ws, name], { encoding: 'utf8', timeout: 20000 });
+say(`task-observer: the per-skill lookup for ${name} ran in a hook (exit ${r.status}); do not run skill-load.sh for this load again. ` +
+  `Read the bodies it lists:\n${((r.stdout || '') + (r.stderr || '')).trim()}`);
+```
+
+Where it is installed, the hook satisfies the load/lookup pairing by
+construction: the lookup and its `loaded` line come from the Skill call,
+whatever else the batch carried, and the agent reads the bodies the
+context names instead of running the script again. Hosts without hooks
+(Cowork) keep the batch rule as written. The name field is the host's
+(`skill` in Claude Code's Skill call): read one real call before wiring it,
+since a field the hook does not read runs nothing, silently. A name the
+lookup would refuse and malformed input exit 0; a missing script is said in
+the context. On native Windows, give `spawnSync` Git Bash's full path for
+the reason in the session-start hook's note. Arm it like any trigger: a
+Skill call naming a skill with open entries injects the count and the
+files, one with none injects `0 open observations`, and each call writes
+one `loaded` line.
 
 ### A pre-tool hook — the only write path as a barrier
 
