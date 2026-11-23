@@ -1835,6 +1835,9 @@ SCAN_FIXTURES = [
      "SPLIT STORE — log.md holds 2 observations not in observation-log/", 1, ""),
     ("use_evidence and next_actor in a header: parsed, not suspect", "fields", True, 0,
      "files: 2  parsed: 2  suspect (awk, a floor): 0", 1, "NOTE:"),
+    ("a sync tool's conflict copy: a NOTE, left out of the count and the DUPLICATE ID check", "conflict", True, 0,
+     "NOTE: sync-conflict copy in the log — a sync tool's second version of an entry, left out of every count "
+     "and of the entries below: 0002-b.sync-conflict-20260101-120000-ABC.md", 1, "DUPLICATE ID — 0002"),
     ("two files share a prefix across active and archive: DUPLICATE ID names both", "dupid", True, 0,
      "DUPLICATE ID — 0002: 0002-b.md, archive/0002-z.md", 1, ""),
     ("a zero-padded and a bare prefix are one id", "dupid-pad", True, 0,
@@ -2013,6 +2016,8 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
                                ("0003-c.md", '---\nid: 3\ntitle: "plain"\n---\n'),
                                ("0004-d.md", '---\nid: 5\ntitle: "wrong"\n---\n')],
                     "dupid": [("0002-b.md", '---\nid: 2\ntitle: "new"\n---\n')],
+                    "conflict": [("0002-b.md", '---\nid: 2\ntitle: "b"\ndate: 2026-01-01\n---\n'),
+                                 ("0002-b.sync-conflict-20260101-120000-ABC.md", '---\nid: 2\ntitle: "b"\ndate: 2026-01-01\n---\n')],
                     "dupkey": [("0002-b.md", '---\nid: 2\ntitle: "twice"\nresolved:\nresolved: 2026-01-01\n---\n')],
                     "secret": [("0002-b.md", '---\nid: 2\ntitle: "leak"\n---\napi_key: sk9ABCdef1234567890ghijklmnopqrs\n'),
                                ("0003-c.md", '---\nid: 3\ntitle: "digests"\n---\ncommit 0123456789abcdef0123456789abcdef01234567 key\n'

@@ -60,6 +60,9 @@
 # UNFILLED: a header whose title: is empty — the skeleton new-observation.sh
 # writes at create time, a write in progress or abandoned; NOTE: id: … when
 # a header's id does not read as its filename prefix; DUPLICATE ID — NNNN:
+# NOTE: sync-conflict copy … for a sync tool's conflict copy in the log
+# (`*.sync-conflict-*`, `* (… conflicted copy …).md`), left out of every
+# count and the entries; DUPLICATE ID — NNNN:
 # <file1>, <file2> when two files across observation-log/ and archive/ share
 # a numeric prefix — a write that went around the id snippet's prefix
 # guard; RESURRECTED — when an active file is byte-identical to its
@@ -288,14 +291,20 @@ if [ -n "$buf" ]; then
 fi
 
 # --- counts -------------------------------------------------------------------
+# A sync tool's conflict copy of an entry (Syncthing's `*.sync-conflict-*`,
+# Dropbox's and Nextcloud's `(… conflicted copy …)`) carries its original's
+# prefix and header: counted, it is one more entry and a DUPLICATE ID whose
+# remedy (re-id) is wrong for it. Every find and glob over the entries below
+# leaves it out (xc, and the same pattern in the awk prints); a NOTE names it.
+xc=(! -name '*.sync-conflict-*' ! -name '*conflicted copy*')
 # n: numbered, non-empty files — what the parse can read. Counted from the
 # literal path, independent of $d, so the guard below compares two numbers
 # derived by different means.
-n=$(find "$root/skill-observations/observation-log" -maxdepth 1 -name '[0-9]*.md' ! -empty | wc -l | tr -d ' ')
+n=$(find "$root/skill-observations/observation-log" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" ! -empty | wc -l | tr -d ' ')
 # parsed: files whose header opens on line 1 (after a UTF-8 BOM, if any) and
 # closes with a second `---`. Counted by its own command, never inside the
 # printing loop.
-parsed=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) nextfile; next} fm && /^---[[:space:]]*$/ {print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')
+parsed=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" -exec awk 'FNR==1 {sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) nextfile; next} fm && /^---[[:space:]]*$/ {print FILENAME; nextfile}' {} + | wc -l | tr -d ' ')
 bad=; case $n in (""|*[!0-9]*) bad=1 ;; esac; case $parsed in (""|*[!0-9]*) bad=1 ;; esac
 if [ -n "$bad" ]; then echo "SCAN COMMAND BROKEN — the counts did not read as numbers (files='$n' parsed='$parsed')" | tee "$root/skill-observations/last-scan-findings.txt"; exit 1; fi
 
@@ -371,8 +380,8 @@ disp='function has(r, m,  s, i, c, rest) {s = r
 # <<< disp
 # The hits are kept, not only counted: the NOTE names each file with its rule
 # and key (`0042-x.md rule 4 commands_verified`), never the value.
-s_hits=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk "$sus" {} +)
-a_hits=; [ -d "$d/archive" ] && a_hits=$(LC_ALL=C find "$d/archive" -maxdepth 1 -name '*.md' -exec awk "$sus" {} +)   # archive/ may not exist yet
+s_hits=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" -exec awk "$sus" {} +)
+a_hits=; [ -d "$d/archive" ] && a_hits=$(LC_ALL=C find "$d/archive" -maxdepth 1 -name '*.md' "${xc[@]}" -exec awk "$sus" {} +)   # archive/ may not exist yet
 suspect=$(printf '%s\n' "$s_hits" | grep -c .)
 a_sus=$(printf '%s\n' "$a_hits" | grep -c .)
 sus_names=$( { printf '%s\n' "$s_hits" | awk -F '\t' 'NF >= 3 {f = $1; sub(/.*\//, "", f); k = $3; sub(/:.*/, "", k); print f " rule " $2 " " k}'
@@ -444,8 +453,12 @@ if [ "$n" -gt 0 ] && [ "$parsed" -eq 0 ]; then echo "SCAN COMMAND BROKEN — $n 
 
 # --- findings ----------------------------------------------------------------
 # Lost entries: a zero-byte numbered file, or one with no opening `---`.
-lost=$( { find "$d" -maxdepth 1 -name '[0-9]*.md' -empty; LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' ! -empty -exec awk 'FNR==1 {sub(/^\357\273\277/, ""); if (!/^---[[:space:]]*$/) print FILENAME; nextfile}' {} +; } | sed 's|.*/||' | LC_ALL=C sort | tr '\n' ' ')
+lost=$( { find "$d" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" -empty; LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" ! -empty -exec awk 'FNR==1 {sub(/^\357\273\277/, ""); if (!/^---[[:space:]]*$/) print FILENAME; nextfile}' {} +; } | sed 's|.*/||' | LC_ALL=C sort | tr '\n' ' ')
 [ -n "$lost" ] && finding "LOST ENTRIES — no header, an interrupted write; report each, never reuse or delete: $lost"
+# Sync-tool conflict copies (xc above), active and archive/, by name.
+cf=$( { find "$d" -maxdepth 1 -name '*.md' \( -name '*.sync-conflict-*' -o -name '*conflicted copy*' \) | sed 's|.*/||'
+  [ -d "$d/archive" ] && find "$d/archive" -maxdepth 1 -name '*.md' \( -name '*.sync-conflict-*' -o -name '*conflicted copy*' \) | sed 's|.*/|archive/|'; } | LC_ALL=C sort | awk '{s = s (NR > 1 ? ", " : "") $0} END {print s}')
+[ -n "$cf" ] && finding "NOTE: sync-conflict copy in the log — a sync tool's second version of an entry, left out of every count and of the entries below: $cf; compare each with the file it copies, merge any difference into that file by hand, then move the copy out of the log (never re-id it)"
 # Unfilled and mismatched headers, from one awk over the parsed headers:
 # U <file> for a header whose title: is empty — the skeleton the helper
 # writes at create time, so a write in progress or abandoned, distinct from
@@ -453,7 +466,7 @@ lost=$( { find "$d" -maxdepth 1 -name '[0-9]*.md' -empty; LC_ALL=C find "$d" -ma
 # read as the filename prefix (a retyped id, or a body written into another
 # entry's file). The id may be padded or not — both forms exist in live
 # logs — so the comparison is numeric.
-hd=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; ti=0; idv="none"; f=FILENAME; sub(/.*\//, "", f); pre=substr(f, 1, match(f, /[^0-9]/) - 1); if (!fm) nextfile; next}
+hd=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" -exec awk 'FNR==1 {sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; ti=0; idv="none"; f=FILENAME; sub(/.*\//, "", f); pre=substr(f, 1, match(f, /[^0-9]/) - 1); if (!fm) nextfile; next}
   fm && /^---[[:space:]]*$/ {if (ti) print "U " f; if (idv !~ /^0*[1-9][0-9]*$/ || idv + 0 != pre + 0) print "I " f " " idv; nextfile}
   fm && /^title:/ {v=$0; sub(/^title:[[:space:]]*/, "", v); sub(/[[:space:]]+$/, "", v); ti=(v == "" || v == "\"\"" || v == "\047\047")}
   fm && /^id:/ {idv=$2; gsub(/["\047\r]/, "", idv)}' {} +)
@@ -478,12 +491,13 @@ if [ -d "$d/archive" ] && command -v cmp >/dev/null 2>&1; then
   for p_a in "$d"/[0-9]*.md; do
     [ -f "$p_a" ] || continue
     b_a=${p_a##*/}
+    case $b_a in (*.sync-conflict-*|*"conflicted copy"*) continue ;; esac
     if [ -f "$d/archive/$b_a" ] && cmp -s "$p_a" "$d/archive/$b_a"; then res="$res/$b_a"; nres=$((nres + 1)); fi
   done
   [ -n "$res" ] && res="$res/"
 fi
 [ "$nres" -gt 0 ] && finding "RESURRECTED — $nres active file(s) byte-identical to their archive/ copy, a sync or mirror restoring archived entries: $(printf '%s' "$res" | sed 's|^/||; s|/$||; s|/|, |g'); remove the active copy, never renumber, and record the sync client (references/environments.md, \"Stable is not the same as always available\")"
-dups=$( { find "$d" -maxdepth 1 -name '[0-9]*.md' | sed 's|.*/||' | LC_ALL=C awk -v skip="$res" 'index(skip, "/" $0 "/") == 0'; [ -d "$d/archive" ] && find "$d/archive" -maxdepth 1 -name '[0-9]*.md' | sed 's|.*/\([^/]*\)$|archive/\1|'; } \
+dups=$( { find "$d" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" | sed 's|.*/||' | LC_ALL=C awk -v skip="$res" 'index(skip, "/" $0 "/") == 0'; [ -d "$d/archive" ] && find "$d/archive" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" | sed 's|.*/\([^/]*\)$|archive/\1|'; } \
   | LC_ALL=C sort | LC_ALL=C awk '{f=$0; sub(/^archive\//, "", f); n=substr(f, 1, match(f, /[^0-9]/) - 1) + 0; c[n]++; if (n in l) l[n]=l[n] ", " $0; else l[n]=$0} END {for (n in c) if (c[n] > 1) printf "%04d: %s\n", n, l[n]}' | LC_ALL=C sort)
 if [ -n "$dups" ]; then
   # a here-string, not a pipe: `finding` must update fx and findings in THIS shell
@@ -493,17 +507,17 @@ fi
 # passes every count here, and parsers disagree on which copy they keep (a
 # batch edit once wrote one entry's lines over another's this way).
 # scripts/set-fields.sh refuses such a file; this names it at read time.
-dk=$( { LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {split("", k); f=FILENAME; sub(/.*\//, "", f); sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) nextfile; next}
+dk=$( { LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" -exec awk 'FNR==1 {split("", k); f=FILENAME; sub(/.*\//, "", f); sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) nextfile; next}
     fm && /^---[[:space:]]*$/ {nextfile}
     fm && /^[A-Za-z_][A-Za-z0-9_]*:/ {x=$0; sub(/:.*/, "", x); if (k[x]++ == 1) print f " (" x ")"}' {} +
-  [ -d "$d/archive" ] && LC_ALL=C find "$d/archive" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {split("", k); f=FILENAME; sub(/.*\//, "archive/", f); sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) nextfile; next}
+  [ -d "$d/archive" ] && LC_ALL=C find "$d/archive" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" -exec awk 'FNR==1 {split("", k); f=FILENAME; sub(/.*\//, "archive/", f); sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) nextfile; next}
     fm && /^---[[:space:]]*$/ {nextfile}
     fm && /^[A-Za-z_][A-Za-z0-9_]*:/ {x=$0; sub(/:.*/, "", x); if (k[x]++ == 1) print f " (" x ")"}' {} +; } | LC_ALL=C sort | awk '{s = s (NR > 1 ? ", " : "") $0} END {print s}')
 [ -n "$dk" ] && finding "NOTE: a header key occurs twice — parsers disagree on which copy they keep; read the body, keep one line, never batch-rewrite: $dk"
 # Actioned entries, active only, whose resolution: gives a listed skill:
 # member no disposition: a family fix marked done while a member was never
 # edited for it reads as complete everywhere else.
-nd=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk "$disp" {} + | sed 's|^.*/||' | LC_ALL=C sort | awk -F '\t' '{s = s (NR > 1 ? ", " : "") $1 " (" $2 ")"} END {print s}')
+nd=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" -exec awk "$disp" {} + | sed 's|^.*/||' | LC_ALL=C sort | awk -F '\t' '{s = s (NR > 1 ? ", " : "") $1 " (" $2 ")"} END {print s}')
 [ -n "$nd" ] && finding "NOTE: actioned without a disposition for every skill: member — resolution: names each as '<member>: applied|excluded|carried'; complete it, or re-open the entry, through scripts/set-fields.sh: $nd"
 # Secret-shaped values, active and archive/, header and body: a line naming
 # key / token / secret / password that also holds a run of 24 or more letters
@@ -522,7 +536,7 @@ fi
 # Headers that did not parse, by name: no opening, or no closing `---`. The
 # names ride on the finding line itself, so the repeat and the sidecar carry them.
 if [ "$parsed" -lt "$n" ]; then
-  unparsed=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk 'FNR==1 {if (NR>1 && fm) print f; f=FILENAME; sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) {print f; nextfile}; next} fm && /^---[[:space:]]*$/ {fm=0; nextfile} END {if (fm) print f}' {} + | sed 's|.*/||' | LC_ALL=C sort | tr '\n' ' ')
+  unparsed=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" -exec awk 'FNR==1 {if (NR>1 && fm) print f; f=FILENAME; sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) {print f; nextfile}; next} fm && /^---[[:space:]]*$/ {fm=0; nextfile} END {if (fm) print f}' {} + | sed 's|.*/||' | LC_ALL=C sort | tr '\n' ' ')
   finding "NOTE: $((n - parsed)) of $n headers did not parse (no opening or no closing ---): $unparsed"
 fi
 [ "$suspect" -gt 0 ] || [ "$a_sus" -gt 0 ] && finding "NOTE: $suspect of $n headers (and $a_sus in archive/) look like invalid YAML (rule 3 an unquoted ': ', 4 text after a closing quote, 5 a value opening with a backtick, @ or %, 6 an undefined escape, 7 a colon in an unquoted list entry): $sus_names — quote or fix them (File format)"
@@ -596,7 +610,7 @@ fi
 mv_ptr="$root/skill-observations/MOVED.md"
 if [ -f "$mv_ptr" ]; then
   mv_line=$(head -n 1 "$mv_ptr" | tr -d '\r' | cut -c 1-200)
-  mv_after=$(find "$d" -maxdepth 1 -name '[0-9]*.md' -newer "$mv_ptr" 2>/dev/null | wc -l | tr -d ' ')
+  mv_after=$(find "$d" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" -newer "$mv_ptr" 2>/dev/null | wc -l | tr -d ' ')
   finding "NOTE: pointer at this root (skill-observations/MOVED.md): \"$mv_line\" — $mv_after entries written here since it; report both roots and ask, never consolidate or re-anchor on it"
 fi
 
@@ -610,7 +624,7 @@ fi
 # the review is due.
 rvd=$(sed '1!d' "$root/skill-observations/last-review-date.txt" 2>/dev/null | tr -d '\r' | cut -c 1-40)
 case $rvd in ([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*) since=${rvd%"${rvd#??????????}"} ;; (*) since= ;; esac
-unrev=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' -exec awk -v since="$since" '
+unrev=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" -exec awk -v since="$since" '
   function val(s) { sub(/^[a-z_]+:[[:space:]]*/, "", s); sub(/[[:space:]]+#.*$/, "", s); gsub(/["\047\r[:space:]]/, "", s); return s }
   FNR==1 {sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; st=""; dt=""; if (!fm) nextfile; next}
   fm && /^---[[:space:]]*$/ {if ((st == "" || st == "open") && (since == "" || dt == "" || dt > since)) print FILENAME; nextfile}
@@ -682,6 +696,7 @@ printf '%s\n' "$rec"
 headers="$root/skill-observations/last-scan-headers.txt"
 print_headers() {
   ( export LC_ALL=C; [ "$n" -eq 0 ] || { cd "$d" && awk 'FNR==1 && NR>1 && fm {print "---"}
+    FNR==1 && FILENAME ~ /\.sync-conflict-|conflicted copy/ {fm=0; nextfile}
     FNR==1 {sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; print "# " FILENAME; if (!fm) {print "---"; nextfile}; next}
     fm && /^---[[:space:]]*$/ {fm=0; print "---"; nextfile}
     fm
@@ -695,6 +710,7 @@ print_entries() {
       if (s == "parked") pk = pk l "\n"; else print l }
     FNR==1 {if (NR>1 && fm) print "--- " prev " (header not closed)"; split("", f); split("", bl); key = ""; prev = FILENAME
             if (skip != "" && index(skip, "/" FILENAME "/")) {fm=0; nextfile}
+            if (FILENAME ~ /\.sync-conflict-|conflicted copy/) {fm=0; nextfile}
             sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (!fm) {print "--- " FILENAME " (no header)"; nextfile}; next}
     fm {sub(/\r$/, "")}
     fm && /^---[[:space:]]*$/ {fm=0; emit(); nextfile}
