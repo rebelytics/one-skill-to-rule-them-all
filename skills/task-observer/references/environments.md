@@ -1,6 +1,6 @@
 # Environments, Activation Setup, and Handoff-Doc Mode
 
-Load triggers: anchoring, pinning, re-pinning or diagnosing a shard of the workspace; a new log was just created (list the sibling logs); setting up or diagnosing activation (instruction block, hooks, activation config); placing the session-start mount probe in the first batched call, or splitting a failed probe (first run, read-only grant, missing mount); the folder picker is refused or no device-bridge tool is found; no filesystem at all (handoff-doc mode); no stable path resolves for a disposable worker (report-back mode); a session whose output a caller owns; briefing a delegate (a subagent, another session, a specialist); after a compaction or resume; the checkpoint in a priced-write workspace; a permission or classifier denial of a log write; a mode that forbids every write by design; the first-run backfill
+Load triggers: anchoring, pinning, re-pinning or diagnosing a shard of the workspace; a new log was just created (list the sibling logs); setting up or diagnosing activation (instruction block, hooks, activation config); placing the session-start mount probe in the first batched call, or splitting a failed probe (first run, read-only grant, missing mount); the folder picker is refused or no device-bridge tool is found; a bridged session with file tools and no device shell; no filesystem at all (handoff-doc mode); no stable path resolves for a disposable worker (report-back mode); a session whose output a caller owns; briefing a delegate (a subagent, another session, a specialist); after a compaction or resume; the checkpoint in a priced-write workspace; a permission or classifier denial of a log write; a mode that forbids every write by design; the first-run backfill
 
 Load this for setup questions, compaction/resume behaviour, or when running
 in an environment without filesystem access.
@@ -1725,7 +1725,8 @@ be an unreleased version that nothing refreshes on install. With no
 matching copy, transfer the scripts to the device — a
 permission-classifier denial of that transfer gets at most one identical
 retry, told to the user (SKILL.md, How to Log) — or run the inline id
-snippet through the device shell. Never a hand-derived id. SKILL.md step
+snippet through the device shell. Never a hand-derived id while a device
+shell exists (with none, the file-tool path below). SKILL.md step
 6's compare follows the same split: `diff-staged.sh` needs both trees in one
 shell (from `.bin/` through `bin-check.sh` where the scripts are not on the
 device); with staged copies on the device and live in the container, run
@@ -1740,6 +1741,24 @@ collision in the invocation:
 `e=$(mktemp) && bash "<root>/skill-observations/.bin/bin-check.sh" "<root>" <digests-file> session-start-scan.sh --entries-to "$e" "<root>"`
 (the same option on a direct run of the scan), then read `"$e"` when a step
 needs the entries. Stdout then carries the findings, the counts and the end line.
+
+**A bridged session with file tools and no device shell.** Where the only
+device tools are file tools (read, write, edit, list), no script or snippet
+can run there, and the write path is done by hand, every step through the
+file tool and read back after each write. The id comes from a listing of
+`observation-log/` and `observation-log/archive/` and a read of
+`archive/.id-floor`, taken immediately before the write: the highest
+numeric prefix of either listing or the floor, whichever is higher, plus
+one — never from an earlier listing or the scan. Create `NNNN-<slug>.md`
+only where the listing shows no file with that prefix, read it back, then
+write the new id to `.id-floor` and read that back. Archival is one move
+per resolved file where the host offers a move tool; where it offers none,
+leave resolved files for a session with a shell — a copy beside the
+original is what the scan reports as RESURRECTED. Record the missing shell
+once per session as one `checkpoints.log` line (for example
+`<date> <time> [<label>] no device shell — file-tool write path`) and never
+announce it in chat, unless a step the user asked for cannot be done
+without one.
 
 | Capability | Claude Cowork | Claude Code | Web chat / no filesystem |
 |---|---|---|---|
