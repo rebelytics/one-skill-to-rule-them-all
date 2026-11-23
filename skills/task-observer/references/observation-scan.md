@@ -35,6 +35,16 @@ block after the entries, and are written to
 `skill-observations/last-scan-findings.txt`, which the end line names: a
 cut view still shows them, and the file holds them when it did not.
 
+**The short form is a flag, never a filter.** A re-run that needs one
+answer — did an edited header still parse, did the status edits land —
+takes `--brief` (before the root): stdout carries only the finding lines,
+the counts line with its per-status tally (`open=N actioned=N declined=N
+superseded=N parked=N statusless=N`) and one line per entry, and the end
+line; every file the full scan writes is still written. A review's re-scan
+reads the tally for "did the edits land", never a `grep | uniq -c` over the
+entries. The session-start run itself stays the full scan: steps 3 and 6
+read its `review:` and `staged:` lines, which `--brief` leaves out.
+
 **Why the line carries a time and a source, not just a date.** The
 workspace is shared across every project that observes the same globally
 installed skill (the anchoring rule), so `checkpoints.log` is a

@@ -3,7 +3,7 @@
 # log, as one command.
 #
 # Usage:
-#   bash scripts/session-start-scan.sh [--entries-to <file>] [workspace-root]
+#   bash scripts/session-start-scan.sh [--brief] [--entries-to <file>] [workspace-root]
 #   (options first: an argument after the root is refused, exit 2)
 #
 #   [workspace-root]  the pinned absolute workspace path — the directory that
@@ -15,6 +15,11 @@
 #                     the installed skill directory, read for the shipped
 #                     starter set; default: the directory above this script.
 #                     A copy run from skill-observations/.bin/ passes it.
+#   --brief           the short form, for a re-run that needs only the
+#                     findings, the counts and the entries: stdout carries
+#                     the finding lines, the counts line, one line per entry
+#                     and the end line, nothing else; every file the full
+#                     scan writes is still written.
 #   --entries-to <file>
 #                     write the per-entry listing to <file>
 #                     instead of stdout, for a channel that caps the output
@@ -71,7 +76,9 @@
 # NOTE lines for a header key written twice, for an actioned entry whose
 # resolution: gives a skill: member no disposition, and for a file holding a
 # key-shaped run beside key / token / secret / password (names only); the
-# counts line (files, parsed, suspect, archive-suspect, resurrected); a SPLIT STORE line when a
+# counts line (files, parsed, suspect, archive-suspect, resurrected, then the
+# per-status tally open=N actioned=N declined=N superseded=N parked=N
+# statusless=N, and other=N for a status outside the five); a SPLIT STORE line when a
 # pre-3.0 log.md sits beside the directory, and one for an observation log
 # at the working directory or beside the skill's install that is not the
 # pinned root; a `staged:` line naming
@@ -155,6 +162,7 @@ VERSION="3.13.0"   # equal to the skill's frontmatter metadata.version; the end 
 entries=   # --entries-to target; empty = the entries print to stdout
 skill_dir= # --skill-dir: the installed skill directory; empty = the one this script sits in
 pairing=   # --pairing: the first day of the 4-5 pairing report; empty = run the scan
+brief=     # --brief: print only the findings, the counts, the entries and the end line
 while [ $# -gt 0 ]; do
   case $1 in
     (--entries-to) [ $# -ge 2 ] || { echo "--entries-to needs a file path" >&2; exit 2; }; entries="$2"; shift 2 ;;
@@ -163,8 +171,9 @@ while [ $# -gt 0 ]; do
     (--skill-dir=*) skill_dir="${1#--skill-dir=}"; shift ;;
     (--pairing) [ $# -ge 2 ] || { echo "--pairing needs a date (YYYY-MM-DD) or all" >&2; exit 2; }; pairing="$2"; shift 2 ;;
     (--pairing=*) pairing="${1#--pairing=}"; shift ;;
+    (--brief) brief=1; shift ;;
     (--) shift; break ;;
-    (-*) echo "unknown option '$1' (the options are --entries-to <file>, --skill-dir <dir> and --pairing <date|all>)" >&2; exit 2 ;;
+    (-*) echo "unknown option '$1' (the options are --brief, --entries-to <file>, --skill-dir <dir> and --pairing <date|all>)" >&2; exit 2 ;;
     (*) break ;;
   esac
 done
@@ -550,7 +559,15 @@ if [ "$parsed" -lt "$n" ]; then
   finding "NOTE: $((n - parsed)) of $n headers did not parse (no opening or no closing ---): $unparsed"
 fi
 [ "$suspect" -gt 0 ] || [ "$a_sus" -gt 0 ] && finding "NOTE: $suspect of $n headers (and $a_sus in archive/) look like invalid YAML (rule 3 an unquoted ': ', 4 text after a closing quote, 5 a value opening with a backtick, @ or %, 6 an undefined escape, 7 a colon in an unquoted list entry, 8 a line that is not key: value, a list item, an indented continuation or a comment): $sus_names — quote or fix them (File format)"
-printf 'files: %s  parsed: %s  suspect (awk, a floor): %s  archive-suspect: %s  resurrected: %s\n' "$n" "$parsed" "$suspect" "$a_sus" "$nres"
+# The per-status tally over the entries the print lists (parsed active
+# headers, restored copies left out): "did the status edits land" is a count,
+# answered here rather than by a filter over the entries. One word per file,
+# summed by a second awk, since find may run the first more than once.
+tally=$(LC_ALL=C find "$d" -maxdepth 1 -name '[0-9]*.md' "${xc[@]}" -exec awk -v skip="$res" 'FNR==1 {st=""; f=FILENAME; sub(/.*\//, "", f); sub(/^\357\273\277/, ""); fm=/^---[[:space:]]*$/; if (skip != "" && index(skip, "/" f "/")) fm=0; if (!fm) nextfile; next}
+  fm && /^---[[:space:]]*$/ {print (st == "" ? "statusless" : st ~ /^(open|actioned|declined|superseded|parked)$/ ? st : "other"); nextfile}
+  fm && /^status:/ {st=$0; sub(/^status:[[:space:]]*/, "", st); sub(/[[:space:]]+#.*$/, "", st); gsub(/["\047\r[:space:]]/, "", st)}' {} + |
+  awk '{c[$1]++} END {printf "open=%d actioned=%d declined=%d superseded=%d parked=%d statusless=%d", c["open"], c["actioned"], c["declined"], c["superseded"], c["parked"], c["statusless"]; if (c["other"]) printf " other=%d", c["other"]}')
+printf 'files: %s  parsed: %s  suspect (awk, a floor): %s  archive-suspect: %s  resurrected: %s  %s\n' "$n" "$parsed" "$suspect" "$a_sus" "$nres" "$tally"
 
 # --- split store: a pre-3.0 log.md beside the directory -----------------------
 # The creation command's LEGACY guard fires only when the directory is
@@ -605,7 +622,7 @@ su_n=0; [ -d "$su" ] && su_n=$(find "$su" -mindepth 1 -maxdepth 1 -type d | wc -
 if [ -f "$su/PENDING.md" ]; then stg_l=$(printf 'staged: manifest at %s/PENDING.md (%s non-blank lines), %s directories under it' "$su" "$(grep -c . "$su/PENDING.md" | tr -d ' ')" "$su_n")
 elif [ -d "$su" ]; then stg_l=$(printf 'staged: no manifest at %s/PENDING.md, %s directories under it' "$su" "$su_n")
 else stg_l=$(printf 'staged: no skill-updates/ at %s/' "$root"); fi
-printf '%s\n' "$stg_l"
+[ -n "$brief" ] || printf '%s\n' "$stg_l"
 if [ -d "$ls_old" ] && [ -d "$su" ]; then
   finding "NOTE: SPLIT STAGING — staged work under both $su/ and skill-observations/skill-updates/ ($(find "$ls_old" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ') round directories); step 6 reads only the first: move the legacy rounds and their PENDING entries into it by hand, then remove the legacy root"
 elif [ -d "$ls_old" ]; then
@@ -652,7 +669,7 @@ elif [ "$rvd" = never ]; then
 else
   rev_l=$(printf 'review: last-review-date.txt absent or not a date (read "%s"); %s open entries' "${rvd:-}" "$unrev")
 fi
-printf '%s\n' "$rev_l"
+[ -n "$brief" ] || printf '%s\n' "$rev_l"
 
 # --- gap: days since the previous session-start scan --------------------------
 # Read before this run's trace line is appended. The previous scan's date is
@@ -690,11 +707,11 @@ rec=$(printf '%s [%s] session start: 1 storage=%s 2 scan=files %s parsed %s 3 re
   "$(date '+%F %H:%M')" "${PWD##*/}" "${miss:+missing: $miss}" "$n" "$parsed" "$rv" "$rs" "$sg" "$n")
 rec=${rec/1 storage= /1 storage=ok }
 printf '%s\n' "$rec" >> "$root/skill-observations/session-starts.log"
-printf '%s\n' "$rec"
+[ -n "$brief" ] || printf '%s\n' "$rec"
 
 # --- content: printed with the headers below ---------------------------------
 # The active principles' headings.
-[ -f "$p" ] && awk "$pa"' a && /^### / {sub(/\r$/, ""); print}' "$p"
+[ -f "$p" ] && [ -z "$brief" ] && awk "$pa"' a && /^### / {sub(/\r$/, ""); print}' "$p"
 # Every numbered entry, one awk for the whole set over the directory's own
 # glob (no word splitting of a spaced path). This is the only half a content
 # classifier can refuse, so everything above has already run when it is.
@@ -857,7 +874,7 @@ while IFS= read -r w; do
     finding "SPLIT STORE — $w: log.md holds $lgn observations beside that root's observation-log/: an older installed copy still writes there; report the root and its copy's version, never migrate or consolidate another root from this scan (references/migration.md)"
   fi
 done <<< "$found"
-printf 'logs at the plausible anchors (report; never consolidate from here%s):%s\n' "$srch" "$sib"
+[ -n "$brief" ] || printf 'logs at the plausible anchors (report; never consolidate from here%s):%s\n' "$srch" "$sib"
 
 # --- LAST: the summary block — the findings again, then the end-of-scan line -
 # The finding lines are repeated here VERBATIM, after the entries, and written
@@ -870,8 +887,15 @@ printf 'logs at the plausible anchors (report; never consolidate from here%s):%s
 # and 6 read them, and a view cut by `tail` would otherwise lose both.
 sc="$sidecar"
 printf '%s' "$findings" > "$sidecar" 2>/dev/null || sc="$sidecar (write failed)"
-printf '%s\n%s\n' "$stg_l" "$rev_l"
-printf '%s' "$findings"
+# --brief prints each finding once, above the entries: the repeat is left out
+# with the other lines a re-run does not need, and the end line says so.
+rep="repeated just above this line and written to"
+if [ -n "$brief" ]; then
+  rep="written to"; ent="$ent; --brief: the staged:, review:, session-start record, principles and sibling-log lines and the repeated findings are left out (run without --brief to read them)"
+else
+  printf '%s\n%s\n' "$stg_l" "$rev_l"
+  printf '%s' "$findings"
+fi
 st=; [ "$rc" -eq 0 ] || st="; content print exited $rc"
 [ -n "${empty_ent:-}" ] && st="; the entries file is EMPTY (exit 3)"
 bytes="bytes above this line not counted (no mktemp)"
@@ -880,6 +904,6 @@ if [ -n "$buf" ]; then
   exec >&5; cat "$buf"; rm -f "$buf"; trap - EXIT
   bytes="$by bytes above this line: a saved or cut copy holding fewer is a truncated scan"
 fi
-printf 'end of scan — files: %s  parsed: %s  suspect: %s  archive-suspect: %s  resurrected: %s  principles: %s; finding lines above the entries (DUE / NOTE / LOST ENTRIES / UNFILLED / DUPLICATE ID / RESURRECTED / SPLIT STORE / GAP): %s, repeated just above this line and written to %s%s%s; full headers in %s; %s. Read the output whole: never cut it with head, tail or grep — session-start-scan.sh v%s\n' \
-  "$n" "$parsed" "$suspect" "$a_sus" "$nres" "$pr" "$fx" "$sc" "$ent" "$st" "$hd_note" "$bytes" "$VERSION"
+printf 'end of scan — files: %s  parsed: %s  suspect: %s  archive-suspect: %s  resurrected: %s  principles: %s; finding lines above the entries (DUE / NOTE / LOST ENTRIES / UNFILLED / DUPLICATE ID / RESURRECTED / SPLIT STORE / GAP): %s, %s %s%s%s; full headers in %s; %s. Read the output whole: never cut it with head, tail or grep — session-start-scan.sh v%s\n' \
+  "$n" "$parsed" "$suspect" "$a_sus" "$nres" "$pr" "$fx" "$rep" "$sc" "$ent" "$st" "$hd_note" "$bytes" "$VERSION"
 exit "$rc"

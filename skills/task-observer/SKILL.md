@@ -170,8 +170,8 @@ The `- [ ]` items under How to Log are ticked in the reply of the turn that writ
    ```
 
    `scripts/session-start-scan.sh` is the scan (in `<skill directory>`); review
-   it there, and read its output whole — never through `tail`, `head` or `grep`
-   (where its findings appear: `references/observation-scan.md`, "Scanning cheaply").
+   it there. Never cut its output with `tail`, `head` or `grep`: read it whole; a re-run
+   needing only findings, counts and entries uses `--brief` (`references/observation-scan.md`, "Scanning cheaply").
    In a bridged session, through a device shell, or wherever a channel caps the
    output, load `references/observation-scan.md` ("The scan in a bridged session or
    a capped channel") first: never a per-skill grep instead, `.bin/` checked against the
