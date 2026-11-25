@@ -1,7 +1,9 @@
 # Line ceilings for the reference files, read by scripts/validate-skill-bundle.py.
 # One line per file: <file.md> <ceiling> [<short reason for the last raise>]
-# Over its ceiling, a file with more than 8 load triggers is split by episode;
-# one with 8 or fewer is trimmed, or its ceiling raised with a reason.
+# A file with more than 8 load triggers, or past split_lines with more than one,
+# is split by episode: a short index plus one file per episode. Over its ceiling
+# with 8 or fewer, it is trimmed, or its ceiling raised with a reason.
+# split_lines: to set
 # A file whose split is decided but not yet made carries a
 # `split_pending: <file.md> [<reason>]` line: the split remedies
 # print as notes and trim-or-raise applies until the split lands. The line is
@@ -21,6 +23,6 @@ observation-log.md 1020 the log layout and frontmatter fields, the id, field and
 observation-scan.md 579 the session-start scan, its guards, refusals and output shape, the bridged and capped-channel scan, the per-skill lookup at every load, flush triggers; the --brief short form and its status tally
 observation-families.md 205 skill families, the sibling check and its fast test, the carrier pattern and its short form
 signals.md 241 the signals worth logging, why a first violation is logged and why a second needs a barrier
-skill-authoring.md 1548 structure and ceilings, licensing and attribution, confidentiality layers, timelessness, editing and delivery rules, trial design, new and retired skills; the routing sweep that completes a retirement
+skill-authoring.md 1572 structure and ceilings, licensing and attribution, confidentiality layers, timelessness, editing and delivery rules, trial design, new and retired skills; the routing sweep that completes a retirement; the split rule: more than 8 triggers or past the skill's split line target, an index plus one file per episode
 starter-principles.md 542 the starter principle set, its import and reconciliation, the reply marker and its format; a skipped entry recorded with the condition that would make it apply
 weekly-review.md 2676 the comprehensive review: approval policy, every step with its gates, published-skill passes, the record template and delivery; the interrupted-run staging, the extras pair, deferred starter entries, the scripted 4-5 pairing, the hand-back checkpoint in the recording call, no branch round without a carrier, test branches only for listed skills; the starter set copied with the .bin/ refresh

@@ -202,7 +202,10 @@ sections after them, each under its own heading so a later split is a cut. Concr
   is routed through the core's pointer list. Declared exception, not an
   escape clause: this skill's references cite `weekly-review.md` directly,
   because the review procedure is the one episode every other reference
-  serves and the core's pointer to it is already mandatory.
+  serves and the core's pointer to it is already mandatory. A file split by
+  episode (the split rule, "Reference-file ceilings") adds the one allowed
+  nesting level: core → index → episode file, each pointer naming its
+  trigger, and an episode file never points onward.
 
 Splitting also creates the edit seams a monolith lacks. Retrofitting
 existing large skills is a separate, lower-priority job — the default
@@ -243,7 +246,9 @@ that twenty separate moments in a session each pull in. So
 every run, and gates growth only for a skill that opts in with per-file
 ceilings ("Reference-file ceilings — the growth barrier", below): there
 the declared count picks the remedy for a file that outgrows its ceiling,
-split above 8 triggers, trim or a reasoned raise at 8 or fewer. A split
+split above 8 triggers, trim or a reasoned raise at 8 or fewer; above 8
+triggers, or past the skill's own split line target with more than one
+episode, the file splits whatever its ceiling. A split
 needs a load-observation test per moved episode (below), and never two
 structural splits in one test period — a regression could not be
 attributed to either.
@@ -1518,18 +1523,37 @@ With the sidecar present, `validate-skill-bundle.py` fails when:
   agrees are overloaded is set too high;
 - a ceiling sits more than 3 lines above its file: lower it in the commit
   that trimmed;
+- a file declares more than 8 load triggers, or passes the skill's
+  `split_lines:` target with more than one, and no split is pending: split
+  it (the split rule, below);
 - a file has no ceiling line or no `Load triggers:` line.
+
+**The split rule: more than 8 load triggers, or past the split line target.**
+Either one splits a reference file by episode, not only a ceiling breach,
+since ceilings get raised round after round and a raise stops nothing. The
+line target is the skill's own number, `split_lines: <N>` in the sidecar,
+never a constant in the shared validator; `split_lines: to set` declares the
+rule before its value is chosen, and only the trigger half then applies. The
+shape is fixed: the file becomes a short index (its `Load triggers:` line, a
+contents list, one pointer per episode file naming its trigger) plus one
+file per episode beside it, `references/<file-stem>-<episode>.md`, each with
+its own ceiling line and `Load triggers:` line. A single-episode file past
+the target has nothing to split along: the validator notes it, and the
+remedy stays trim or a reasoned raise. For example, a 1,400-line file
+declaring four triggers in a skill with `split_lines: 1000` becomes an index
+of about 30 lines and four episode files, and the core's pointers move to
+the index.
 
 A file above the threshold whose split is decided but not yet made carries
 `split_pending: <file.md> [<why>]` in the sidecar: the validator then prints the
 split remedies as notes and applies the trim-or-raise remedy until the split
 lands, so a decided restructure does not block the round before it. The line is
 read bare or behind `# `, so a round can write it while the installed validator
-still predates the marker. In this skill's own bundle, `environments.md` (12
-triggers) is the next split candidate, pending a later round.
+still predates the marker; `split_lines:` is read the same way. In this
+skill's own bundle, `environments.md` (above 8 triggers) is the next split
+candidate, pending a later round.
 
-Size alone never forces a split, so a single-episode file is still never
-split to meet a size rule. Without the sidecar nothing is gated, which is
+Size alone never splits a single-episode file. Without the sidecar nothing is gated, which is
 why it has a plain name: an install route that drops dotfiles would switch
 the gate off without a word. Change a file's `Load triggers:` line in the
 same edit as any core pointer into it.

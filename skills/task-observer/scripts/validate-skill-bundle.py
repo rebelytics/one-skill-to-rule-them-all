@@ -951,6 +951,11 @@ def check_reference_indexes(skill_dir, fails):
 #   * more than SPLIT_TRIGGER_THRESHOLD triggers: split by episode;
 #   * that many or fewer: trim, or raise the ceiling with a short one-line
 #     reason written beside the number.
+# The split rule does not wait for a ceiling breach: a file above the
+# threshold, or past the skill's own line target (`split_lines: <N>` in the
+# sidecar, the subject's number, never a constant here) with more than one
+# trigger, fails until it is split or marked split_pending. `split_lines: to
+# set` declares the rule with no value; only the trigger half applies then.
 # Size alone never forces a split, so a single-episode file is never split to
 # meet a size rule. The ceiling follows trims down with the core's tolerance.
 #
@@ -1024,6 +1029,8 @@ REF_CEILING_LINE_RE = re.compile(
 SPLIT_PENDING_LINE_RE = re.compile(
     r"^(?:#[ \t]*)?split_pending:[ \t]+(?P<file>[^\s/]+\.md)"
     r"(?:[ \t]+\d{4}-\d{2}-\d{2})?(?:[ \t]+(?P<reason>\S.*?))?[ \t]*$")
+# The skill's split line target, read bare or behind `# ` like the marker.
+SPLIT_LINES_LINE_RE = re.compile(r"^(?:#[ \t]*)?split_lines:[ \t]*(?P<value>.*?)[ \t]*$")
 # `references/x.md` ("Heading") — up to 40 characters between, newlines
 # included, no backtick — and the parenthesised (`references/x.md`, "Heading").
 REF_POINTER_RE = re.compile(r'`references/([a-z0-9-]+\.md)`(?:[^(`]{0,40}\(|,\s*)"([^"]+)"')
@@ -1110,6 +1117,15 @@ def read_ref_ceilings(refs, fails):
         if sp:
             pending[sp.group("file")] = sp.group("reason") or ""
             continue
+        sl = SPLIT_LINES_LINE_RE.match(line)
+        if sl:
+            v = sl.group("value")
+            if v.isdigit() and int(v) > 0:
+                pending.setdefault(SPLIT_LINES_KEY, int(v))
+            elif v.lower() != "to set":
+                fails.append(f"{where}: unreadable line {line!r} — the form is "
+                             f"`split_lines: <lines>` or `split_lines: to set`")
+            continue
         if not line or line.startswith("#"):
             continue
         m = REF_CEILING_LINE_RE.match(line)
@@ -1126,6 +1142,9 @@ def read_ref_ceilings(refs, fails):
     return out, pending
 
 
+SPLIT_LINES_KEY = " split_lines"   # carried in the pending map; no file name has a leading space
+
+
 def check_reference_shape(skill_dir, core, fails):
     """Print the `reference shape` line; gate it when the skill opted in."""
     refs = pathlib.Path(skill_dir) / "references"
@@ -1134,6 +1153,7 @@ def check_reference_shape(skill_dir, core, fails):
     named, unnamed = core_pointers(core)
     citing = core_pointer_sections(core)
     ceilings, pending = read_ref_ceilings(refs, fails)
+    target = pending.pop(SPLIT_LINES_KEY, None)
     N, tol = SPLIT_TRIGGER_THRESHOLD, CEILING_SLACK_TOLERANCE
     rows = []
     for p in sorted(refs.glob("*.md")):
@@ -1149,8 +1169,9 @@ def check_reference_shape(skill_dir, core, fails):
         shown.append(f"{name}={lines}/{c[0] if c else '-'}/{t}")
     gated = ("ceilings in references/" + REF_CEILINGS_FILE if ceilings is not None
              else "no references/" + REF_CEILINGS_FILE + " — not gated")
+    past = f" or past {target} lines" if target else ""
     print(f"reference shape (lines / ceiling / load triggers declared in the header, "
-          f"~ = scanned from the core, none declared; split by episode above {N}; {gated}): "
+          f"~ = scanned from the core, none declared; split by episode above {N}{past}; {gated}): "
           + ", ".join(shown))
     # The pointer cross-check: declared episodes against the number of core
     # sections that cite the file (the lower bound on episodes) — never
@@ -1166,8 +1187,7 @@ def check_reference_shape(skill_dir, core, fails):
         if len(declared) > N:
             print(f"note: {name} declares {len(declared)} load triggers (> {N}) — split "
                   f"by episode is indicated"
-                  + (" once it outgrows its ceiling" if ceilings is not None
-                     else "; size is not the signal")
+                  + ("" if ceilings is not None else "; size is not the signal")
                   + (f"; split pending" + (f": {pending[name]}" if pending[name] else "")
                      if name in pending else ""))
     if ceilings is None:
@@ -1191,16 +1211,28 @@ def check_reference_shape(skill_dir, core, fails):
                          f"`## ` heading), one entry per distinct episode that loads it")
             continue
         n = len(declared)
-        if name in pending and n <= N:
+        over_target = bool(target) and lines > target
+        split_rule = n > N or (over_target and n > 1)
+        if name in pending and not split_rule:
             print(f"note: references/{REF_CEILINGS_FILE} marks a split pending for {name}, "
-                  f"which declares {n} load triggers (<= {N}) — the line can go")
-        split_due = n > N and name not in pending
-        if lines > ceiling and split_due:
+                  f"which declares {n} load triggers (<= {N})"
+                  + (f" and is within the split line target" if target else "")
+                  + " — the line can go")
+        if over_target and n <= 1:
+            print(f"note: references/{name} {lines} lines is past the split line target "
+                  f"{target} with one episode: nothing to split along — trim, or keep "
+                  f"its ceiling with a reason")
+        split_due = split_rule and name not in pending
+        if split_due:
+            why = (f"{n} load triggers (> {N})" if n > N else
+                   f"{lines} lines, past the split line target {target}, with {n} load triggers")
             fails.append(
-                f"references/{name} {lines} lines > ceiling {ceiling}, with {n} load "
-                f"triggers (> {N}): split it by episode, so each trigger loads only "
-                f"its own part — a raise is not the remedy for a file this many "
-                f"episodes pull in")
+                f"references/{name}: {why}: split it by episode — a short index plus one "
+                f"file per episode (`<file-stem>-<episode>.md`), each pointer naming its "
+                f"trigger — or mark a decided split `split_pending: {name}` in "
+                f"references/{REF_CEILINGS_FILE}"
+                + (f"; its raised ceiling ({reason}) is not a raise this file can take"
+                   if reason else ""))
         elif lines > ceiling:
             # Reached with n > N only while a split is pending: say so, not `<= N`.
             count_vs_n = f"> {N}, split pending" if n > N else f"<= {N}"
@@ -1215,11 +1247,10 @@ def check_reference_shape(skill_dir, core, fails):
                 f"{ceiling - lines} > tolerance {tol}. Lower its line in "
                 f"references/{REF_CEILINGS_FILE} to {lines} in this commit — a trim "
                 f"is locked in, not left as headroom")
-        if reason and split_due:
+        if reason and split_due and lines > ceiling:
             fails.append(
-                f"references/{name} carries a raised ceiling ({reason}) but "
-                f"declares {n} load triggers (> {N}): with that many episodes the "
-                f"remedy is a split by episode, not a raise")
+                f"references/{name} {lines} lines > ceiling {ceiling}: with {n} load "
+                f"triggers the remedy is a split by episode, not a raise")
 
 
 # A `## Bundle manifest` section (in SKILL.md or a reference) is a hand-kept
@@ -3342,6 +3373,21 @@ REF_SHAPE_FIXTURES = [
     ("the marker behind `# ` is read the same way (an older validator reads a comment)",
      105, SPLIT_TRIGGER_THRESHOLD + 1,
      "a.md 105 more room\n# split_pending: a.md split decided, lands next round\n", None, None),
+    ("under its ceiling, > N triggers, no split pending: the split rule fails it",
+     98, SPLIT_TRIGGER_THRESHOLD + 1, "a.md 100\n", "split it by episode", "trim"),
+    ("past split_lines with 3 triggers: split, whatever the ceiling",
+     105, 3, "a.md 105 one new section\nsplit_lines: 100\n", "past the split line target", None),
+    ("split_lines behind `# ` is read the same way", 105, 3,
+     "a.md 105 one new section\n# split_lines: 100\n", "past the split line target", None),
+    ("past split_lines with one trigger: nothing to split along, passes",
+     105, 1, "a.md 105 one new section\nsplit_lines: 100\n", None, None),
+    ("within split_lines: passes", 98, 3, "a.md 100\nsplit_lines: 100\n", None, None),
+    ("split_lines: to set — the line target is not applied", 105, 3,
+     "a.md 105 one new section\n# split_lines: to set\n", None, None),
+    ("past split_lines with the split pending: trim-or-raise applies, passes", 105, 3,
+     "a.md 105 one new section\nsplit_lines: 100\nsplit_pending: a.md\n", None, None),
+    ("a split_lines value that is not a number is unreadable", 100, 3,
+     "a.md 100\nsplit_lines: soon\n", "unreadable line", None),
 ]
 
 
