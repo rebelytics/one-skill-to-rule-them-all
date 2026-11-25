@@ -5,7 +5,7 @@ license: CC-BY-4.0
 metadata:
   author: Eoghan Henn and contributors
   source: https://github.com/rebelytics/one-skill-to-rule-them-all
-  version: "3.12.0"
+  version: "3.12.2"
   core_max_lines: "600"
 ---
 
