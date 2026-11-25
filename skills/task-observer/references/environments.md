@@ -1759,7 +1759,15 @@ original is what the scan reports as RESURRECTED. Record the missing shell
 once per session as one `checkpoints.log` line (for example
 `<date> <time> [<label>] no device shell — file-tool write path`) and never
 announce it in chat, unless a step the user asked for cannot be done
-without one.
+without one. The shell can fail alone while the other device tools work:
+a shell call that fails (an `echo ok` included) while a listing of the
+workspace succeeds is this case, not a lost bridge. Where the file tools
+are stage and commit rather than read and edit, the scan runs read-only on
+a staged copy of the log; a new file goes through commit, an existing one
+only with its staged mtime as the guard; and every step that needs the
+shell (the per-skill lookups, the start line, hashes, deletions, helper
+writes) goes into one handoff file the next session with a working shell
+runs first. Never a cloud listing of the device path.
 
 | Capability | Claude Cowork | Claude Code | Web chat / no filesystem |
 |---|---|---|---|
