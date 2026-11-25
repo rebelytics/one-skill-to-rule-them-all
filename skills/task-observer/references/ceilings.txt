@@ -15,7 +15,7 @@
 environments.md 2285 activation per host, workspace anchoring and scope, bridged sessions and the device script copy, hooks and their samples, scheduled prompts, install checks and the backfill; a consumer whose output is data kept out of the block's reach; split by episode pending; the skill-load hook on the Skill tool, the file-tool write path for a bridged session with no device shell, the starter set copied beside .bin/
 # split_pending: environments.md the next split by episode
 migration.md 270 the pre-3.0 log conversion and a split store: a log.md beside the observation directory; the conformance count over every field the format carries, re-run after a bulk edit
-acting-on-observations.md 82 using an open observation in the current task, the skill-save control, acting in-session
+acting-on-observations.md 87 using an open observation in the current task, the skill-save control, acting in-session; the status write and any other record of the applied ids in one command
 review-slice.md 51 the bounded slice's own entry file, loaded instead of weekly-review.md
 observation-log.md 1020 the log layout and frontmatter fields, the id, field and extend helpers with their refusals, archival, quoting, tracked tickets and the quick reference table; the paths absent by design on a healthy install; the use_evidence insert through its script
 observation-scan.md 579 the session-start scan, its guards, refusals and output shape, the bridged and capped-channel scan, the per-skill lookup at every load, flush triggers; the --brief short form and its status tally

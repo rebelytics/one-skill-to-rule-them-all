@@ -80,3 +80,8 @@ that lands as ordinary work** — the rule written into the instructions file,
 the code corrected — with the observation not in mind; and a later session
 finding the remedy already in place closes the entry the same way. Neither
 looks like acting on an observation, which is why both are missed.
+**Where the act also names the ids somewhere else** — a staging manifest
+entry, a commit plan, a build's release notes — one command writes both:
+`bash scripts/set-fields.sh <root> <plan> && <append the entry>`, never two
+steps, since the second place is read as proof the work is done and the
+field is what the queue reads.
