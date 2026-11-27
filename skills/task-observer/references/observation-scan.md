@@ -181,8 +181,7 @@ with its checkpoint line written by hand in the same batch (the inline id
 snippet in SKILL.md is then the write path):
 
 ```bash
-find "[ABSOLUTE PATH]/skill-observations/observation-log" -maxdepth 1 \
-  -name '*.md' -exec grep -l -E "^(skill|target_file):.*<skill-name>" {} +
+find "[ABSOLUTE PATH]/skill-observations/observation-log" -maxdepth 1 -name '*.md' -exec grep -l -E "^(skill|target_file):.*<skill-name>" {} +
 ```
 
 `<skill-name>` is the bare name: drop a plugin: prefix, up to the last

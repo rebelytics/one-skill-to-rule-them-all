@@ -74,7 +74,8 @@ here: run this, do not work down the tree above by hand.
 
 ```bash
 d="[ABSOLUTE PATH]/skill-observations"   # the pinned path, quoted: it may contain a space; bash, not sh
-case $d in (/*|[A-Za-z]:[/\\]*) ;; (*) echo "UNFINISHED INSTALL: the pinned root is not an absolute path: '$d' — fill in the activation block's workspace path (environments.md, \"An unfilled pin is an unfinished install\")"; exit 1 ;; esac
+ok=; case $d in (/*) ok=1 ;; ([A-Za-z]:?*) case $(printf '%s' "${d:2:1}" | od -An -tu1 | tr -d ' ') in (47|92) ok=1 ;; esac ;; esac   # / or C:/ or C:<backslash>, by byte code 47 or 92
+[ -n "$ok" ] || { echo "UNFINISHED INSTALL: the pinned root is not an absolute path: '$d' — fill in the activation block's workspace path (environments.md, 'An unfilled pin is an unfinished install')"; exit 1; }
 [ -e "$d/log.md" ] && [ ! -d "$d/observation-log" ] && { echo "LEGACY log.md — run the migration (references/migration.md) before creating anything"; exit 1; }
 [ -e "$d/log.md" ] && [ -d "$d/observation-log" ] && { echo "SPLIT STORE — log.md holds $(grep -c '^### Observation ' "$d/log.md") observations not in observation-log/ (an older installed copy still writes the legacy file); migrate the remainder (references/migration.md), re-issuing ids from the directory's counter"; exit 1; }
 c=; for x in observation-log observation-log/archive last-review-date.txt cross-cutting-principles.md; do [ -e "$d/$x" ] || c="$c${c:+,}$x"; done   # what this run creates
@@ -91,10 +92,16 @@ A checkpoint line whose `created=` names `observation-log` is a new log:
 before its first write, list the sibling logs and their open entries
 (`environments.md`, "A renamed project orphans its log").
 
-The `case` line refuses a root that is not absolute — a placeholder left
-unfilled at install, above all — before anything is created: without it,
+The two guard lines refuse a root that is not absolute — a placeholder left
+unfilled at install, above all — before anything is created: without them,
 the command makes a folder named after the placeholder in the working
 directory and the install looks finished.
+A command a session runs inline at session start carries no `\\`. A
+Windows agent's Bash tool can halve every `\\` in an inline command, so
+`[/\\]` arrives as `[/\]` and the guard refuses every drive-letter pin
+(`environments.md`, "Windows hosts: what reaches the shell and the file").
+So the guard reads the character after the drive letter as a byte code:
+47 is `/`, 92 is the backslash.
 
 `mkdir -p` creates the parent, so `observation-log/` needs no separate line;
 the `[ -e ]` guards make the command safe to re-run on an existing workspace,
