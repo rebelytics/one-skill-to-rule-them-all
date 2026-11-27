@@ -572,13 +572,13 @@ def main():
     os.makedirs(out, exist_ok=True)
     for r in records:
         fn = f"{r['id']:04d}-{slugify(r['title'])}.md"
-        with open(os.path.join(out, fn), "w", encoding="utf-8") as fh:
+        with open(os.path.join(out, fn), "w", encoding="utf-8", newline="\n") as fh:
             fh.write(render(r))
 
     floor = max([r["id"] for r in records] + [id_floor_from(args.id_floor_from)])
     arch = os.path.join(out, "archive")
     os.makedirs(arch, exist_ok=True)
-    with open(os.path.join(arch, ".id-floor"), "w") as fh:
+    with open(os.path.join(arch, ".id-floor"), "w", newline="\n") as fh:
         fh.write(f"{floor}\n")
 
     slugs = [slugify(r["title"]) for r in records]
