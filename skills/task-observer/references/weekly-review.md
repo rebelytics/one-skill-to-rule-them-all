@@ -1063,10 +1063,12 @@ or outstanding principles", update the timestamp, and stop.
 an edit SURVIVES, not by whether it succeeds.** List all skills (system
 prompt `<available_skills>` or the skills directory) and put each into one
 of three categories. Project-level skill directories (a project's
-`.claude/skills/`, where the harness surfaces them) are listed and
-classified too, and a project skill that duplicates an account skill is
-named as such: two copies of one skill drift exactly like two copies of
-one rule, and an inventory that reads one surface never sees the other.
+`.claude/skills/`, where the harness surfaces them) and project slash
+commands (`.claude/commands/*.md`, which a host can list beside the
+skills) are listed and classified too, and a project skill or command
+whose body duplicates an account skill is named as such: two copies of
+one skill drift exactly like two copies of one rule, and an inventory
+that reads one surface never sees the other.
 The categories:
 
 | Category | Detection | Action |
