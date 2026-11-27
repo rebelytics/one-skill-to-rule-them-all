@@ -1549,9 +1549,9 @@ A file above the threshold whose split is decided but not yet made carries
 split remedies as notes and applies the trim-or-raise remedy until the split
 lands, so a decided restructure does not block the round before it. The line is
 read bare or behind `# `, so a round can write it while the installed validator
-still predates the marker; `split_lines:` is read the same way. In this
-skill's own bundle, `environments.md` (above 8 triggers) is the next split
-candidate, pending a later round.
+still predates the marker; `split_lines:` is read the same way. This
+skill's sidecar sets `split_lines: 1000` and states 500 as the aim, a figure
+and not a gate; the target steps down toward it once the first splits land.
 
 Size alone never splits a single-episode file. Without the sidecar nothing is gated, which is
 why it has a plain name: an install route that drops dotfiles would switch

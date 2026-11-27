@@ -3,7 +3,9 @@
 # A file with more than 8 load triggers, or past split_lines with more than one,
 # is split by episode: a short index plus one file per episode. Over its ceiling
 # with 8 or fewer, it is trimmed, or its ceiling raised with a reason.
-# split_lines: to set
+# split_lines: 1000
+# The aim is 500 lines: a stated figure, not a gate. The target is lowered
+# toward it in steps once the first splits have landed.
 # A file whose split is decided but not yet made carries a
 # `split_pending: <file.md> [<reason>]` line: the split remedies
 # print as notes and trim-or-raise applies until the split lands. The line is
@@ -16,6 +18,9 @@
 # activation block: 31 lines (environments.md, "The activation block": the fenced text block, stamp line included; checked by hand, not by the validator)
 environments.md 2293 activation per host, workspace anchoring and scope, bridged sessions and the device script copy, hooks and their samples, scheduled prompts, install checks and the backfill; a consumer whose output is data kept out of the block's reach; split by episode pending; the skill-load hook on the Skill tool, the file-tool write path for a bridged session with no device shell, the starter set copied beside .bin/; the device shell failing alone while staging and commit still work
 # split_pending: environments.md the next split by episode
+# split_pending: weekly-review.md past the split line target
+# split_pending: skill-authoring.md past the split line target
+# split_pending: observation-log.md past the split line target
 migration.md 270 the pre-3.0 log conversion and a split store: a log.md beside the observation directory; the conformance count over every field the format carries, re-run after a bulk edit
 acting-on-observations.md 87 using an open observation in the current task, the skill-save control, acting in-session; the status write and any other record of the applied ids in one command
 review-slice.md 51 the bounded slice's own entry file, loaded instead of weekly-review.md
