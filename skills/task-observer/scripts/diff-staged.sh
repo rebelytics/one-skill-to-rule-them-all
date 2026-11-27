@@ -12,8 +12,8 @@
 #   ERROR <what>                     2  the compare did not run — not
 #                                       reconciled, never "identical"
 # ERROR covers a wrong argument count, a missing path, a file where a
-# directory belongs, a SKILL.md that cannot be read or parsed, and a failed
-# normalisation. The exits of `diff -rq` alone cannot tell "differs" from
+# directory belongs, a file whose content is not materialised, a SKILL.md
+# that cannot be read or parsed, and a failed normalisation. The exits of `diff -rq` alone cannot tell "differs" from
 # "never ran" (a missing path and a real difference look alike to a loop
 # that only checks for non-zero), and a loop over a joined string of names
 # runs no compare at all: this script names the path it could not use.
@@ -32,6 +32,16 @@
 # checkout's .claude-plugin/ manifests (live may be a repository checkout;
 # a skill bundle never carries them).
 #
+# Before any compare, every file on both sides is checked for content a
+# cloud resync left unmaterialised: a non-empty file whose first 64 KiB is
+# all NUL bytes, a zero-length SKILL.md, or a zero-length file whose
+# counterpart on the other side is not empty. A sparse file's holes read as
+# NUL, so an all-hole file is caught by the same read; allocated block counts
+# are not used, since a filesystem that stores small files inline reports
+# zero blocks for real content. Any such file is
+#   ERROR file content not materialised: <n> file(s): <side>: <p> (<why>); …
+# because a byte compare on it reads as DIFFERS or IDENTICAL, never as damage.
+#
 # bash 3.2-compatible (stock macOS).
 
 set -u
@@ -45,6 +55,25 @@ for p in "$staged" "$live"; do
   if [ ! -d "$p" ]; then echo "ERROR not a directory: '$p'"; exit 2; fi
   if [ ! -f "$p/SKILL.md" ]; then echo "ERROR no SKILL.md in '$p'"; exit 2; fi
 done
+
+# --- content not materialised: checked before any compare ----------------------
+bad=; nb=0
+for side in live staged; do
+  if [ "$side" = live ]; then p=$live; o=$staged; else p=$staged; o=$live; fi
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    r=${f#"$p"}; r=${r#/}; why=
+    if [ -s "$f" ]; then
+      [ "$(head -c 65536 "$f" | tr -d '\000' | wc -c | tr -d ' ')" = 0 ] && why="NUL-filled"
+    elif [ "$r" = SKILL.md ]; then why="zero-length"
+    elif [ -f "$o/$r" ] && [ -s "$o/$r" ]; then why="zero-length, the other side is not"
+    fi
+    [ -n "$why" ] && { bad="$bad${bad:+; }$side: $r ($why)"; nb=$((nb + 1)); }
+  done <<LIST
+$(find "$p" \( -name .git -o -name .hg -o -name .svn -o -name .claude-plugin -o -name __pycache__ \) -prune -o -type f ! -name '*.pyc' ! -name .DS_Store -print 2>/dev/null)
+LIST
+done
+if [ "$nb" -gt 0 ]; then echo "ERROR file content not materialised: $nb file(s): $bad"; exit 2; fi
 
 here=$(cd "$(dirname "$0")" && pwd)
 diffs=

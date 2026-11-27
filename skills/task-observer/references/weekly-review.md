@@ -871,6 +871,25 @@ Windows Store alias passes `command -v` and does not run), the script
 compares `SKILL.md` by the text fallback and says so on stderr: that is a
 verdict, not an `ERROR`.
 
+**A compare on content that is not there is an `ERROR`, not a verdict.**
+A cloud resync can leave a staged or live file NUL-filled, or empty
+beside a full counterpart, and a byte compare reads that as DIFFERS or
+IDENTICAL. `diff-staged.sh` checks both sides first and prints
+`ERROR file content not materialised: …`, naming each file. Report it
+"not reconciled: file content not materialised", like any other `ERROR`.
+The check comes before every byte compare in this gate: the seed
+re-hash, the bundle-against-directory compare and the bridged digest
+listing say nothing about a copy that fails it. Bridged, a path whose
+digest differs is first read on its own side, and 0 from
+`head -c 65536 <file> | tr -d '\000' | wc -c` on a non-empty file is the
+same `ERROR`. The repair rebuilds the damaged copy from its `.skill`
+bundle, then gives every file a fresh mtime
+(`find "$s" -type f -exec touch {} +`). An extract keeps the archive's
+older times, and a sync client can keep its damaged copy as the newer
+one. The repair is done only after the sync client reports the upload
+and a read after evicting the local copy returns the bundle's hash.
+Until then the entry stays "not reconciled".
+
 **A claim's liveness is the newest mtime under its anchor, never a
 hand-kept field.** An in-progress claim — a seeded round, a "being applied
 by session Y" note in an observation body — has no expiry of its own, so
@@ -1334,6 +1353,14 @@ entries target the same member. Then, before anything is presented:
   shape, recording the rewrite in `resolution:`. The log is the artefact most likely to be shared casually, and
   the authoring-time sweeps never see it.
 
+**Reconcile the ids before anything is presented.** The union of the ids
+across every bucket the user will see equals the OPEN queue Step 1 built,
+entry for entry. Compute both lists and print the difference both ways
+before the first decision message. Place each missing id in a bucket, or
+make it its own question; an id in a bucket but not in the queue is
+explained or removed. A read entry that reached no bucket is otherwise
+approved by nobody and stays OPEN with no disposition.
+
 Interactive: save the full decision list — grouped by skill, as the
 Approval policy requires — in the review record (Step 7). In chat, show
 at most three recommended next steps, ordered by impact. For each, state
@@ -1352,14 +1379,6 @@ underlying problem is rediscovered from different task contexts and filed
 against different skills, so grouping by filing category asks the user
 the same question more than once. Group the OPEN entries by the DECISION
 they require, not by the skill they are filed against; escalate one
-
-**Reconcile the ids before anything is presented.** The union of the ids
-across every bucket the user will see equals the OPEN queue Step 1 built,
-entry for entry. Compute both lists and print the difference both ways
-before the first decision message. Place each missing id in a bucket, or
-make it its own question; an id in a bucket but not in the queue is
-explained or removed. A read entry that reached no bucket is otherwise
-approved by nobody and stays OPEN with no disposition.
 decision per cluster with the member observation numbers listed under
 it; cross-reference rather than separately escalate any entry whose
 decision duplicates another's. Cheap first pass: scan the Principle lines

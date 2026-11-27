@@ -2739,6 +2739,13 @@ DIFFSTAGED_FIXTURES = [
     ("a file where a directory belongs is ERROR", "file", 2, "ERROR not a directory: "),
     ("one argument is ERROR", "onearg", 2, "ERROR usage: "),
     ("a joined string of two paths is ERROR naming the joined string", "joined", 2, "ERROR missing: "),
+    ("a staged file of NUL bytes as long as live's is ERROR, never DIFFERS", "nulstaged", 2,
+     "ERROR file content not materialised: 1 file(s): staged: references/a.md (NUL-filled)"),
+    ("NUL bytes on both sides are ERROR, never IDENTICAL", "nulboth", 2,
+     "ERROR file content not materialised: 2 file(s): live: references/a.md (NUL-filled); staged: references/a.md"),
+    ("a zero-length staged file beside a non-empty live one is ERROR", "zerolen", 2,
+     "ERROR file content not materialised: 1 file(s): staged: references/a.md (zero-length, the other side is not)"),
+    ("an empty file on both sides is IDENTICAL, not ERROR", "bothempty", 0, "IDENTICAL"),
 ]
 
 
@@ -2754,6 +2761,11 @@ def diffstaged_case(scenario):
             (staged / "references" / "a.md").write_text("b\n", encoding="utf-8")
             (staged / "references" / "new.md").write_text("n\n", encoding="utf-8")
             (live / "references" / "old.md").write_text("o\n", encoding="utf-8")
+        for d in {"nulstaged": (staged,), "nulboth": (live, staged), "zerolen": (staged,)}.get(scenario, ()):
+            (d / "references" / "a.md").write_bytes(b"" if scenario == "zerolen" else b"\0" * len(b"a\n"))
+        if scenario == "bothempty":
+            for d in (live, staged):
+                (d / "references" / "empty.md").write_bytes(b"")
         if scenario == "checkout":
             (live / ".claude-plugin").mkdir()
             (live / ".claude-plugin" / "plugin.json").write_text("{}\n", encoding="utf-8")
@@ -2787,6 +2799,13 @@ BINCHECK_FIXTURES = [
      "BIN REFUSED — '../outside.sh' is not a plain script name"),
     ("an absolute script path is refused, nothing runs", "abspath", 3, "", "is not a plain script name"),
     ("a name outside the .sh/.py set the digests cover is refused", "noext", 3, "", "is not a .sh or .py file"),
+    ("a differing copy: the refusal names both stale sides and the re-hash that tells them apart", "differs", 3, "",
+     "a stale .bin/ (refresh it from the installed scripts: weekly-review.md, Step 1 gate, then re-run), or an installed "
+     "copy older than .bin/ — re-hash the installed scripts into a new digests file and retry once"),
+    ("a file with no installed digest: the refusal names an installed copy older than .bin/ too", "extra", 3, "",
+     "or an installed copy older than .bin/ — re-hash"),
+    ("equal versions, differing digests: the refusal says an equal version does not mean equal files", "samediff", 3, "",
+     "(an equal version, 3.9.0, does not mean equal files)"),
 ]
 
 
@@ -2799,13 +2818,6 @@ def bincheck_case(scenario):
         bin_dir.mkdir(parents=True)
         installed = pathlib.Path(tmp) / "installed"
         installed.mkdir()
-    ("a differing copy: the refusal names both stale sides and the re-hash that tells them apart", "differs", 3, "",
-     "a stale .bin/ (refresh it from the installed scripts: weekly-review.md, Step 1 gate, then re-run), or an installed "
-     "copy older than .bin/ — re-hash the installed scripts into a new digests file and retry once"),
-    ("a file with no installed digest: the refusal names an installed copy older than .bin/ too", "extra", 3, "",
-     "or an installed copy older than .bin/ — re-hash"),
-    ("equal versions, differing digests: the refusal says an equal version does not mean equal files", "samediff", 3, "",
-     "(an equal version, 3.9.0, does not mean equal files)"),
         (installed / "hello.sh").write_text('echo hello "$@"\n', encoding="utf-8")
         (bin_dir / "hello.sh").write_text('echo hello "$@"\n', encoding="utf-8")
         if scenario in ("differs", "samediff"):
@@ -2979,18 +2991,6 @@ def migrate_count_ok():
         return ok, f"exit {r.returncode}, counted {got}, files {want}"
 
 
-# scripts/new-observation.sh, the only write path where a script can run.
-# Each case runs it against a throwaway workspace (with a space in its path)
-# and pins one boundary: (name, scenario, slug, body text or None, exit
-# status, stdout substring, stderr substring, names of the numbered files
-# the log holds afterwards, the floor file's content or None). GOOD_BODY
-# is a header the schema accepts, with the two placeholders and a backticked
-# command span that must reach the file verbatim.
-NEWOBS_SCRIPT = pathlib.Path(__file__).resolve().parent / "new-observation.sh"
-# The core template's fields (SKILL.md, File format), in order: the skeleton
-# the helper writes without --body must carry exactly these.
-SKELETON_FIELDS = ["id", "title", "status", "type", "skill", "proposes_skill", "target_file",
-                   "siblings_checked", "area", "date", "session_context", "parked_until",
 def migrate_floor_ok():
     """id_floor_from() over a directory: a numbered file contributes its
     filename prefix only, never a legacy heading in its body; a non-numbered
@@ -3067,6 +3067,18 @@ def addev_case(variant, relative, arg, line):
         return r.returncode, r.stderr, before, f.read_text(encoding="utf-8"), names
 
 
+# scripts/new-observation.sh, the only write path where a script can run.
+# Each case runs it against a throwaway workspace (with a space in its path)
+# and pins one boundary: (name, scenario, slug, body text or None, exit
+# status, stdout substring, stderr substring, names of the numbered files
+# the log holds afterwards, the floor file's content or None). GOOD_BODY
+# is a header the schema accepts, with the two placeholders and a backticked
+# command span that must reach the file verbatim.
+NEWOBS_SCRIPT = pathlib.Path(__file__).resolve().parent / "new-observation.sh"
+# The core template's fields (SKILL.md, File format), in order: the skeleton
+# the helper writes without --body must carry exactly these.
+SKELETON_FIELDS = ["id", "title", "status", "type", "skill", "proposes_skill", "target_file",
+                   "siblings_checked", "area", "date", "session_context", "parked_until",
                    "resolved", "resolution", "reference", "commands_verified", "next_actor",
                    "use_evidence", "escalated"]
 GOOD_BODY = ('---\nid: __ID__\ntitle: "t"\nstatus: open            # open | actioned\n'
@@ -3862,6 +3874,14 @@ def selftest():
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} skill-load script: a second load chained in one shell is BATCH REFUSED; separate shells both write"
               + ("" if ok else f" ({detail})"))
+        ok, detail = load_conflict_ok()
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} skill-load script: a sync tool's conflict copies are left out of the count and the listing"
+              + ("" if ok else f" ({detail})"))
+        ok, detail = load_refusal_text_ok()
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} skill-load script: the BATCH REFUSED text names the re-run, never a load no Skill call made"
+              + ("" if ok else f" ({detail})"))
         ok, detail = tools_missing_ok(LOAD_SCRIPT, False)
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} skill-load script: commands off PATH, LOOKUP TOOLS MISSING, nothing written"
@@ -3874,14 +3894,6 @@ def selftest():
                   + ("" if ok else f" (exit {rc}, lines {lines!r}, out {out!r})"))
     elif shutil.which("bash"):
         bad += 1; total += 1
-        ok, detail = load_conflict_ok()
-        bad += not ok; total += 1
-        print(f"{'ok  ' if ok else 'FAIL'} skill-load script: a sync tool's conflict copies are left out of the count and the listing"
-              + ("" if ok else f" ({detail})"))
-        ok, detail = load_refusal_text_ok()
-        bad += not ok; total += 1
-        print(f"{'ok  ' if ok else 'FAIL'} skill-load script: the BATCH REFUSED text names the re-run, never a load no Skill call made"
-              + ("" if ok else f" ({detail})"))
         print(f"FAIL skill-load script: {LOAD_SCRIPT.name} missing beside this file")
     if shutil.which("bash") and DIFFSTAGED_SCRIPT.is_file():
         ok = subprocess.run(["bash", "-n", str(DIFFSTAGED_SCRIPT)]).returncode == 0
@@ -4013,25 +4025,13 @@ def selftest():
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} migrate-log: the conformance count equals the written files (one siblings_checked empty)"
               + ("" if ok else f" ({detail})"))
-    else:
-        bad += 1; total += 1
-        print(f"FAIL migrate-log: {MIGRATE_SCRIPT.name} missing beside this file")
-    print(f"selftest: {total - bad}/{total} passed")
-    return 1 if bad else 0
-
-
-def check_repo_versions(repo_dir, fails):
-    """Every manifest in the repo carries the same version as the skill's own.
-
-    `.claude-plugin/plugin.json` is canonical — it is the one the installer
-    reads, and it is the one that ships inside the skill bundle. Every other
         ok, detail = migrate_floor_ok()
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} migrate-log: --id-floor-from takes a numbered file's prefix only and a legacy log's headings (floor 15)"
               + ("" if ok else f" ({detail})"))
-    site is a copy, and a copy that drifts is worse than no copy: the
-    installer's update check is keyed on the version, so a manifest left at
-    the old number means `/plugin update` reports "already at the latest
+    else:
+        bad += 1; total += 1
+        print(f"FAIL migrate-log: {MIGRATE_SCRIPT.name} missing beside this file")
     if shutil.which("bash") and ADDEV_SCRIPT.is_file():
         ok = subprocess.run(["bash", "-n", str(ADDEV_SCRIPT)]).returncode == 0
         bad += not ok; total += 1
@@ -4049,6 +4049,18 @@ def check_repo_versions(repo_dir, fails):
     elif shutil.which("bash"):
         bad += 1; total += 1
         print(f"FAIL add-evidence script: {ADDEV_SCRIPT.name} missing beside this file")
+    print(f"selftest: {total - bad}/{total} passed")
+    return 1 if bad else 0
+
+
+def check_repo_versions(repo_dir, fails):
+    """Every manifest in the repo carries the same version as the skill's own.
+
+    `.claude-plugin/plugin.json` is canonical — it is the one the installer
+    reads, and it is the one that ships inside the skill bundle. Every other
+    site is a copy, and a copy that drifts is worse than no copy: the
+    installer's update check is keyed on the version, so a manifest left at
+    the old number means `/plugin update` reports "already at the latest
     version" while serving stale files.
 
     Deliberately NOT a site: `marketplace.json` has no `version` field. The
