@@ -2991,6 +2991,82 @@ NEWOBS_SCRIPT = pathlib.Path(__file__).resolve().parent / "new-observation.sh"
 # the helper writes without --body must carry exactly these.
 SKELETON_FIELDS = ["id", "title", "status", "type", "skill", "proposes_skill", "target_file",
                    "siblings_checked", "area", "date", "session_context", "parked_until",
+def migrate_floor_ok():
+    """id_floor_from() over a directory: a numbered file contributes its
+    filename prefix only, never a legacy heading in its body; a non-numbered
+    legacy log contributes its headings. 0007-x.md, 0012-y.md (whose body
+    quotes a "### Observation 99:" heading) and legacy.md ("### Observation
+    15:") give a floor of 15: 12 without the legacy log, 99 if the numbered
+    file's body were read."""
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        t = pathlib.Path(tmp)
+        (t / "skills" / "companion-a").mkdir(parents=True)
+        src = t / "floor src"
+        src.mkdir()
+        (src / "0007-x.md").write_text("---\nid: 7\n---\nbody\n", encoding="utf-8")
+        (src / "0012-y.md").write_text("---\nid: 12\n---\nquoted from the old log:\n### Observation 99: T\n",
+                                       encoding="utf-8")
+        (src / "legacy.md").write_text("### Observation 15: T\n**Status:** OPEN\n", encoding="utf-8")
+        (t / "log.md").write_text("### Observation 3: T\n**Date:** 2026-01-01\n**Status:** OPEN\n"
+                                  "**Skill:** companion-a\n\n**Issue:** x\n", encoding="utf-8")
+        r = subprocess.run([sys.executable, str(MIGRATE_SCRIPT), "--convert", str(t / "log.md"), "--out", str(t / "out"),
+                            "--known-skills", str(t / "skills"), "--id-floor-from", str(src)],
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+        fl = t / "out" / "archive" / ".id-floor"
+        floor = fl.read_text(encoding="utf-8").strip() if fl.is_file() else None
+        return r.returncode == 0 and floor == "15", f"exit {r.returncode}, floor {floor!r}"
+
+
+# scripts/add-evidence.sh, the use_evidence: insert: (name, header variant,
+# root relative?, file argument, line, exit status, stderr substring, the
+# header block expected afterwards or None for byte-identical).
+ADDEV_SCRIPT = pathlib.Path(__file__).resolve().parent / "add-evidence.sh"
+ADDEV_HEADS = {
+    "one": "use_evidence:\n  - 2026-01-01 used — first\nescalated:\n",
+    "empty": "use_evidence:\nescalated:\n",
+    "inline": "use_evidence: []\nescalated:\n",
+    "nokey": "escalated:\n",
+}
+ADDEV_FIXTURES = [
+    ("a line goes in after the existing item, before the next key", "one", False, "0001-a.md",
+     "2026-01-02 accepted — second", 0, "",
+     "use_evidence:\n  - 2026-01-01 used — first\n  - 2026-01-02 accepted — second\nescalated:\n"),
+    ("an empty block takes the first item at two spaces; a leading '- ' is accepted", "empty", False, "0001-a.md",
+     "- 2026-01-02 used — first use", 0, "", "use_evidence:\n  - 2026-01-02 used — first use\nescalated:\n"),
+    ("a key line carrying an inline list: refused, nothing written", "inline", False, "0001-a.md",
+     "2026-01-02 used — x", 1, "carries a value on its own line", None),
+    ("a line holding ': ': refused, nothing written", "one", False, "0001-a.md",
+     "2026-01-02 used — a: b", 1, "holds ': ' or ' #'", None),
+    ("a verdict outside accepted, declined, used: refused, nothing written", "one", False, "0001-a.md",
+     "2026-01-02 liked — x", 1, "must read 'YYYY-MM-DD accepted|declined|used", None),
+    ("a header with no use_evidence: key: NO use_evidence: KEY, nothing written", "nokey", False, "0001-a.md",
+     "2026-01-02 used — x", 1, "NO use_evidence: KEY", None),
+    ("an entry that does not exist: NO SUCH ENTRY, no file created", "one", False, "0009-z.md",
+     "2026-01-02 used — x", 1, "NO SUCH ENTRY", None),
+    ("a relative root: refused, exit 2, nothing written", "one", True, "0001-a.md",
+     "2026-01-02 used — x", 2, "must be an ABSOLUTE path", None),
+]
+
+
+def addev_case(variant, relative, arg, line):
+    """Run add-evidence.sh on a one-entry log; return (status, stderr, text
+    before, text after, the log's file names afterwards)."""
+    import os
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / "work space"
+        log = root / "skill-observations" / "observation-log"
+        (log / "archive").mkdir(parents=True)
+        f = log / "0001-a.md"
+        f.write_text('---\nid: 1\ntitle: "a"\nstatus: open\n' + ADDEV_HEADS[variant] + "---\nbody\n", encoding="utf-8")
+        before = f.read_text(encoding="utf-8")
+        r = subprocess.run(["bash", str(ADDEV_SCRIPT), os.path.relpath(root, tmp) if relative else str(root), arg, line],
+                           cwd=tmp, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        names = sorted(p.name for p in log.rglob("*") if p.is_file())
+        return r.returncode, r.stderr, before, f.read_text(encoding="utf-8"), names
+
+
                    "resolved", "resolution", "reference", "commands_verified", "next_actor",
                    "use_evidence", "escalated"]
 GOOD_BODY = ('---\nid: __ID__\ntitle: "t"\nstatus: open            # open | actioned\n'
@@ -3798,6 +3874,14 @@ def selftest():
                   + ("" if ok else f" (exit {rc}, lines {lines!r}, out {out!r})"))
     elif shutil.which("bash"):
         bad += 1; total += 1
+        ok, detail = load_conflict_ok()
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} skill-load script: a sync tool's conflict copies are left out of the count and the listing"
+              + ("" if ok else f" ({detail})"))
+        ok, detail = load_refusal_text_ok()
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} skill-load script: the BATCH REFUSED text names the re-run, never a load no Skill call made"
+              + ("" if ok else f" ({detail})"))
         print(f"FAIL skill-load script: {LOAD_SCRIPT.name} missing beside this file")
     if shutil.which("bash") and DIFFSTAGED_SCRIPT.is_file():
         ok = subprocess.run(["bash", "-n", str(DIFFSTAGED_SCRIPT)]).returncode == 0
@@ -3874,14 +3958,6 @@ def selftest():
             ok = rc == want_rc and want_err in err and check(before, after, out)
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} extend-observation script: {name}"
-        ok, detail = load_conflict_ok()
-        bad += not ok; total += 1
-        print(f"{'ok  ' if ok else 'FAIL'} skill-load script: a sync tool's conflict copies are left out of the count and the listing"
-              + ("" if ok else f" ({detail})"))
-        ok, detail = load_refusal_text_ok()
-        bad += not ok; total += 1
-        print(f"{'ok  ' if ok else 'FAIL'} skill-load script: the BATCH REFUSED text names the re-run, never a load no Skill call made"
-              + ("" if ok else f" ({detail})"))
                   + ("" if ok else f" (exit {rc}, err {err.strip()!r}, files {sorted(after)})"))
     elif shutil.which("bash"):
         bad += 1; total += 1
@@ -3956,6 +4032,23 @@ def check_repo_versions(repo_dir, fails):
 
     Deliberately NOT a site: `marketplace.json` has no `version` field. The
     plugin's own manifest wins where both are set, so leaving it out removes
+    if shutil.which("bash") and ADDEV_SCRIPT.is_file():
+        ok = subprocess.run(["bash", "-n", str(ADDEV_SCRIPT)]).returncode == 0
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} add-evidence script: bash -n passes")
+        for name, variant, relative, arg, line, want_rc, want_err, want_block in ADDEV_FIXTURES:
+            rc, err, before, after, names = addev_case(variant, relative, arg, line)
+            if want_block is None:
+                ok = after == before
+            else:
+                ok = after == before.replace(ADDEV_HEADS[variant], want_block)
+            ok = ok and rc == want_rc and want_err in err and names == ["0001-a.md"]
+            bad += not ok; total += 1
+            print(f"{'ok  ' if ok else 'FAIL'} add-evidence script: {name}"
+                  + ("" if ok else f" (exit {rc}, err {err.strip()!r}, files {names})"))
+    elif shutil.which("bash"):
+        bad += 1; total += 1
+        print(f"FAIL add-evidence script: {ADDEV_SCRIPT.name} missing beside this file")
     a copy rather than synchronising one.
 
     plugin.json also carries a `description` (and `keywords`) written for
