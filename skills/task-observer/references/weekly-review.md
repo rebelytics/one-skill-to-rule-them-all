@@ -466,8 +466,10 @@ follows the copy. Record the verdict in `activation-tiers.txt` beside the
 scheduled-task tier, and make it evidential: the prompt's first line
 verbatim, then each flagged line quoted, or `restates: none (read: <n>
 lines)` — a verdict that quotes nothing cannot be checked by the next
-review. Run the same read over every other scheduled prompt that invokes
-a skill.
+review. Flag too every line that asks the run to create, change or
+delete a scheduled task (`references/environments.md`, "A scheduled
+prompt drafts tasks, never creates them"). Run the same read over every
+other scheduled prompt that invokes a skill.
 
 A third read belongs to the same pass: **did each skill load carry its
 lookup in the same batch?** Where session transcripts are available, match

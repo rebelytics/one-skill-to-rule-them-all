@@ -1829,6 +1829,16 @@ is a review that happened. The marker is judged by its content, never by
 its mtime: Step 8 writes it after the date file, so a completed run's
 marker is always the newer of the two.
 
+**A scheduled prompt drafts tasks, never creates them.** A scheduled prompt
+never asks its run to create, change or delete a scheduled task or a
+reminder. A host can refuse that call in a scheduled run, because it
+needs an approval that only an attended turn can give. The prompt asks the
+run to draft each task instead (name, time and prompt) into a workspace
+file it names, for creation in the next attended turn. Before a run
+promises a follow-up in a notification, it confirms the follow-up is a
+call the run can make. For example, a run that picks a date for a re-check
+writes the re-check task's draft and says it waits for the user.
+
 **The access grant is part of the task definition, not of the path.** A
 scheduled session runs in the sandbox the scheduler creates, and that
 sandbox can deny a path that exists and is online — through every
