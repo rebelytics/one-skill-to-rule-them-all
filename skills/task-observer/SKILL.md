@@ -52,6 +52,19 @@ POSIX `sh`**: invoke the snippets with bash explicitly. Why, in both cases:
 `references/observation-log.md` ("Snippets take a spaced path and run
 under bash").
 
+**Mandatory checkpoint after every 3rd completed todo item.** After marking
+the 3rd, 6th, 9th (etc.) item complete you must **write to disk** — not
+merely ask yourself whether anything is pending. Write any pending
+observation files (created only through `scripts/new-observation.sh` where it runs: How to Log), or append a one-line `no observations` acknowledgement
+to `skill-observations/checkpoints.log`: a remembered "ask whether" is not
+enforcement. That line is valid only when, since the last checkpoint, no
+user correction came, no memory or feedback file was written and no
+workaround followed a denial or failure; otherwise it names each and why
+it does not generalise. Roughly every third completion is the rule. A todo item is an item in any plan or task-list tool
+the host provides, and a call that completes several items counts each; where
+hooks exist, a counter does the counting (`references/environments.md`, "A
+plan-tool counter"). (Exception for a priced-write workspace: `references/environments.md`.)
+
 ## Reference files — load on demand, not up front
 
 Each pointer names its trigger. These loads are mandatory: when an episode
@@ -307,20 +320,6 @@ before proposing either.
 Write the observation file **within the same turn or the next, without
 interrupting the user's task** — never batch mentally for later; the act
 of writing is the enforcement mechanism.
-
-**Mandatory checkpoint after every 3rd completed todo item.** After marking
-the 3rd, 6th, 9th (etc.) item complete you must **write to disk** — not
-merely ask yourself whether anything is pending. Write any pending
-observation files, or append a one-line `no observations` acknowledgement
-to `skill-observations/checkpoints.log`: a remembered "ask whether" is not
-enforcement. That line is valid only when, since the last checkpoint, no
-user correction came, no memory or feedback file was written and no
-workaround followed a denial or failure; otherwise it names each and why
-it does not generalise. Roughly every third completion is the rule. A todo
-item is an item in any plan or task-list tool the host provides, and a call
-that completes several items counts each; where hooks exist, a counter does
-the counting (`references/environments.md`, "A plan-tool counter"). (Exception for a
-priced-write workspace: `references/environments.md`.)
 
 **A denied or failed write is not a read-only log.** A transient failure
 (an I/O error, a timeout, a tool error with no permission decision) gets

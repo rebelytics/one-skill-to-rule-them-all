@@ -856,7 +856,7 @@ try { fs.writeFileSync(state, JSON.stringify(s)); } catch { process.exit(0); }
 if (Math.floor(s.count / 3) === Math.floor(before / 3)) process.exit(0);
 console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext:
   `task-observer checkpoint: ${s.count} plan items completed this session. Before the next item, write ` +
-  'pending observation files or append a "no observations" line to skill-observations/checkpoints.log (How to Log).' } }));
+  'pending observation files or append a "no observations" line to skill-observations/checkpoints.log (SKILL.md, Mandatory checkpoint).' } }));
 ```
 
 The input fields are the host's: `todos` is the full list a todo tool
@@ -2163,6 +2163,14 @@ skill's re-invocation nothing is written by any other route: a flush
 that fires first runs `scripts/new-observation.sh` (it needs no skill
 body in context — a slug and the workspace root are its only inputs) or
 waits for the invocation, and never copies another file's header or
+
+**The rule that must hold late in a session sits early in SKILL.md.** A
+harness can re-supply the skill after a compaction as a copy cut short
+partway through the file. So the every-3rd-completion checkpoint, with its
+write target and the helper that creates observation files, sits ahead of
+the Session Start Protocol, not under How to Log. Keep it there in any
+restructure. A rule placed past the cut is absent in exactly the turns
+that need it, and nothing reports it missing.
 counts a listing — including on the turn after a compaction, when the skill body is out of
 context. A rule that must reach a resumed context travels in a channel
 that survives the compaction: a session-start hook where the harness

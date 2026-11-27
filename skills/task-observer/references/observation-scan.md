@@ -3,7 +3,8 @@
 Load triggers: writing or changing any instrument that reads the log; a skill load where the per-skill lookup's fallback, a refusal or a first run applies; the per-skill check feels redundant after the session-start scan; the scan's guard fires or the scan is being adapted; moving the scan's print; running the scan in a bridged session, through a device shell, or where a channel caps the output; why the checkpoints are writes; adding or changing an enforcement trigger
 
 The core skill carries the scan's invocation (Session Start step 2) and
-the checkpoint rules (How to Log). This file holds the reasoning behind
+the checkpoint rules (the mandatory checkpoint ahead of the Session Start
+Protocol, the flushes under How to Log). This file holds the reasoning behind
 the scan's form, the per-skill lookup run at every skill load, the guard
 every instrument over the log carries, what a refusal means, and why the
 checkpoints are writes. The log's layout, the
