@@ -445,6 +445,16 @@ own config, never a single copy at the anchor workspace. The baseline
 includes any review-source line Step 0 quoted: when it has changed or
 gone, say so, and Step 0's offer is due again at the next review.
 
+**Check that the tiers cover the workspace's scope.** A user-scope
+workspace serves every project, and a block in one project's instruction
+file activates that project only (`references/environments.md`, "The
+activation instruction lives at the workspace's scope"). Record in the same
+file one line naming the workspace's scope and the tier that covers it, or
+`scope: user; covered by: none (block in <project> only)`. An uncovered
+scope goes in the summary's first line with the instruction to add at that
+scope, and the next review compares the line. In an aggregate run, a
+participating workspace with no `activation-tiers.txt` is a finding on that
+line too: its tiers were never recorded.
 Two more reads belong to the same pass. **Does the pre-skill tier's line
 name the batch content, or only the probe?** Where a tier read before any
 skill is in place — a preferences block, a user-level instruction file, a
@@ -500,16 +510,6 @@ re-run; each `UNPAIRED:` line it prints — items 4 and 5 not recorded — is
 a Log integrity finding too, with both counts.
 
 **Drain the observation inbox before the work queue is built.** Where this
-run can read the user-scoped store that sessions without the log park
-observations in (`references/environments.md`, "No link to the user's
-computer"), read its inbox file. For each entry, one at a time: run the
-normal write path — restatement check, sibling check, id derivation
-through the helper — and create the observation file; delete that entry
-from the store only after its file exists on disk, so an interrupted run
-loses nothing (the restatement check catches an entry whose file was
-written just before the interruption). Never delete the inbox file itself
-— deleting a memory file needs the user's explicit request — leave it
-empty. Where the store is not readable from this run, say so under Log
 **List the skills root for directories the loader skips.** A directory in
 a skills root with no `SKILL.md` is never loaded, yet a listing shows it
 beside the skills that are. Run this over each skills root the install
@@ -520,6 +520,16 @@ names one is re-routed in Step 3:
 for d in "<skills root>"/*/; do [ -f "$d/SKILL.md" ] || echo "no SKILL.md: $d"; done
 ```
 
+run can read the user-scoped store that sessions without the log park
+observations in (`references/environments.md`, "No link to the user's
+computer"), read its inbox file. For each entry, one at a time: run the
+normal write path — restatement check, sibling check, id derivation
+through the helper — and create the observation file; delete that entry
+from the store only after its file exists on disk, so an interrupted run
+loses nothing (the restatement check catches an entry whose file was
+written just before the interruption). Never delete the inbox file itself
+— deleting a memory file needs the user's explicit request — leave it
+empty. Where the store is not readable from this run, say so under Log
 integrity ("inbox not read: <reason>"): the log is then not known to be
 complete. The failure shape: a capture fallback the processing step never
 drains is a second log nobody reviews.

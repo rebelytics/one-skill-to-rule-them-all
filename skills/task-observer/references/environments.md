@@ -328,7 +328,19 @@ location; do not derive one per session, tool or project. Where Claude Code runs
 config home (`CLAUDE_CONFIG_DIR`), the default `~/.claude/…` resolves per
 profile: choose one absolute workspace path at install, pin it in every
 profile's activation text and hook, and install the activation in every
-profile that holds the skill. Where the environment provides a managed persistence directory
+profile that holds the skill.
+
+**The activation instruction lives at the workspace's scope.** A workspace
+at user scope serves every project, so its activation instruction or hook
+sits at user scope too: a user-level instruction file, or a hook in the
+user settings. A block in one project's instruction file activates sessions
+in that project only. Sessions in every other project then reach the skill
+by description match alone, which fires in some sessions and not others. A
+workspace created at, or moved to, user scope moves its activation with it.
+Session Start step 4 and the review's activation check both compare the
+instruction's scope with the workspace's (`weekly-review.md`, Step 1).
+
+Where the environment provides a managed persistence directory
 under the project identity (a memory directory it loads every session),
 that directory and the identity root are both "stable"; anchor inside the
 managed directory when one exists, otherwise on the identity root — never
@@ -1034,7 +1046,12 @@ activation is not running, whatever the log holds. The scan prints a
 `GAP:` line when that date is 7 or more days old, which helps only the
 session that is activated after the gap; the dated line is the check
 anyone can run from outside. The README carries the same diagnostic for
-users who never read this file.
+users who never read this file. The date measures recency, not coverage:
+where activation reaches some projects and not others, the line stays
+recent while most sessions elsewhere never run the protocol. Where the
+harness keeps session records, compare the tool-using sessions with the
+scan lines over the same window, split by project; the scan line names
+the working directory's last segment.
 
 **Another skill's session-start output is a false positive for
 activation.** A harness that injects a different always-on skill's
@@ -1207,6 +1224,18 @@ that filesystem.** A command addressed at the right path through the wrong
 channel cannot fail informatively, and its failure reads like an unmounted
 folder; name the channel, not the intent.
 
+**No pinned path in context before the skill load moves the probe to batch
+2.** The rule about the first batch's content is written in this skill, and
+the pinned path is carried by the activation instruction or hook. Where no
+activation instruction or hook in context carries the path, the first batch
+is composed before either the rule or the path is known. Batch 1 then holds
+the skill load, plus the host's plan call where the host requires one. The
+probe, the session-start scan and the per-skill lookup ride together in
+batch 2, once the skill text has named the anchors to try. That order is not
+a batch-split finding. Record it in the start-up lines ("probe in batch 2:
+no pinned path in context before the skill load"). The same session's
+Session Start step 4 suggestion is then due: the missing pin is the cause.
+
 **A failed probe has three readings, and the parent tells them apart.**
 The pinned path is absent on the first run of every install, because
 nothing creates `skill-observations/` before the first session does; a
@@ -1224,18 +1253,6 @@ per skill loaded in that batch, one call each, so `checkpoints.log` holds the
 `workspace: created=…` line followed by one `loaded` line per skill.
 
 **A missing mount in a bridged session is asked for in the same turn, and
-**No pinned path in context before the skill load moves the probe to batch
-2.** The rule about the first batch's content is written in this skill, and
-the pinned path is carried by the activation instruction or hook. Where no
-activation instruction or hook in context carries the path, the first batch
-is composed before either the rule or the path is known. Batch 1 then holds
-the skill load, plus the host's plan call where the host requires one. The
-probe, the session-start scan and the per-skill lookup ride together in
-batch 2, once the skill text has named the anchors to try. That order is not
-a batch-split finding. Record it in the start-up lines ("probe in batch 2:
-no pinned path in context before the skill load"). The same session's
-Session Start step 4 suggestion is then due: the missing pin is the cause.
-
 re-probed while it stays missing.** When the probe fails because the
 workspace folder is not connected, the folder-access request goes out in
 the batch right after the failed probe, before any work, with the tool's
@@ -2146,6 +2163,14 @@ or perform their one-time setup actions". The Session Start Protocol is not
 a one-time setup action: it is a per-context check, and it runs again
 after every compaction, whatever that note says. The note arrives later and
 reads as more authoritative than the activation block, so name it when you
+
+**The rule that must hold late in a session sits early in SKILL.md.** A
+harness can re-supply the skill after a compaction as a copy cut short
+partway through the file. So the every-3rd-completion checkpoint, with its
+write target and the helper that creates observation files, sits ahead of
+the Session Start Protocol, not under How to Log. Keep it there in any
+restructure. A rule placed past the cut is absent in exactly the turns
+that need it, and nothing reports it missing.
 re-invoke: the block wins for this protocol, the note for everything else.
 Where text alone has failed, a barrier is the remedy (SKILL.md, the
 second-violation rule); one shape, for a harness whose session-start event
@@ -2163,14 +2188,6 @@ skill's re-invocation nothing is written by any other route: a flush
 that fires first runs `scripts/new-observation.sh` (it needs no skill
 body in context — a slug and the workspace root are its only inputs) or
 waits for the invocation, and never copies another file's header or
-
-**The rule that must hold late in a session sits early in SKILL.md.** A
-harness can re-supply the skill after a compaction as a copy cut short
-partway through the file. So the every-3rd-completion checkpoint, with its
-write target and the helper that creates observation files, sits ahead of
-the Session Start Protocol, not under How to Log. Keep it there in any
-restructure. A rule placed past the cut is absent in exactly the turns
-that need it, and nothing reports it missing.
 counts a listing — including on the turn after a compaction, when the skill body is out of
 context. A rule that must reach a resumed context travels in a channel
 that survives the compaction: a session-start hook where the harness

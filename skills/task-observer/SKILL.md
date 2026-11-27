@@ -213,8 +213,8 @@ The `- [ ]` items under How to Log are ticked in the reply of the turn that writ
    whose output a caller owns does neither: `references/environments.md`
    ("Sessions whose output channel is owned by a caller").
 - [ ] **4. Activation.** Once per session: if no CLAUDE.md (or equivalent)
-   activation instruction for this skill exists, suggest adding one
-   (`references/environments.md`); after a scan `GAP:` line, open with the
+   activation instruction for this skill exists at the workspace's scope (one project's block does not cover a user-scope workspace), suggest adding one
+   there (`references/environments.md`); after a scan `GAP:` line, open with the
    gap and the missing instruction, plainly. A block whose stamp (its first
    line) is older than the template's (never the `metadata.version`), or absent, is
    reported in one line with how it differs, the current block offered whole — never
