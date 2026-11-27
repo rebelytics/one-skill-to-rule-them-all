@@ -2767,7 +2767,7 @@ def bincheck_case(scenario):
         installed.mkdir()
         (installed / "hello.sh").write_text('echo hello "$@"\n', encoding="utf-8")
         (bin_dir / "hello.sh").write_text('echo hello "$@"\n', encoding="utf-8")
-        if scenario == "differs":
+        if scenario in ("differs", "samediff"):
             (bin_dir / "hello.sh").write_text('echo hello "$@" # older\n', encoding="utf-8")
         if scenario == "extra":
             (bin_dir / "extra.py").write_text("print(1)\n", encoding="utf-8")
@@ -2776,12 +2776,13 @@ def bincheck_case(scenario):
         dig = pathlib.Path(tmp) / "installed.sha256"
         sums = "".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p}\n"
                        for p in sorted(installed.iterdir()))
-        head = 'version: "3.9.0"\n' if scenario in ("older", "same", "nover", "selfdig") else ""
+        head = 'version: "3.9.0"\n' if scenario in ("older", "same", "nover", "selfdig", "samediff") else ""
         if scenario == "metaolder":
             head = '  version: "3.9.0"\n'
         dig.write_text(head + sums, encoding="utf-8")
         manifest = bin_dir / "MANIFEST"
-        va = {"older": "3.8.0", "metaolder": "3.8.0", "same": "3.9.0", "flag": "3.9.0", "selfdig": "3.9.0"}.get(scenario)
+        va = {"older": "3.8.0", "metaolder": "3.8.0", "same": "3.9.0", "flag": "3.9.0", "selfdig": "3.9.0",
+              "samediff": "3.9.0"}.get(scenario)
         manifest.write_text((f"verified_against: {va}\n" if va else "") + sums, encoding="utf-8")
         if scenario == "selfdig":
             dig = manifest
@@ -2799,6 +2800,13 @@ def _py_stubs(tmp, python_works):
     `python`) is a Windows Store alias stand-in that prints the install hint
     and exits 9009; with python_works, `python` runs this interpreter."""
     import os
+    ("a differing copy: the refusal names both stale sides and the re-hash that tells them apart", "differs", 3, "",
+     "a stale .bin/ (refresh it from the installed scripts: weekly-review.md, Step 1 gate, then re-run), or an installed "
+     "copy older than .bin/ — re-hash the installed scripts into a new digests file and retry once"),
+    ("a file with no installed digest: the refusal names an installed copy older than .bin/ too", "extra", 3, "",
+     "or an installed copy older than .bin/ — re-hash"),
+    ("equal versions, differing digests: the refusal says an equal version does not mean equal files", "samediff", 3, "",
+     "(an equal version, 3.9.0, does not mean equal files)"),
     d = pathlib.Path(tmp) / "stub bin"
     d.mkdir()
     alias = '#!/bin/sh\necho "Python was not found; run without arguments to install from the Microsoft Store" >&2\nexit 9009\n'

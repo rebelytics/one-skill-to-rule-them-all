@@ -39,7 +39,9 @@
 # note on stderr and the digest compare alone decides.
 #
 # Exit status: the script's own once it runs; 3 = refused, nothing ran — a
-# .bin/ file whose digest differs from, or is missing from, the installed set,
+# .bin/ file whose digest differs from, or is missing from, the installed set
+# (either side can be stale: the message names both, and the re-hash that
+# tells them apart),
 # a script name that is not a plain file name, or a failed version gate (refresh .bin/ from the installed scripts:
 # references/weekly-review.md, Step 1 gate), or a .py with no working Python 3
 # to run it (its own line, `BIN REFUSED — no working Python 3`, never a digest
@@ -81,13 +83,18 @@ else
     for (i = 1; i <= n; i++) { p = x[i] + 0; q = y[i] + 0; if (p > q) {print 1; exit} if (p < q) {print 0; exit} } print 0}')
   [ "$newer" = 0 ] || { echo "BIN REFUSED — installed $iv is newer than .bin/MANIFEST verified_against $va: refresh .bin/ from the installed scripts (weekly-review.md, Step 1 gate), then re-run" >&2; exit 3; }
 fi
+# Either side can be the stale one: a long-lived or resumed session can hold
+# a snapshot of the install taken before .bin/ was refreshed, and two builds
+# can carry one version, so the version gate above passes. The refusal names
+# both sides, and the check that tells them apart.
+stale_inst="re-hash the installed scripts into a new digests file and retry once before refreshing .bin/ or reporting either side as stale${iv:+ (an equal version, $iv, does not mean equal files)}"
 digest_of() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1"; else shasum -a 256 "$1"; fi | cut -c1-64; }
 for f in "$bin"/*.sh "$bin"/*.py; do
   [ -e "$f" ] || continue
   n=${f##*/}
   want=$(awk -v n="$n" '{p=$2; sub(/^\*/, "", p); sub(/.*\//, "", p); if (p == n) {print $1; exit}}' "$dig")
-  [ -n "$want" ] || { echo "BIN REFUSED — $n has no digest in the installed set ($dig): a stale .bin/, or a file the install does not ship" >&2; exit 3; }
-  [ "$want" = "$(digest_of "$f")" ] || { echo "BIN REFUSED — $n differs from the installed script: refresh .bin/ from the installed scripts (weekly-review.md, Step 1 gate), then re-run" >&2; exit 3; }
+  [ -n "$want" ] || { echo "BIN REFUSED — $n has no digest in the installed set ($dig): a stale .bin/, a file the install does not ship, or an installed copy older than .bin/ — $stale_inst" >&2; exit 3; }
+  [ "$want" = "$(digest_of "$f")" ] || { echo "BIN REFUSED — $n differs from the installed script: a stale .bin/ (refresh it from the installed scripts: weekly-review.md, Step 1 gate, then re-run), or an installed copy older than .bin/ — $stale_inst" >&2; exit 3; }
 done
 case $script in
   (*.py)

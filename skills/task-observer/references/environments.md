@@ -1746,8 +1746,16 @@ is newer than the MANIFEST's `verified_against:`, or the MANIFEST lacks the
 line, so the install that outdates the copy fails closed; a digests file
 without that version line takes `--installed-version <v>` before `"<root>"`,
 and with neither the version gate is skipped with a note. The check runs at session start, before the
-first `.bin/` script — the scan included — never at the next review: on a
-refusal, or where `.bin/` holds no `bin-check.sh` (compare the installed
+first `.bin/` script — the scan included — never at the next review. A
+refusal has two readings: `.bin/` is stale, or the install this session
+sees is. A long-lived or resumed session can hold a snapshot of the install
+taken before `.bin/` was refreshed from a newer build of the same version,
+so the version gate passes and only the digests differ. So on a refusal,
+first re-hash the installed scripts into a new digests file and retry once;
+when it still refuses and the `.bin/` MANIFEST was written after this
+session began, report that the installed copy may be the older side and
+leave `.bin/` alone, since a refresh would copy the older scripts over the
+newer. On any other refusal, or where `.bin/` holds no `bin-check.sh` (compare the installed
 digests with `.bin/MANIFEST` instead), refresh `.bin/` and its MANIFEST from
 the installed scripts in the same batch, with the starter set beside it at
 `skill-observations/references/` (`weekly-review.md`, Step 1 gate, names the
@@ -2156,14 +2164,6 @@ skill the task in front of you needs. Where the CLAUDE.md structural
 trigger reaches the resumed context it re-invokes the skill; do not rely on
 it having done so.
 
-**A harness note against re-running skills does not cover the protocol.**
-A resumed context can carry a harness block that lists the skills invoked
-before the compaction, headed in words like "Do NOT re-execute these skills
-or perform their one-time setup actions". The Session Start Protocol is not
-a one-time setup action: it is a per-context check, and it runs again
-after every compaction, whatever that note says. The note arrives later and
-reads as more authoritative than the activation block, so name it when you
-
 **The rule that must hold late in a session sits early in SKILL.md.** A
 harness can re-supply the skill after a compaction as a copy cut short
 partway through the file. So the every-3rd-completion checkpoint, with its
@@ -2171,6 +2171,14 @@ write target and the helper that creates observation files, sits ahead of
 the Session Start Protocol, not under How to Log. Keep it there in any
 restructure. A rule placed past the cut is absent in exactly the turns
 that need it, and nothing reports it missing.
+
+**A harness note against re-running skills does not cover the protocol.**
+A resumed context can carry a harness block that lists the skills invoked
+before the compaction, headed in words like "Do NOT re-execute these skills
+or perform their one-time setup actions". The Session Start Protocol is not
+a one-time setup action: it is a per-context check, and it runs again
+after every compaction, whatever that note says. The note arrives later and
+reads as more authoritative than the activation block, so name it when you
 re-invoke: the block wins for this protocol, the note for everything else.
 Where text alone has failed, a barrier is the remedy (SKILL.md, the
 second-violation rule); one shape, for a harness whose session-start event
