@@ -159,7 +159,7 @@
 
 set -u
 
-VERSION="3.13.0"   # equal to the skill's frontmatter metadata.version; the end line names it
+VERSION="3.14.0"   # equal to the skill's frontmatter metadata.version; the end line names it
 
 entries=   # --entries-to target; empty = the entries print to stdout
 skill_dir= # --skill-dir: the installed skill directory; empty = the one this script sits in
