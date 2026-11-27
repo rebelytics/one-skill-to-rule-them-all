@@ -440,6 +440,10 @@ def id_floor_from(paths):
     for p in paths:
         for root, _, files in os.walk(p):
             for f in files:
+                mm = re.match(r"^(\d+)-", f)
+                if mm:
+                    hi = max(hi, int(mm.group(1)))
+                    continue
                 if f.endswith(".md"):
                     try:
                         with open(os.path.join(root, f), encoding="utf-8") as fh:
@@ -449,9 +453,6 @@ def id_floor_from(paths):
                                     hi = max(hi, int(m.group(1)))
                     except OSError:
                         pass
-                mm = re.match(r"^(\d+)-", f)
-                if mm:
-                    hi = max(hi, int(mm.group(1)))
     return hi
 
 

@@ -4025,13 +4025,13 @@ def check_repo_versions(repo_dir, fails):
 
     `.claude-plugin/plugin.json` is canonical — it is the one the installer
     reads, and it is the one that ships inside the skill bundle. Every other
+        ok, detail = migrate_floor_ok()
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} migrate-log: --id-floor-from takes a numbered file's prefix only and a legacy log's headings (floor 15)"
+              + ("" if ok else f" ({detail})"))
     site is a copy, and a copy that drifts is worse than no copy: the
     installer's update check is keyed on the version, so a manifest left at
     the old number means `/plugin update` reports "already at the latest
-    version" while serving stale files.
-
-    Deliberately NOT a site: `marketplace.json` has no `version` field. The
-    plugin's own manifest wins where both are set, so leaving it out removes
     if shutil.which("bash") and ADDEV_SCRIPT.is_file():
         ok = subprocess.run(["bash", "-n", str(ADDEV_SCRIPT)]).returncode == 0
         bad += not ok; total += 1
@@ -4049,6 +4049,10 @@ def check_repo_versions(repo_dir, fails):
     elif shutil.which("bash"):
         bad += 1; total += 1
         print(f"FAIL add-evidence script: {ADDEV_SCRIPT.name} missing beside this file")
+    version" while serving stale files.
+
+    Deliberately NOT a site: `marketplace.json` has no `version` field. The
+    plugin's own manifest wins where both are set, so leaving it out removes
     a copy rather than synchronising one.
 
     plugin.json also carries a `description` (and `keywords`) written for
