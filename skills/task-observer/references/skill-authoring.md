@@ -935,7 +935,7 @@ record how to obtain it.
    an unquoted `: ` inside the value turns the rest of the line into a
    nested key and the whole block stops parsing, and an unquoted ` #` is
    worse: YAML starts a comment there, the block still parses, and the
-   value silently ends at the space (`see #146` and `{Author, 2021 #123}`
+   value silently ends at the space (`see #N` and `{Author, 2021 #N}`
    are cut; `page#section` is not, because the comment needs the space). The
    validator reporting "`name` missing" on a frontmatter that visibly has
    a `name:` line is the signature of an unparseable block, not of a
