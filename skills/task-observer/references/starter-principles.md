@@ -2,7 +2,7 @@
 
 Load triggers: the starter-set reconciliation is due (marker absent, an `offered:` line, or older than this file's set)
 
-Starter set version: 5
+Starter set version: 6
 
 This file is NOT the adopter's principles file. It is an optional seed:
 a curated set of generic methodology principles, accumulated over a long
@@ -199,6 +199,7 @@ prevent.
 - 27. Every skill ships as a bundle and is structured for progressive disclosure, regardless of size
 - 28. Absence is never established by a summarising instrument
 - 29. A skill holds method; dated values live in a workspace file the skill names
+- 30. Adapted content pins its source and ships a diff check
 
 ---
 
@@ -573,3 +574,16 @@ inside a skill goes stale silently — the skill is loaded as if it were
 current, changing a number takes a skill review, and copies held by two
 skills diverge. A value in a workspace file is updated without a review
 and lives in one place.
+
+### 30. Adapted content pins its source and ships a diff check
+**Applies to:** every skill that adapts text (prompts, rules, procedures)
+from an external source that keeps changing; installed-whole skills are
+updated by their installer instead
+**Requirement:** Record where adapted content came from in a form a script
+can check: the source, the exact version taken (a pinned commit, or a URL
+with its retrieval date), the paths watched, and a map from each upstream
+part to the place in the skill that holds it. "What changed since" is one
+command. The pin moves every time the diff is reviewed, whether or not
+anything was taken, or the same diff is reviewed again next time. A skill
+with nothing to pull says so (`none`), so absence of the record is never
+ambiguous.
