@@ -114,10 +114,13 @@ names on a fresh install or a repaired one. Creation is otherwise the one
 session-start action nothing records: when a review finds the principles
 file missing, a step 1 that never ran and a file deleted later look the
 same, and only the trace tells them apart.
-Other files created at session start on the same terms, for a test plan
-rather than this command: `starter-principles-reviewed.txt` (starter-set
-reconciliation) and `skill-families.md` (created when the first family
-is named).
+**Absent by design is not a skipped step.** The command neither creates
+nor asserts the files other steps write when they first apply:
+`starter-principles-reviewed.txt` once the starter offer is answered (and
+`starter-principles-deferred.md` after a partial import), `skill-families.md`
+once a first family is named, `skill-updates/` and its `PENDING.md` once a
+review stages something. `created=none` with them missing is a healthy
+install; never report their absence as setup not run.
 
 **A read-only or permission error is one of two cases — tell them apart
 before naming a remedy.** When this command fails with `Read-only file
@@ -211,26 +214,19 @@ reports a clean count. The failure produces a smaller number, never an error, wh
 why a near-miss name is flagged rather than skipped wherever a check runs.
 
 **Appending a `use_evidence:` line is one insert inside the header, never
-a rewrite of the file.** The line goes before the header's closing `---`,
-under an existing `use_evidence:` key or a new one; the verdict and the
-context travel as arguments, so no shell quoting touches them, and the
-command refuses a context the header cannot carry:
+a rewrite of the file.** The line goes under the header's `use_evidence:`
+key, after the items already there — never before the closing `---`, where
+it lands under the last key (`escalated:`) and reads as an escalation.
+Where scripts run, `scripts/add-evidence.sh` makes the insert: it refuses a
+header with no `use_evidence:` key, a line holding `: ` or ` #`, and any
+change beyond the one line, writes through a temp file and `mv`, and
+re-reads the result:
 
 ```bash
-python3 - "<observation file>" accepted "<short context, no colon-space>" <<'PY'   # accepted | declined | used
-import sys, datetime, pathlib
-p, v, c = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3]
-assert v in ("accepted", "declined", "used") and ": " not in c and " #" not in c, "verdict or context not allowed"
-t = p.read_text(encoding="utf-8").split("\n"); e = t.index("---", 1)
-k = next((i for i in range(1, e) if t[i].startswith("use_evidence:")), None)
-if k is None: t.insert(e, "use_evidence:"); k = e; e += 1
-j = k + 1
-while j < e and t[j].startswith("  - "): j += 1
-t.insert(j, f"  - {datetime.date.today():%Y-%m-%d} {v} — {c}"); p.write_text("\n".join(t), encoding="utf-8")
-PY
+bash "<skill directory>/scripts/add-evidence.sh" "[ABSOLUTE PATH]" 0042-slug.md "$(date +%F) accepted — <short context, no colon-space>"   # accepted | declined | used
 ```
 
-Where no Python runs, the editing tool inserts the same line at the same
+Where no script runs, the editing tool inserts the same line at the same
 place; either way the file is re-read first, as for any status edit.
 
 **An entry is UTF-8 without a byte order mark.** Every header reader tests
@@ -727,8 +723,8 @@ a remembered path: it finds the entry by id and refuses an archived or resolved 
 **Changing fields** (core, "Changing an existing observation"): `scripts/set-fields.sh`
 refuses the whole plan unless every file changes only on the named
 lines, and `actioned` unless `resolution:` gives each `skill:` member a
-disposition. A `use_evidence:` line is appended inside the header, before
-its closing `---`, by one insert command, never a rewrite of the file (the
+disposition. A `use_evidence:` line is appended under the header's
+`use_evidence:` key by `scripts/add-evidence.sh`, never a rewrite of the file (the
 command: "Frontmatter fields", above). A
 decision appended to the body sets `next_actor:` and prefixes `title:`
 with `DECIDED:` in the same edit, so a title-only scan stops showing a

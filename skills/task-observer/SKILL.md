@@ -5,7 +5,7 @@ license: CC-BY-4.0
 metadata:
   author: Eoghan Henn and contributors
   source: https://github.com/rebelytics/one-skill-to-rule-them-all
-  version: "3.12.2"
+  version: "3.13.0"
   core_max_lines: "600"
 ---
 
@@ -100,8 +100,8 @@ skill" (some upload paths keep only `SKILL.md`); its episodes do not run.
 
 The seven items below are recorded in `skill-observations/session-starts.log`,
 a file the user can read: the scan writes items 1, 2, 3, 6 and 7 with their outcomes,
-and you append one line for items 4–5 (`<date> <time> session start 4-5:
-activation=<outcome> concurrency=<outcome>`); an item not run is logged as such, never assumed.
+and you append one line for items 4–5 (`<date> <time> [<label>] session start 4-5:
+activation=<outcome> concurrency=<outcome>`, the label the scan's line carries); an item not run is logged as such, never assumed.
 The first reply reports an item that failed or needs the user, in one line before the answer; the record holds the rest.
 The `- [ ]` items under How to Log are ticked in the reply of the turn that writes.
 
@@ -136,7 +136,7 @@ The `- [ ]` items under How to Log are ticked in the reply of the turn that writ
    whenever `skill-observations/starter-principles-reviewed.txt` is absent
    or holds a starter-set version older than the one in
    `references/starter-principles.md`: offered only in a review or a session
-   the user opened for skill work, never pre-populated silently (that file,
+   the user opened for skill work, as its own question — never bundled with the review offer or appended to a task report — never pre-populated silently (that file,
    "Reconciliation"). The step 2 scan prints a `DUE:` line for either duty still owed. Name the loaded skill's
    `metadata.version` (a top-level `version:` on an older install) in the start-up lines — read from the file, never
    fetched — and list the skill's own directory with its `references/` and
@@ -170,8 +170,8 @@ The `- [ ]` items under How to Log are ticked in the reply of the turn that writ
    ```
 
    `scripts/session-start-scan.sh` is the scan (in `<skill directory>`); review
-   it there, and read its output whole — never through `tail`, `head` or `grep`
-   (where its findings appear: `references/observation-scan.md`, "Scanning cheaply").
+   it there. Never cut its output with `tail`, `head` or `grep`: read it whole; a re-run
+   needing only findings, counts and entries uses `--brief` (`references/observation-scan.md`, "Scanning cheaply").
    In a bridged session, through a device shell, or wherever a channel caps the
    output, load `references/observation-scan.md` ("The scan in a bridged session or
    a capped channel") first: never a per-skill grep instead, `.bin/` checked against the

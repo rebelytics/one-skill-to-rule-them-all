@@ -145,6 +145,9 @@ it can be the Microsoft Store alias), use `py -3`.
    replaced by `__ID__` first — the id is re-issued from the directory's
    counter, never carried over, and the legacy number goes into the body
    as "migrated from log.md #N" so a citation of it can still be traced.
+   The helper refuses an empty `siblings_checked:`, so do each open entry's
+   sibling check first and set it through the step 4 overrides, never by an
+   edit loop over the converted files.
 
 6. **Verify twice: source fidelity, then target conformance.** The
    report's file count must equal the number of `### Observation` headers
@@ -166,20 +169,25 @@ it can be the Microsoft Store alias), use `py -3`.
    review's sibling backfill will add it. Enumerate the fields from the
    target's own definition (SKILL.md, File format), never from the mapping
    table above — a field absent from the table is indistinguishable from
-   one absent from the schema:
+   one absent from the schema — and count every field the format always
+   carries, not only the ones the conversion was expected to change:
 
    ```bash
    o="skill-observations/observation-log"
    n=$(find "$o" -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')
-   for field in status siblings_checked; do
+   for field in id title status type skill siblings_checked date; do
      have=$(find "$o" -maxdepth 1 -name '*.md' -exec grep -l "^$field:" {} + | wc -l | tr -d ' ')
      echo "$field: $have/$n"
    done
    ```
 
    A count below `n` for `siblings_checked` is expected and is the state
-   the first review clears; a count below `n` for `status` is a converter
-   defect — report it.
+   the first review clears; below `n` for `type` or `date`, check the
+   report's flags for legacy entries that never had one; below `n` for any
+   other field is a converter defect — report it. Re-run the count after
+   any later bulk edit to the converted files: an edit that inserts one
+   field can damage the lines around it, and a count of that field alone
+   cannot see it.
 7. **Move legacy archives under the new layout** so one directory holds
    the whole history, and retire the old file so nothing scans it:
 

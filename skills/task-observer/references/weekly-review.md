@@ -79,12 +79,10 @@ workspace denied by the session sandbox; grant [ABSOLUTE PATH] in the
 task definition" (`references/environments.md`, "The access grant is
 part of the task definition") — because an offline note for a policy
 denial sends the reader to wait for a machine that is already on; (3)
-when setting up a scheduled
-review, bake this policy into the scheduled task's prompt, so fresh
+when setting up a scheduled review, bake this policy into the scheduled task's prompt, so fresh
 sessions inherit it without rediscovery. A permission failure mid-run —
 after the probe has succeeded — is handled the same way: skip the gated
-step, record it as a manual
-follow-up, and still emit the final report — a blocked step N must never
+step, record it as a manual follow-up, and still emit the final report — a blocked step N must never
 cost the report for steps 1 through N-1. None of this covers a run that
 stops before Step 1: a session that goes idle after its first call
 writes no timestamp, stages nothing, emits no summary, and the scheduler
@@ -230,16 +228,14 @@ tool that generates it, if one does. Where the premise is genuinely
 remote (does the section still exist at upstream HEAD, is the PR still
 open), the review must not depend on reaching the network (the opt-in
 version check at Step 2 and a named feedback tracker at Step 1 are the
-fetches it may start): present the
-option with that half named as unverified, and leave the remote check to
+fetches it may start): present the option with that half named as unverified, and leave the remote check to
 the feedback pre-flight in `references/skill-authoring.md`, which runs
 once the user has chosen to contribute. Forked files need the check at
 two levels: file-level provenance ("this skill is foreign-maintained")
 and section-level provenance ("the section this observation extends is a
 local addition") are separate statements, both answerable from the local
 copy, and routing to upstream-vs-fork depends on the second, asked per
-edit at the Step 5 presence check.
-A declined or dismissed approval prompt is NOT approval — and it is not a
+edit at the Step 5 presence check. A declined or dismissed approval prompt is NOT approval — and it is not a
 request to skip the asking and proceed either. Treat it as a stop signal
 for the gated actions: halt, then ask in plain chat text what the user
 wants. Only an explicit go (blanket or per-item) authorizes applying;
@@ -313,8 +309,9 @@ already made returns their answer as a question and costs a cycle in
 which the skill stays knowingly wrong.
 
 **The published case is applied too, with its ceremony attached.** A
-restructure of a published skill needs a release branch, a test plan and
-a version bump, which an unattended run cannot decide alone — but
+restructure of a published skill needs a version bump and, for a skill
+your publishing process lists as using test branches, a release branch
+and a test plan (any other skill ships it on `main`), which an unattended run cannot decide alone — but
 "escalate without applying" is the wrong shape for that protection,
 because staging is not publishing: nothing reaches the repository until
 your publishing step, which already holds on `under_test` and on its
@@ -324,7 +321,7 @@ published skill IS applied by the scheduled run, as a staged copy that
 diff in the summary with the explicit line "published skill — install and
 the release are your call"; (c) carries a manifest entry that names it as
 a restructure, so your publishing step routes it to a release branch with a
-test plan under the standing rule for branches (Step 5); and (d) leaves
+test plan under the standing rule for branches (Step 5) where it lists the skill for them; and (d) leaves
 the observation `open`, with the staged path in a `reference:` note, so
 the next review's presence check closes it once the copy is installed
 rather than re-applying it. What stays escalated is the decision the run
@@ -345,19 +342,20 @@ a body citing the id as settled): a hold whose release condition a later
 decision met is a settled question, never an open one.
 
 **An escalation is recorded on the entry, and silence never decides it.**
-An entry the user has been asked about and has not answered looks unseen
-from its header, and refills every "N oldest" slice. So: (1) the first ask
-appends `- YYYY-MM-DD <the one-line question>` to the entry's `escalated:`
-field; a bounded slice skips an entry asked and unanswered, and the record
-lists such entries once, under "Waiting for the user"; (2) one review later
-the question comes back as a binary choice with the recommendation stated
-— to make answering cheap, never as a default; (3) still unanswered, the
-entry is parked with `parked_until: "the user answers: <the one-line
-question>"`: it leaves the work queue, its substance stays undecided and
-the question stays on the parked list. Nothing is ever applied by silence.
-(4) Before any re-ask, search where answers land — decision records,
-review records, observation bodies — and close a question already
-answered, citing where.
+An entry asked about and unanswered looks unseen from its header and
+refills every "N oldest" slice. So: (1) the first ask appends
+`- YYYY-MM-DD <the one-line question>` to the entry's `escalated:` field
+in the same act that lists it; a bounded slice skips an entry asked and
+unanswered, and the record's "Waiting for the user" list is derived from
+those fields, never carried by hand (a carried entry with no item gets
+its first ask written now, dated by the record that first carried it);
+(2) one review later the question returns as a binary choice with the
+recommendation stated — cheap to answer, never a default; (3) still
+unanswered, the entry is parked with `parked_until: "the user answers:
+<the one-line question>"`: it leaves the work queue undecided and stays
+on the parked list. Nothing is ever applied by silence. (4) Before any
+re-ask, search where answers land (decision and review records,
+observation bodies) and close a question already answered, citing where.
 
 Escalate one decision per cluster (Step 3).
 
@@ -480,8 +478,7 @@ Skill invocation in the same batch, and an invocation with no `loaded`
 line from its batch. A `loaded` line followed by its `NOT loaded` line
 (`--correct`) is not a finding; a refused or failed Skill call in the
 transcript with no such line after it is. Without transcripts, compare
-each session's `loaded`
-lines against the skills that session reports loading, and flag a skill
+each session's `loaded` lines against the skills that session reports loading, and flag a skill
 with no line. A batch split recorded in the start-up lines as a deferred
 probe tool (`references/environments.md`, "A deferred probe tool moves the
 probe to batch 2") is not a finding. The failure shape: a late lookup
@@ -492,9 +489,12 @@ task-observer` line in `checkpoints.log` has a `session start:` line of the
 same day, and a load without one — the protocol loaded but not
 run — is a Log integrity finding. Each `session start:` line, which the
 scan writes, has the session's own `session start 4-5:` line (activation
-and concurrency) beside it; parallel sessions interleave in this file, so
-count per day: fewer 4-5 lines than scan lines — items 4 and 5 not
-recorded — is a Log integrity finding too, with both counts.
+and concurrency) beside it. Parallel sessions interleave in this file and
+a re-run repeats a scan line, so never count by hand: run `bash
+scripts/session-start-scan.sh --pairing <last review date> <root>`, which
+pairs the lines per day and session label and folds a quick same-label
+re-run; each `UNPAIRED:` line it prints — items 4 and 5 not recorded — is
+a Log integrity finding too, with both counts.
 
 **Drain the observation inbox before the work queue is built.** Where this
 run can read the user-scoped store that sessions without the log park
@@ -766,7 +766,13 @@ staging directories without a manifest entry: …". After the four-way
 classification below, mark in that line each reported directory that
 holds only copies classified (a) or (b) and their `.skill` packages —
 the installed copies keep-two retains — as `retained`, so the unmarked
-names are the ones nothing explains. Enumerate the listing rather than
+names are the ones nothing explains. **An unmarked directory dated on or
+after `last-review-date.txt` is an interrupted run** (a review that staged
+and ended before its bookkeeping): before Step 3 builds the queue,
+presence-check the open observations of each skill it holds against that
+copy, report the ones it carries as "already staged in <path>, not
+re-applied", and seed any further staging of that skill from that copy,
+never from live. Enumerate the listing rather than
 matching a date-shaped name: discriminated anchors (`<date>-<slug>`,
 `<date>.2`) and hand-over material are valid names, and an index shows
 only what someone entered. Then the same listing for every previous root
@@ -821,6 +827,15 @@ entry stays, and the copy is never (a), whatever the live diff says.
   merge, assert that every heading from BOTH inputs is present in the
   result and none is duplicated; the merged copy then takes (c)'s
   bookkeeping (surface it, list its observations, count its reviews).
+
+**A `{skill}-extras` companion is reported as a pair.** Its delivery is
+two writes in two files, the copy and the routing entry in the
+instruction file, and the compare sees only the first. For each staged
+or installed `{skill}-extras`, grep the activation file(s) for its name
+and report copy present or absent × routing entry present or absent;
+"installed, not routed" is listed first, since from every other angle it
+looks like success. An un-routed companion's second-review decision
+counts reviews from the review that staged it, as state (c) does.
 
 **A compare that did not run is not a fifth state, it is no state.** An
 `ERROR` line from `diff-staged.sh` — a missing path, a file where a
@@ -1002,8 +1017,7 @@ a missing entry, but catching it is a finding, not a repair: a
 release-branch staging is cut together with its manifest entry, its hold
 and its test plan (Step 5, standing rule), and the entry's absence means the
 cutting act skipped its writes, so the hold and the test plan are suspect
-too. Name the
-directory, name the missing writes, and treat the copy as state (c); if
+too. Name the directory, name the missing writes, and treat the copy as state (c); if
 the run reconstructs the entry so the rest of the gate can proceed, the
 first line says so and says what was written — a repair the summary does
 not mention is the silent reconstruction this rule forbids.
@@ -1020,7 +1034,13 @@ line carrying the installed frontmatter version (`metadata.version`, or a
 top-level `version:` on an older install), the date, and one
 `sha256  <file>` line per installed script, none omitted — no prose that
 reads as a verification result, since `bin-check.sh` refuses a copy whose
-`verified_against:` is older than the installed version. Verify by
+`verified_against:` is older than the installed version. The same refresh
+copies the installed `references/starter-principles.md` to
+`skill-observations/references/starter-principles.md`, where a `.bin/` scan
+looks for the shipped set (a device shell cannot reach `--skill-dir`), with
+its own line `sha256  ../references/starter-principles.md` in the MANIFEST;
+`bin-check.sh` digests only the files in `.bin/`, so that line never
+refuses a run. Verify by
 re-hashing `.bin/` against the manifest before the summary names it. The
 manifest is the contract sessions check; a `.bin/` without one is not
 used, and a stale one fails its own digest check in every bridged session.
@@ -1031,7 +1051,11 @@ rest, is the command that makes the comparison and refuses to run a
 mismatched copy (`references/environments.md`, "Where the scripts are not
 on the device").
 
-Also read all active cross-cutting principles. If there are no OPEN
+Also read all active cross-cutting principles, and
+`skill-observations/starter-principles-deferred.md` where it exists:
+re-check each deferred entry's condition against the work observed since
+and re-offer, one line each, an entry whose condition has fired
+(`starter-principles.md`, "Reconciliation"). If there are no OPEN
 observations and no outstanding principles: report "no open observations
 or outstanding principles", update the timestamp, and stop.
 
@@ -1058,7 +1082,9 @@ holding only the delta **plus** a routing entry in the user's instruction
 file (state plainly that without the routing entry nothing ever loads the
 companion — a fix routed somewhere nothing loads is not a fix); or routing
 the content straight into the instruction file, which loads
-unconditionally. For (b) with a declared upstream, the default route is
+unconditionally. The offer states each route's writes — the companion
+two (its copy and the routing entry), the instruction file one — and
+prefers the instruction file for a delta small enough to sit there. For (b) with a declared upstream, the default route is
 an upstream issue or PR per the source and feedback line — the feedback
 pre-flight in `references/skill-authoring.md` runs at Step 5 — with a
 `{skill}-extras` companion only for a delta specific to this install
@@ -1547,29 +1573,35 @@ the summary carries.
    summary so the maintainer sees what changed; anything of the same class
    the maintainer alone would notice (a "recommended by" list, a
    supported-platform list) is checked in the same pass.
-4. **Classify every change, and stage twice.** Each change going into
-   this week's version — community item or observation — is
+4. **Classify every change, and stage twice — for a test-branch skill.**
+   This pass, and the release branch it feeds, apply only to a skill your
+   publishing process lists as using test branches (skill-publishing: the
+   configuration's `test_branch_skills:` line; none when it is absent);
+   every other published skill is staged once, for `main`,
+   with its version bump, a restructure included. For a listed skill, each
+   change going into this week's version — community item or observation — is
    **safe-to-main** (doc-level fixes, bug fixes with a clear spec,
    changes consistent with the current rules) or **needs-test**
    (behavioural changes to snippets, procedures or activation, and
    anything that changes what an agent does at session start). That
-   produces two artefacts, not one: the **main staging** (safe changes
-   only) and the **release-branch staging** (safe plus needs-test),
-   named `release/vX.Y.Z` for the version the branch will become, and it
-   is the release-branch staging that is installed locally for the test
-   week. Both are staged copies under `skill-updates/` with their own
-   manifest entries; neither is pushed by the review. For a skill under
-   test the review also writes each round's per-file diff against the
-   branch line beside the staging — `<anchor>/<skill>.round.diff`, built
-   with `diff -ruN` (never `-ru`: without `-N` a file added in the round
-   is an `Only in` line no label can carry, so a new script silently
-   leaves the classified diff), every
+   produces two artefacts: the **main staging** (safe changes only) and
+   the **release-branch staging** (safe plus needs-test, named
+   `release/vX.Y.Z` for the version the branch will become), the one
+   installed for the test week; both are staged copies under
+   `skill-updates/` with their own manifest entries, and neither is
+   pushed by the review. **A skill under test is no reason to hold a
+   change:** safe ones go to the main staging, needs-test ones onto the
+   current branch, or onto the next when its merge review is too close
+   for a test period; only an item that needs a user decision waits. For
+   a skill under test the review also writes each round's per-file diff
+   against the branch line beside the staging —
+   `<anchor>/<skill>.round.diff`, built with `diff -ruN` (with `-N`, or a
+   file the round adds is an `Only in` line no label can carry), every
    hunk labelled with its class and its observation id — and the
    PUBLISHING session commits it, one commit per classified change; the
-   review stays clone-free. Where a hunk would mix two observations'
-   lines, write the file so each observation's lines sit in their own
-   hunk (a context-breaking blank line, or the order of the edits) rather
-   than labelling the hunk by its larger half.
+   review stays clone-free. A hunk that would mix two observations' lines
+   is split by the file's layout (a context-breaking blank line, or the
+   edit order), never labelled by its larger half.
 
    The label has one form, the line the merge parses: before every `@@`
    hunk header, `### [<class>] <ids> — <note>`, class `safe-to-main` or
@@ -1578,6 +1610,18 @@ the summary carries.
    safe hunk whose context only a needs-test hunk creates says so in its
    note (`depends-on: <that hunk's ids>`), and a restructure's pointer
    re-targets take the restructure's class, so the group travels together.
+
+   **No branch round while a public promise has no carrier.** Before
+   staging a round for the branch line, or cutting the branch, take from
+   the publishing process's hand-over (its triage table, its drafted and
+   posted replies, read as data) every repo item whose maintainer reply
+   promises the next review, test line or release, and find its carrier:
+   `grep -rlE -- '#<n>([^0-9]|$)' observation-log/ observation-log/archive/`
+   must name an observation whose `skill:` lists this skill. An item with
+   no hit stops the round until its carrier is written (How to Log) and
+   queued; the round's summary lists each promised item beside its carrier
+   id. A reply is not a queue: promised items with no carrier once missed
+   the very line their replies named.
 
 **Standing rule — the review that changes a published skill bumps its
 version.** When the staged skill is published, or built and awaiting its
@@ -1670,8 +1714,7 @@ below is defined against a staged copy of the *live* file, so it is
 structurally blind to a draft that never went live, and that is the work
 most at risk of being lost: a skill authored "from scratch" while an
 uninstalled draft of the same name already carries rules the new file
-lacks. A hit in state (c) of the
-reconciliation gate is the base for this staging, as the gate says; a
+lacks. A hit in state (c) of the reconciliation gate is the base for this staging, as the gate says; a
 hit in state (d) is merged onto live first, and the merge is the base.
 
 Choose the anchor first, by claiming it. Where `[today]/[skill-name]` holds
@@ -1684,7 +1727,11 @@ rounds that each pick the first free name by inspection both take it. One
 claim per round, whatever it stages; a round that stages no skill leaves its
 `_target-files/` or a one-line pointer in the anchor, so the gate's liveness
 read finds a file under it. The guard line still refuses to seed over an
-existing skill directory.
+existing skill directory. A published skill's round that classified its
+changes (pass 4) seeds both copies from live in this step, `<skill>` for the
+branch and `<skill>.main` for main, so the main staging cannot be skipped
+(the validator's name check reads the directory: validate and pack
+`<skill>.main` from a copy named `<skill>`).
 
 ```bash
 u="[workspace folder]/skill-updates"; a=; i=1
@@ -1928,7 +1975,14 @@ well as returned, so a hand-back lost with an interrupted conversation is
 recovered by reading the file, not by resuming the agent. Where the
 harness refuses a subagent's report file, the parent writes each hand-back
 to the scratch area on receipt, one write per report, before it reads the
-next. After an interruption, re-list the staged tree against the
+next. **The call that records a return also writes its checkpoint line**
+(the deliverable-event flush, SKILL.md: a flush the reviewer must notice
+fails at fan-out scale): the one command that saves the report, or checks
+the file the delegate wrote, appends in the same call
+`<date> <time> [<label>] hand-back <cluster>: no observations` to
+`checkpoints.log`, or the ids of the observations written for the
+friction it reports (`cp … && printf … >> checkpoints.log`). A return
+recorded by a call without that line is not recorded. After an interruption, re-list the staged tree against the
 pre-dispatch snapshot
 before dispatching anything again, and treat an unexplained change as a
 prior run of that cluster, never as clean seed. Where the harness offers
@@ -2113,6 +2167,7 @@ it: **"keep-two (as of HH:MM): N copies pruned, N kept as uninstalled, N
 pending a grant"** — the keep-two prune (Delivery) is a fixed step of every review,
 over the whole `skill-updates/` tree rather than only this round's skills,
 and a review that skipped it cannot write the line. Both are measured:
+a published skill's classified round counts two staged (main and branch),
 staged from the bundles this run packed, presented from the delivered-file
 list the presentation call returns (where the environment has no such
 call, from the staged paths listed in chat; on the skill-card route, a
@@ -2165,8 +2220,8 @@ skills", pass 1); or "no comparison"]
 whose condition has been met and was returned to the queue this review]
 
 ### Waiting for the user
-[one line each: #id — the one-line question — asked [dates] (Approval
-policy, "An escalation is recorded on the entry"); or "none"]
+[one line each, from the entries' `escalated:` fields: #id — the question
+— asked [dates] (Approval policy, "An escalation is recorded"); or "none"]
 
 ### Arrived during this run
 [from the Step 6 re-scan: #id — title — folded into [skill] / left OPEN
@@ -2582,7 +2637,7 @@ version bump for published skills (the new version, or the intended
 bump where the version lives only in the repo's manifest) — and, where
 the staging is a user-decided restructure of a published skill (Approval
 policy), the word `restructure`, so your publishing step routes it to a
-release branch with a test plan rather than to `main`. The manifest is
+release branch with a test plan rather than to `main` where it lists the skill for test branches. The manifest is
 what the Session Start Protocol reads to announce "N staged updates
 awaiting review", so staged work is never quietly forgotten; the
 per-change summary is what lets the user review a full-file diff

@@ -62,7 +62,9 @@
 #      skill name with characters outside [A-Za-z0-9:._/-], an unknown
 #      option, or --correct with no reason, or an argument after --query-only,
 #      or more than one skill name (a second name, or a list in one
-#      argument): one call per Skill invocation, in that invocation's batch
+#      argument): one call per Skill invocation, in that invocation's batch;
+#      or BATCH REFUSED — a second `loaded` write from the same parent shell
+#      within 10 seconds (a loop or chain of calls, below); nothing written
 #
 # Why a script: a rule about what a tool batch must CONTAIN cannot be
 # enforced by prose inside the thing the batch loads — the agent reads the
@@ -70,9 +72,18 @@
 # and the checkpoint line, emitted beside the Skill invocation, leaves a
 # record a review can match against the invocation afterwards. The script
 # takes one name and refuses a second, so a list of skills about to be
-# loaded cannot be recorded in one call; a shell loop of single-name calls
-# looks the same from inside, so the one-call-per-invocation rule still
-# rests on the caller.
+# loaded cannot be recorded in one call. A shell loop of single-name calls
+# passes that check, so the barrier detects the batch instead: calls made
+# from one tool call share their parent shell, separate tool calls do not.
+# Each `loaded` write leaves a key for the parent shell and the time in
+# skill-observations/.skill-load-last, and a second write from the same
+# parent shell within 10 seconds is refused. The key is the parent's pid,
+# its start time and $HOME folded by cksum, never the pid alone: a host
+# that runs every call in a fresh sandbox gives each call's shell the same
+# pid (2 under bwrap), and two sessions on one workspace have different
+# homes. A loop inside one call shares all three. Only a parent that is a shell
+# counts — a host that execs the command from its own process gives every
+# call one parent — and without `ps` the check is skipped.
 #
 # Why no grep | xargs: file names are handed from find to awk with
 # `-exec … {} +`, never through a pipe, so a spaced path cannot split. (The
@@ -150,8 +161,30 @@ if [ ! -d "$d" ]; then
   if [ -e "$root/skill-observations/log.md" ]; then
     echo "LEGACY log.md under '$root/skill-observations' and no observation-log/ — run the migration (references/migration.md) first" >&2; exit 2
   fi
-  echo "NOTE: $name: no observation log yet at '$d' — a first run, before Session Start step 1 creates it; not 0 open. Re-run this lookup once for each skill loaded in this batch after the Workspace creation command"
+  echo "NOTE: $name: no observation log yet at '$d' — a first run, before Session Start step 1 creates it; not 0 open. Re-run this lookup once for each skill loaded in this batch after the Workspace creation command, one call per skill"
   exit 0
+fi
+
+# --- the batch barrier: a second `loaded` write from the same shell ---------
+last="$root/skill-observations/.skill-load-last"
+now=$(date '+%s')
+pshell=
+if [ -z "$mode" ] && command -v ps >/dev/null 2>&1; then
+  pc=$(ps -o comm= -p "$PPID" 2>/dev/null | tr -d ' '); pc=${pc##*/}; pc=${pc#-}
+  case "$pc" in (bash|sh|zsh|dash|ksh) pshell=$PPID ;; esac
+fi
+pkey=
+if [ -n "$pshell" ]; then
+  pst=$(ps -o lstart= -p "$PPID" 2>/dev/null)
+  pkey=$(printf '%s|%s|%s' "$PPID" "$pst" "${HOME:-}" | cksum | cut -d' ' -f1)
+fi
+if [ -n "$pshell" ] && [ -r "$last" ]; then
+  read -r lp lt _ < "$last" 2>/dev/null
+  case "${lp:-}${lt:-}" in (*[!0-9]*|"") ;; (*)
+    if [ "$lp" = "$pkey" ] && [ $((now - lt)) -lt 10 ]; then
+      echo "BATCH REFUSED — a second 'loaded' write from the same shell (pid $pshell) within 10 seconds: a loop or chain of calls records loads no Skill call made; nothing written for '$name'. Run one call per Skill invocation, in that invocation's batch" >&2; exit 2
+    fi ;;
+  esac
 fi
 
 # One awk over every entry. Per file: H <file> when the header closes (the
@@ -199,4 +232,5 @@ printf '%s: %s open observations\n' "$name" "$count"
 
 printf '%s loaded %s — %s open observations\n' "$(date '+%F %H:%M')" "$name" "$count" \
   >> "$root/skill-observations/checkpoints.log"
+[ -n "$pkey" ] && printf '%s %s\n' "$pkey" "$now" > "$last" 2>/dev/null
 exit 0

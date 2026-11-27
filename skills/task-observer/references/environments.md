@@ -1,6 +1,6 @@
 # Environments, Activation Setup, and Handoff-Doc Mode
 
-Load triggers: anchoring, pinning, re-pinning or diagnosing a shard of the workspace; a new log was just created (list the sibling logs); setting up or diagnosing activation (instruction block, hooks, activation config); placing the session-start mount probe in the first batched call, or splitting a failed probe (first run, read-only grant, missing mount); the folder picker is refused or no device-bridge tool is found; no filesystem at all (handoff-doc mode); no stable path resolves for a disposable worker (report-back mode); a session whose output a caller owns; briefing a delegate (a subagent, another session, a specialist); after a compaction or resume; the checkpoint in a priced-write workspace; a permission or classifier denial of a log write; a mode that forbids every write by design; the first-run backfill
+Load triggers: anchoring, pinning, re-pinning or diagnosing a shard of the workspace; a new log was just created (list the sibling logs); setting up or diagnosing activation (instruction block, hooks, activation config); placing the session-start mount probe in the first batched call, or splitting a failed probe (first run, read-only grant, missing mount); the folder picker is refused or no device-bridge tool is found; a bridged session with file tools and no device shell; no filesystem at all (handoff-doc mode); no stable path resolves for a disposable worker (report-back mode); a session whose output a caller owns; briefing a delegate (a subagent, another session, a specialist); after a compaction or resume; the checkpoint in a priced-write workspace; a permission or classifier denial of a log write; a mode that forbids every write by design; the first-run backfill
 
 Load this for setup questions, compaction/resume behaviour, or when running
 in an environment without filesystem access.
@@ -13,6 +13,7 @@ in an environment without filesystem access.
   - A session-start hook (Claude Code and similar harnesses)
   - A stop hook — the per-task backstop as a harness event
   - A plan-tool counter — the 3rd-completion checkpoint as a harness event
+  - A skill-load hook — the per-skill lookup as a harness event
   - A pre-tool hook — the only write path as a barrier
   - A skill-file write gate — the skill-authoring load as a harness event
   - Verify activation in a NEW session — the installing session cannot prove it
@@ -67,8 +68,7 @@ knowingly; do not assume any of the middle ones is a guarantee.
    the folder-picker tool; never state whether the folder is connected
    without that probe" (why the wording is about the call's content, not
    its order: "The probe rides inside the first batched call" below) —
-   because a config
-   file inside the workspace folder cannot fire in the very case it
+   because a config file inside the workspace folder cannot fire in the very case it
    targets: when no folder is connected, there is no config file. Verify
    the channel once by asking a folder-less session to quote its
    preferences block; a line that does not reach the agent is not a tier.
@@ -260,10 +260,19 @@ loads, not only the sessions a person watches: scripts calling the CLI
 app's scheduled tasks. A run with a narrow tool allowlist can write no
 file; one in default permission mode stops at the protocol's first
 command and waits for an approval nobody reads. So list every such
-consumer with its permission mode and tool allowlist first, and for each
-that cannot write or get an approval answered, put its run-output path
-into the `[RUN OUTPUT PATHS]` configuration line, so the review knows where to
-harvest. A consumer the list missed shows up later as a job that stalls
+consumer with its permission mode and tool allowlist first, and sort each
+that cannot write or get an approval answered by what its output is. A
+run whose final message is a report (a job log, a run file a person
+reads) gets its run-output path in the `[RUN OUTPUT PATHS]` configuration
+line, so the review knows where to harvest. A run whose output another
+program stores or parses as data (a summariser, a classifier, a
+commit-message generator) must never see the block, or its notes section
+or first-reply line lands in that data: place the block where that run's
+file discovery does not reach (in Claude Code, a CLAUDE.md in a parent
+folder of the user's work instead of the user-level file, when the run's
+working directory lies outside it), and only where no such placement
+exists, add an exclusion line beside the block naming the run — never a
+run-output path. A consumer the list missed shows up later as a job that stalls
 at the protocol's first call — a missing entry here, not a defect in the block.
 
 On Windows, pin the drive-letter form (`C:/Users/<user>/...`): PowerShell,
@@ -443,8 +452,7 @@ fork, not a variant: stop and reconcile before writing, and keep the pin
 in one file both tools load. At install, ask once whether another
 assistant was given the same install request: two installs on different
 hosts each report complete, and neither search can see the other's. If one exists, adopt it, or
-consolidate deliberately with the user. A fresh
-empty log beside a populated one is a silent fork: both grow
+consolidate deliberately with the user. A fresh empty log beside a populated one is a silent fork: both grow
 independently, ids collide, and each session sees only half the history.
 Consolidating a shard is mechanical: carry over only the entries still
 `open` — its already-actioned entries re-import as duplicates of work
@@ -577,15 +585,14 @@ configuration lines the user needs, because constraints that live only in
 SKILL.md arrive after the decision they were meant to govern.
 
 **Load is not activation.** The failure the block's wording guards
-against: the agent loads the skill per the
-config instruction, then stops — the Session Start Protocol (log files,
-scan, review trigger) never runs, and nothing surfaces the omission
-because a loaded-but-inert skill looks identical to an active one from
-the user's side. Hence the two belts above: the
-instruction demands the protocol by name, not just the load, and the
-post-task summary line makes silent inactivity visible at the first
-task boundary. If you adopt only one line of the block, adopt the
-post-task check.
+against: the agent loads the skill per the config instruction, then
+stops — the Session Start Protocol (log files, scan, review trigger)
+never runs, and nothing surfaces the omission because a loaded-but-inert
+skill looks identical to an active one from the user's side. Hence the
+two belts above: the instruction demands the protocol by name, not just
+the load, and the post-task summary line makes silent inactivity visible
+at the first task boundary. If you adopt only one line of the block,
+adopt the post-task check.
 
 That check is prose in the same file as the rule it guards, and it fails
 with it: whatever made a session skip the block's first paragraph makes it
@@ -661,8 +668,7 @@ directory is not, and a message built from the workspace alone keeps
 telling every session to invoke a skill it cannot invoke, with a review
 offer on top. Set `OBS_SKILL_DIR` beside `OBS_WORKSPACE`. The message names the resolved workspace and the whole first batch — the
 listing, the skill load and its per-skill lookup, since a message that
-lists two items gets a batch of two —
-because it is the one pre-skill text the harness delivers on turn 1
+lists two items gets a batch of two — because it is the one pre-skill text the harness delivers on turn 1
 ("The probe rides inside the first batched call", below): a message that
 only says "invoke the skill" leaves the probe to a skill not yet read,
 and a tool whose sessions resolve the root another way keeps writing to
@@ -860,6 +866,51 @@ its fields; a field the hook does not read counts nothing, silently. Arm it
 like any trigger: three single completions remind once, one call
 completing two items after one completion reminds, a list re-sent with
 no new completion stays silent, and a subagent call reminds every time.
+
+### A skill-load hook — the per-skill lookup as a harness event
+
+The per-skill lookup rides in the Skill call's batch by a rule (SKILL.md,
+Session Start step 2), and a batch is composed around the goal in front of
+the agent: a host rule that also claims the first call, or a batch already
+full of right-looking calls, pushes the lookup one batch late, and the slip
+leaves no trace because its result still arrives in time. Where the harness
+has a post-tool event, run the lookup there: the hook fires on the Skill
+call itself, takes the skill name from the call's input and runs
+`scripts/skill-load.sh` out of model. Node, no dependencies; substitute
+`[ABSOLUTE PATH]` and `<skill directory>` (the installed task-observer) as
+elsewhere, and register it on the skill tool (in Claude Code, matcher
+`Skill`) with the interpreter in the command, as above:
+
+```js
+// PostToolUse hook (matcher "Skill"): run the per-skill lookup for the skill
+// just invoked out of model, and hand its output to the agent as context.
+const fs = require('node:fs'), path = require('node:path'), { spawnSync } = require('node:child_process');
+const ws = '[ABSOLUTE PATH]';                                  // the pinned workspace
+const script = path.join('<skill directory>', 'scripts', 'skill-load.sh'); // the installed task-observer
+let input = {};
+try { input = JSON.parse(fs.readFileSync(0).toString('utf8') || '{}'); } catch { process.exit(0); }
+const name = String((input.tool_input || {}).skill || '');
+if (!/^[A-Za-z0-9:._/-]+$/.test(name)) process.exit(0);        // skill-load.sh's own name rule
+const say = (text) => { console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: text } })); process.exit(0); };
+if (!fs.existsSync(script)) say(`task-observer: skill-load hook found no ${script}; run the per-skill lookup for ${name} in this turn.`);
+const r = spawnSync('bash', [script, ws, name], { encoding: 'utf8', timeout: 20000 });
+say(`task-observer: the per-skill lookup for ${name} ran in a hook (exit ${r.status}); do not run skill-load.sh for this load again. ` +
+  `Read the bodies it lists:\n${((r.stdout || '') + (r.stderr || '')).trim()}`);
+```
+
+Where it is installed, the hook satisfies the load/lookup pairing by
+construction: the lookup and its `loaded` line come from the Skill call,
+whatever else the batch carried, and the agent reads the bodies the
+context names instead of running the script again. Hosts without hooks
+(Cowork) keep the batch rule as written. The name field is the host's
+(`skill` in Claude Code's Skill call): read one real call before wiring it,
+since a field the hook does not read runs nothing, silently. A name the
+lookup would refuse and malformed input exit 0; a missing script is said in
+the context. On native Windows, give `spawnSync` Git Bash's full path for
+the reason in the session-start hook's note. Arm it like any trigger: a
+Skill call naming a skill with open entries injects the count and the
+files, one with none injects `0 open observations`, and each call writes
+one `loaded` line.
 
 ### A pre-tool hook — the only write path as a barrier
 
@@ -1169,7 +1220,7 @@ grant precondition above ("A grant names a path; it does not create
 one"); it does not resolve → a missing mount, and the folder picker is
 the first response. The per-skill lookups that rode in the probe's batch
 ran against no log: after a first-run creation, re-run the lookup once
-per skill loaded in that batch, so `checkpoints.log` holds the
+per skill loaded in that batch, one call each, so `checkpoints.log` holds the
 `workspace: created=…` line followed by one `loaded` line per skill.
 
 **A missing mount in a bridged session is asked for in the same turn, and
@@ -1664,8 +1715,9 @@ and with neither the version gate is skipped with a note. The check runs at sess
 first `.bin/` script — the scan included — never at the next review: on a
 refusal, or where `.bin/` holds no `bin-check.sh` (compare the installed
 digests with `.bin/MANIFEST` instead), refresh `.bin/` and its MANIFEST from
-the installed scripts in the same batch (`weekly-review.md`, Step 1 gate,
-names the refresh), then run the scan. Where `.bin/` is absent or cannot be
+the installed scripts in the same batch, with the starter set beside it at
+`skill-observations/references/` (`weekly-review.md`, Step 1 gate, names the
+refresh), then run the scan. Where `.bin/` is absent or cannot be
 refreshed, look for another copy in the workspace — a
 staged copy under `skill-updates/*/task-observer/scripts/` — and compare its
 digest (`md5sum` or `sha256sum`, run on both sides) with the installed
@@ -1674,7 +1726,8 @@ be an unreleased version that nothing refreshes on install. With no
 matching copy, transfer the scripts to the device — a
 permission-classifier denial of that transfer gets at most one identical
 retry, told to the user (SKILL.md, How to Log) — or run the inline id
-snippet through the device shell. Never a hand-derived id. SKILL.md step
+snippet through the device shell. Never a hand-derived id while a device
+shell exists (with none, the file-tool path below). SKILL.md step
 6's compare follows the same split: `diff-staged.sh` needs both trees in one
 shell (from `.bin/` through `bin-check.sh` where the scripts are not on the
 device); with staged copies on the device and live in the container, run
@@ -1690,6 +1743,32 @@ collision in the invocation:
 (the same option on a direct run of the scan), then read `"$e"` when a step
 needs the entries. Stdout then carries the findings, the counts and the end line.
 
+**A bridged session with file tools and no device shell.** Where the only
+device tools are file tools (read, write, edit, list), no script or snippet
+can run there, and the write path is done by hand, every step through the
+file tool and read back after each write. The id comes from a listing of
+`observation-log/` and `observation-log/archive/` and a read of
+`archive/.id-floor`, taken immediately before the write: the highest
+numeric prefix of either listing or the floor, whichever is higher, plus
+one — never from an earlier listing or the scan. Create `NNNN-<slug>.md`
+only where the listing shows no file with that prefix, read it back, then
+write the new id to `.id-floor` and read that back. Archival is one move
+per resolved file where the host offers a move tool; where it offers none,
+leave resolved files for a session with a shell — a copy beside the
+original is what the scan reports as RESURRECTED. Record the missing shell
+once per session as one `checkpoints.log` line (for example
+`<date> <time> [<label>] no device shell — file-tool write path`) and never
+announce it in chat, unless a step the user asked for cannot be done
+without one. The shell can fail alone while the other device tools work:
+a shell call that fails (an `echo ok` included) while a listing of the
+workspace succeeds is this case, not a lost bridge. Where the file tools
+are stage and commit rather than read and edit, the scan runs read-only on
+a staged copy of the log; a new file goes through commit, an existing one
+only with its staged mtime as the guard; and every step that needs the
+shell (the per-skill lookups, the start line, hashes, deletions, helper
+writes) goes into one handoff file the next session with a working shell
+runs first. Never a cloud listing of the device path.
+
 | Capability | Claude Cowork | Claude Code | Web chat / no filesystem |
 |---|---|---|---|
 | Persistent workspace | the shared folder | pinned absolute path (see activation block) | none — handoff-doc mode below |
@@ -1698,7 +1777,7 @@ needs the entries. Stdout then carries the findings, the counts and the end line
 | Scheduled review | the app's scheduled tasks (cloud-default: run remotely; legacy local mode: run on the user's machine, only while it is on — see the execution-mode note above) | cron / an account-level scheduler that can reach the workspace — headless invocations carry the workspace grant (`--add-dir`) in the task definition; a `SessionStart` hook reports the review state, it does not run the review | calendar reminder + manual trigger |
 | Session-start hook | none | `SessionStart` hook (`hookSpecificOutput.additionalContext`) | none |
 | Local-vs-cloud tell | `allow_cowork_file_delete` present ⇒ local session | n/a | n/a |
-| Refresh the digests `bin-check.sh` reads ("Where the scripts are not on the device") | cloud session bridged to the device: `{ grep -m1 -E '^[[:space:]]*version:' "<skill directory>"/SKILL.md | sed 's/^[[:space:]]*//'; sha256sum "<skill directory>"/scripts/*; } > digests.txt` in the container, then the device file-commit tool carries that file to `[ABSOLUTE PATH]/skill-observations/.bin/digests.txt`; local session: the scripts are on the device, so `sha256sum` writes the file there directly | `{ grep -m1 -E '^[[:space:]]*version:' "<skill directory>"/SKILL.md | sed 's/^[[:space:]]*//'; sha256sum "<skill directory>"/scripts/*; } > "[ABSOLUTE PATH]/skill-observations/.bin/digests.txt"` — one shell, nothing to carry | n/a |
+| Refresh the digests `bin-check.sh` reads ("Where the scripts are not on the device") | cloud session bridged to the device: `{ grep -m1 -E '^[[:space:]]*version:' "<skill directory>"/SKILL.md | sed 's/^[[:space:]]*//'; sha256sum "<skill directory>"/scripts/*; } > digests.txt` in the container, then the device file-commit tool carries that file to `[ABSOLUTE PATH]/skill-observations/.bin/digests.txt` (a `.bin/` refresh carries the installed `references/starter-principles.md` the same way, to `[ABSOLUTE PATH]/skill-observations/references/starter-principles.md`); local session: the scripts are on the device, so `sha256sum` writes the file there directly | `{ grep -m1 -E '^[[:space:]]*version:' "<skill directory>"/SKILL.md | sed 's/^[[:space:]]*//'; sha256sum "<skill directory>"/scripts/*; } > "[ABSOLUTE PATH]/skill-observations/.bin/digests.txt"` — one shell, nothing to carry | n/a |
 
 **The Claude Code column is the terminal CLI; the desktop app has a
 scheduler of its own.** Claude Code run inside the desktop app exposes
@@ -1756,8 +1835,7 @@ sandbox can deny a path that exists and is online — through every
 interface, a junction inside the allowed area included, because the
 sandbox canonicalises the target — and the run ends with the offline
 policy's one-line skip: a config gap wearing the costume of a transient
-outage. Registering a scheduled
-review therefore includes whatever allowed-directory configuration the
+outage. Registering a scheduled review therefore includes whatever allowed-directory configuration the
 harness needs for the workspace root — for Claude Code headless,
 `--add-dir "[ABSOLUTE PATH]"` on the invocation, or the equivalent
 permissions rule — and the setup is not done until one firing has
@@ -1774,7 +1852,12 @@ rule did not lift it, while `Write(...)` rules are not matched at all
 (reported on one install, tested): for a scheduled
 review, anchor the workspace outside any `.claude/` folder or prove the
 write on the first firing. (The run-time skip note:
-`references/weekly-review.md`, offline-workspace policy.)
+`references/weekly-review.md`, offline-workspace policy.) A write scope the
+prompt sets ("write only inside `<folder>`") covers the observation log and
+its logbooks too, and a classifier enforces it as written: name both ("…,
+plus `skill-observations/`"), and keep an optional cleanup (an `rm` of
+scratch files) out of the command that makes a required write — beside
+it, the write reads as destructive.
 
 **Managed skills directories (dotfile managers, sync tools).** Where the
 skills directory is generated by chezmoi, GNU Stow, yadm, a symlinked
@@ -2012,7 +2095,7 @@ This skill consists of `SKILL.md`, the reference files it lists
 `acting-on-observations.md`, `signals.md`, `migration.md`,
 `starter-principles.md`) and `scripts/bin-check.sh`, `scripts/diff-staged.sh`,
 `scripts/migrate-log.py`, `scripts/new-observation.sh`, `scripts/session-start-scan.sh`,
-`scripts/set-fields.sh`, `scripts/extend-observation.sh`, `scripts/stage-patch.sh`,
+`scripts/set-fields.sh`, `scripts/extend-observation.sh`, `scripts/add-evidence.sh`, `scripts/stage-patch.sh`,
 `scripts/skill-load.sh` and `scripts/validate-skill-bundle.py`. If any is
 missing, SKILL.md "Reference files" applies (the rule lives there because
 this file can be the missing one). `references/ceilings.txt` travels with

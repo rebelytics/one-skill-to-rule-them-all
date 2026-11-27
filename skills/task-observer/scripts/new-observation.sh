@@ -142,7 +142,8 @@ sus='FNR==1 {sub(/^\357\273\277/, ""); fm = (/^---[[:space:]]*$/ ? 1 : 0); if (!
   fm && /'"$key"'("([^"\\]|\\.)*"[[:space:]]*[^[:space:]#]|\047([^\047]|\047\047)*\047([[:space:]]+[^[:space:]#]|[^[:space:]#\047]))/ {print FILENAME "\t4\t" $0; nextfile}
   fm && /'"$key"'[`@%]/ {print FILENAME "\t5\t" $0; nextfile}
   fm && /'"$key"'"([^"\\]|('"$esc_ok"'))*\\('"$esc_bad"')/ {print FILENAME "\t6\t" $0; nextfile}
-  fm && /^[a-z_]+:[ ]+\[/ {v=$0; sub(/^[a-z_]+:[ ]+/,"",v); gsub(/"([^"\\]|\\.)*"/,"",v); gsub(/\047[^\047]*\047/,"",v); sub(/[[:space:]]#.*/,"",v); if (v ~ /:/) {print FILENAME "\t7\t" $0; nextfile}}'
+  fm && /^[a-z_]+:[ ]+\[/ {v=$0; sub(/^[a-z_]+:[ ]+/,"",v); gsub(/"([^"\\]|\\.)*"/,"",v); gsub(/\047[^\047]*\047/,"",v); sub(/[[:space:]]#.*/,"",v); if (v ~ /:/) {print FILENAME "\t7\t" $0; nextfile}}
+  fm && !/^([A-Za-z_][A-Za-z0-9_-]*:|-)[[:space:]]/ && !/^([A-Za-z_][A-Za-z0-9_-]*:|-)?$/ && !/^[[:space:]#]/ {print FILENAME "\t8\t" $0; nextfile}'
 # <<< sus
 
 # --- body schema: refuse a header the log's rules forbid, before any write ---
@@ -180,7 +181,8 @@ if [ -n "$body" ]; then
     }' "$body")
   # The scan's suspect rules, run here before the write: a header the next
   # session's scan would flag as invalid YAML is refused by name instead.
-  sh_why=$(LC_ALL=C awk "$sus" "$body" | awk -F '\t' '{k=$3; sub(/:.*/, "", k)
+  sh_why=$(LC_ALL=C awk "$sus" "$body" | awk -F '\t' '$2 == 8 {print "a header line is not key: value, a - list item, an indented continuation or a comment — fix or remove it (line: " $3 ")"; next}
+    {k=$3; sub(/:.*/, "", k)
     r = ($2 == 3 ? "holds an unquoted \047: \047" : $2 == 4 ? "has text after its closing quote" : $2 == 5 ? "opens with a backtick, @ or %" : $2 == 6 ? "holds an escape YAML does not define" : "is a [ ] list with a colon outside quotes")
     print k ": " r " — fix or quote the value (line: " $3 ")"}')
   [ -n "$sh_why" ] && why="$why${why:+

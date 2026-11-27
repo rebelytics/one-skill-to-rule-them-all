@@ -35,6 +35,16 @@ block after the entries, and are written to
 `skill-observations/last-scan-findings.txt`, which the end line names: a
 cut view still shows them, and the file holds them when it did not.
 
+**The short form is a flag, never a filter.** A re-run that needs one
+answer — did an edited header still parse, did the status edits land —
+takes `--brief` (before the root): stdout carries only the finding lines,
+the counts line with its per-status tally (`open=N actioned=N declined=N
+superseded=N parked=N statusless=N`) and one line per entry, and the end
+line; every file the full scan writes is still written. A review's re-scan
+reads the tally for "did the edits land", never a `grep | uniq -c` over the
+entries. The session-start run itself stays the full scan: steps 3 and 6
+read its `review:` and `staged:` lines, which `--brief` leaves out.
+
 **Why the line carries a time and a source, not just a date.** The
 workspace is shared across every project that observes the same globally
 installed skill (the anchoring rule), so `checkpoints.log` is a
@@ -148,16 +158,17 @@ call. A skill loaded by the user's slash command, with no Skill call of
 your own, gets the same lookup in the first batch after the command
 arrives. On a first run the log does not exist yet (Session Start step 1
 creates it): the call says so and exits 0 with no checkpoint line; re-run
-it once per skill loaded in that batch after the Workspace creation
-command.
+it once per skill loaded in that batch, one call each, after the Workspace
+creation command.
 
 The converse holds too: the lookup, and any checkpoint line recording the
 load, run only in the same batch as the Skill invocation, and take the
 skill name from a load that has actually happened — never from a list of
-skills you built to load. A checkpoint line written without the load is a
-false record. Before writing to any file a skill reads at run time (a
-state file), load that skill: a state file that describes itself is not a
-substitute for the skill that owns it.
+skills you built to load, nor from a loop over one (a second `loaded` line
+from the same shell within seconds is BATCH REFUSED). A checkpoint line
+written without the load is a false record. Load a skill before writing a
+file it reads at run time: a state file that describes itself does not
+replace the skill that owns it.
 
 Where the harness cannot run a script, the lookup is a `find … grep`,
 with its checkpoint line written by hand in the same batch (the inline id
@@ -269,8 +280,7 @@ the highest id *issued*, but an id can be issued without its file ever
 being created (an older snippet wrote the floor before the create, and a
 legacy monolithic archive holds ids no filename carries), so a computed
 maximum below the floor is reported, and the id taken above the floor,
-rather than halted on. And never write a
-suspect reading back into the persistent source it came from; a guard
+rather than halted on. And never write a suspect reading back into the persistent source it came from; a guard
 placed after that write has protected nothing, and the floor that exists
 to stop the counter rewinding becomes the thing that rewinds it.
 
@@ -520,8 +530,8 @@ at a specific moment needs its own entry in the tool record. (Where the
 workspace prices every write — the exception under "How to Log" — fold
 this line into the session's first write instead.) Read the scan's output
 whole. Its finding lines (DUE, NOTE, LOST ENTRIES, UNFILLED, GAP) and counts
-come first and the entry headers last, with one `end of scan` line closing
-it that repeats the counts and the number of finding lines; `tail`, `head`
+come first and the entries last; a closing block repeats the `staged:` and
+`review:` lines and the findings above one `end of scan` line; `tail`, `head`
 or a `grep` hides exactly the lines that matter while the checkpoint line
 still lands and the log looks compliant. A truncated scan is a skipped one,
 and an output the harness saved to a file or cut short is a truncated scan

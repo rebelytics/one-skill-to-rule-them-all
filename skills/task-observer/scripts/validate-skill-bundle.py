@@ -951,6 +951,11 @@ def check_reference_indexes(skill_dir, fails):
 #   * more than SPLIT_TRIGGER_THRESHOLD triggers: split by episode;
 #   * that many or fewer: trim, or raise the ceiling with a short one-line
 #     reason written beside the number.
+# The split rule does not wait for a ceiling breach: a file above the
+# threshold, or past the skill's own line target (`split_lines: <N>` in the
+# sidecar, the subject's number, never a constant here) with more than one
+# trigger, fails until it is split or marked split_pending. `split_lines: to
+# set` declares the rule with no value; only the trigger half applies then.
 # Size alone never forces a split, so a single-episode file is never split to
 # meet a size rule. The ceiling follows trims down with the core's tolerance.
 #
@@ -1024,6 +1029,8 @@ REF_CEILING_LINE_RE = re.compile(
 SPLIT_PENDING_LINE_RE = re.compile(
     r"^(?:#[ \t]*)?split_pending:[ \t]+(?P<file>[^\s/]+\.md)"
     r"(?:[ \t]+\d{4}-\d{2}-\d{2})?(?:[ \t]+(?P<reason>\S.*?))?[ \t]*$")
+# The skill's split line target, read bare or behind `# ` like the marker.
+SPLIT_LINES_LINE_RE = re.compile(r"^(?:#[ \t]*)?split_lines:[ \t]*(?P<value>.*?)[ \t]*$")
 # `references/x.md` ("Heading") — up to 40 characters between, newlines
 # included, no backtick — and the parenthesised (`references/x.md`, "Heading").
 REF_POINTER_RE = re.compile(r'`references/([a-z0-9-]+\.md)`(?:[^(`]{0,40}\(|,\s*)"([^"]+)"')
@@ -1110,6 +1117,15 @@ def read_ref_ceilings(refs, fails):
         if sp:
             pending[sp.group("file")] = sp.group("reason") or ""
             continue
+        sl = SPLIT_LINES_LINE_RE.match(line)
+        if sl:
+            v = sl.group("value")
+            if v.isdigit() and int(v) > 0:
+                pending.setdefault(SPLIT_LINES_KEY, int(v))
+            elif v.lower() != "to set":
+                fails.append(f"{where}: unreadable line {line!r} — the form is "
+                             f"`split_lines: <lines>` or `split_lines: to set`")
+            continue
         if not line or line.startswith("#"):
             continue
         m = REF_CEILING_LINE_RE.match(line)
@@ -1126,6 +1142,9 @@ def read_ref_ceilings(refs, fails):
     return out, pending
 
 
+SPLIT_LINES_KEY = " split_lines"   # carried in the pending map; no file name has a leading space
+
+
 def check_reference_shape(skill_dir, core, fails):
     """Print the `reference shape` line; gate it when the skill opted in."""
     refs = pathlib.Path(skill_dir) / "references"
@@ -1134,6 +1153,7 @@ def check_reference_shape(skill_dir, core, fails):
     named, unnamed = core_pointers(core)
     citing = core_pointer_sections(core)
     ceilings, pending = read_ref_ceilings(refs, fails)
+    target = pending.pop(SPLIT_LINES_KEY, None)
     N, tol = SPLIT_TRIGGER_THRESHOLD, CEILING_SLACK_TOLERANCE
     rows = []
     for p in sorted(refs.glob("*.md")):
@@ -1149,8 +1169,9 @@ def check_reference_shape(skill_dir, core, fails):
         shown.append(f"{name}={lines}/{c[0] if c else '-'}/{t}")
     gated = ("ceilings in references/" + REF_CEILINGS_FILE if ceilings is not None
              else "no references/" + REF_CEILINGS_FILE + " — not gated")
+    past = f" or past {target} lines" if target else ""
     print(f"reference shape (lines / ceiling / load triggers declared in the header, "
-          f"~ = scanned from the core, none declared; split by episode above {N}; {gated}): "
+          f"~ = scanned from the core, none declared; split by episode above {N}{past}; {gated}): "
           + ", ".join(shown))
     # The pointer cross-check: declared episodes against the number of core
     # sections that cite the file (the lower bound on episodes) — never
@@ -1166,8 +1187,7 @@ def check_reference_shape(skill_dir, core, fails):
         if len(declared) > N:
             print(f"note: {name} declares {len(declared)} load triggers (> {N}) — split "
                   f"by episode is indicated"
-                  + (" once it outgrows its ceiling" if ceilings is not None
-                     else "; size is not the signal")
+                  + ("" if ceilings is not None else "; size is not the signal")
                   + (f"; split pending" + (f": {pending[name]}" if pending[name] else "")
                      if name in pending else ""))
     if ceilings is None:
@@ -1191,16 +1211,28 @@ def check_reference_shape(skill_dir, core, fails):
                          f"`## ` heading), one entry per distinct episode that loads it")
             continue
         n = len(declared)
-        if name in pending and n <= N:
+        over_target = bool(target) and lines > target
+        split_rule = n > N or (over_target and n > 1)
+        if name in pending and not split_rule:
             print(f"note: references/{REF_CEILINGS_FILE} marks a split pending for {name}, "
-                  f"which declares {n} load triggers (<= {N}) — the line can go")
-        split_due = n > N and name not in pending
-        if lines > ceiling and split_due:
+                  f"which declares {n} load triggers (<= {N})"
+                  + (f" and is within the split line target" if target else "")
+                  + " — the line can go")
+        if over_target and n <= 1:
+            print(f"note: references/{name} {lines} lines is past the split line target "
+                  f"{target} with one episode: nothing to split along — trim, or keep "
+                  f"its ceiling with a reason")
+        split_due = split_rule and name not in pending
+        if split_due:
+            why = (f"{n} load triggers (> {N})" if n > N else
+                   f"{lines} lines, past the split line target {target}, with {n} load triggers")
             fails.append(
-                f"references/{name} {lines} lines > ceiling {ceiling}, with {n} load "
-                f"triggers (> {N}): split it by episode, so each trigger loads only "
-                f"its own part — a raise is not the remedy for a file this many "
-                f"episodes pull in")
+                f"references/{name}: {why}: split it by episode — a short index plus one "
+                f"file per episode (`<file-stem>-<episode>.md`), each pointer naming its "
+                f"trigger — or mark a decided split `split_pending: {name}` in "
+                f"references/{REF_CEILINGS_FILE}"
+                + (f"; its raised ceiling ({reason}) is not a raise this file can take"
+                   if reason else ""))
         elif lines > ceiling:
             # Reached with n > N only while a split is pending: say so, not `<= N`.
             count_vs_n = f"> {N}, split pending" if n > N else f"<= {N}"
@@ -1215,11 +1247,10 @@ def check_reference_shape(skill_dir, core, fails):
                 f"{ceiling - lines} > tolerance {tol}. Lower its line in "
                 f"references/{REF_CEILINGS_FILE} to {lines} in this commit — a trim "
                 f"is locked in, not left as headroom")
-        if reason and split_due:
+        if reason and split_due and lines > ceiling:
             fails.append(
-                f"references/{name} carries a raised ceiling ({reason}) but "
-                f"declares {n} load triggers (> {N}): with that many episodes the "
-                f"remedy is a split by episode, not a raise")
+                f"references/{name} {lines} lines > ceiling {ceiling}: with {n} load "
+                f"triggers the remedy is a split by episode, not a raise")
 
 
 # A `## Bundle manifest` section (in SKILL.md or a reference) is a hand-kept
@@ -1816,7 +1847,7 @@ SCAN_FIXTURES = [
     ("healthy log scans: counts line, one checkpoint line", "healthy", True, 0,
      "files: 2  parsed: 2  suspect (awk, a floor): 1", 1, "NOTE: pointer"),
     ("the suspect-YAML NOTE names each file with its rule and key, archive/ included", "susarch", True, 0,
-     "a colon in an unquoted list entry): 0002-b.md rule 3 title, archive/0009-z.md rule 5 source — quote", 1, "`x`"),
+     "or a comment): 0002-b.md rule 3 title, archive/0009-z.md rule 5 source — quote", 1, "`x`"),
     ("no header parses: guard halts before the checkpoint", "broken", True, 1,
      "SCAN COMMAND BROKEN", 0, ""),
     ("no workspace root: refused, nothing written", "healthy", False, 2, "", 0, ""),
@@ -1835,6 +1866,11 @@ SCAN_FIXTURES = [
      "SPLIT STORE — log.md holds 2 observations not in observation-log/", 1, ""),
     ("use_evidence and next_actor in a header: parsed, not suspect", "fields", True, 0,
      "files: 2  parsed: 2  suspect (awk, a floor): 0", 1, "NOTE:"),
+    ("a header with no date: line and a line with no key: the date NOTE and rule 8", "nodate", True, 0,
+     "0002-b.md rule 8 (a line with no key)", 1, "\x01"),
+    ("a sync tool's conflict copy: a NOTE, left out of the count and the DUPLICATE ID check", "conflict", True, 0,
+     "NOTE: sync-conflict copy in the log — a sync tool's second version of an entry, left out of every count "
+     "and of the entries below: 0002-b.sync-conflict-20260101-120000-ABC.md", 1, "DUPLICATE ID — 0002"),
     ("two files share a prefix across active and archive: DUPLICATE ID names both", "dupid", True, 0,
      "DUPLICATE ID — 0002: 0002-b.md, archive/0002-z.md", 1, ""),
     ("a zero-padded and a bare prefix are one id", "dupid-pad", True, 0,
@@ -2004,7 +2040,8 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
             rest = {"skeleton": [("0002-b.md", '---\nid: 2\ntitle: ""\nstatus: open\nskill: []\n---\n')],
                     "idmis": [("0002-b.md", '---\nid: 1\ntitle: "retyped"\n---\n')],
                     # the two optional fields: a bare word, and an append-only list
-                    "fields": [("0002-b.md", '---\nid: 2\ntitle: "DECIDED: fields"\nstatus: open\n'
+                    "fields": [("0001-a.md", '---\nid: 1\ntitle: "ok"\ndate: 2026-01-01\n---\nbody\n'),
+                               ("0002-b.md", '---\nid: 2\ntitle: "DECIDED: fields"\nstatus: open\ndate: 2026-01-01\n'
                                 'next_actor: review\nuse_evidence:\n'
                                 '  - 2026-01-02 accepted — one line of context\n'
                                 '  - 2026-01-03 used — unattended run\n---\n')],
@@ -2013,6 +2050,10 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
                                ("0003-c.md", '---\nid: 3\ntitle: "plain"\n---\n'),
                                ("0004-d.md", '---\nid: 5\ntitle: "wrong"\n---\n')],
                     "dupid": [("0002-b.md", '---\nid: 2\ntitle: "new"\n---\n')],
+                    # a date: line replaced by a stray line that holds a control character
+                    "nodate": [("0002-b.md", '---\nid: 2\ntitle: "damaged"\nstatus: open\n\x01 2026-01-01\n---\n')],
+                    "conflict": [("0002-b.md", '---\nid: 2\ntitle: "b"\ndate: 2026-01-01\n---\n'),
+                                 ("0002-b.sync-conflict-20260101-120000-ABC.md", '---\nid: 2\ntitle: "b"\ndate: 2026-01-01\n---\n')],
                     "dupkey": [("0002-b.md", '---\nid: 2\ntitle: "twice"\nresolved:\nresolved: 2026-01-01\n---\n')],
                     "secret": [("0002-b.md", '---\nid: 2\ntitle: "leak"\n---\napi_key: sk9ABCdef1234567890ghijklmnopqrs\n'),
                                ("0003-c.md", '---\nid: 3\ntitle: "digests"\n---\ncommit 0123456789abcdef0123456789abcdef01234567 key\n'
@@ -2104,6 +2145,19 @@ SCAN_REPEAT_FIXTURES = [
     ("a DUPLICATE ID line is repeated, counted and written like the others", "dupid",
      "DUPLICATE ID — 0002: 0002-b.md, archive/0002-z.md"),
 ]
+
+
+def scan_tail_lines_ok():
+    """The `staged:` and `review:` lines print twice: in place, and again
+    after the entries and the sibling-log line, above the end line, so a
+    view cut to its last lines keeps both. Returns (ok, detail)."""
+    rc, out, *_ = scan_case("idmis", True)
+    lines = out.splitlines()
+    pos = {k: [i for i, l in enumerate(lines) if l.startswith(k)] for k in ("staged: ", "review: ")}
+    anchors = [i for i, l in enumerate(lines) if l.startswith("logs at the plausible anchors")]
+    ok = rc == 0 and len(anchors) == 1 and lines[-1].startswith("end of scan") and all(
+        len(v) == 2 and lines[v[0]] == lines[v[1]] and v[0] < anchors[0] < v[1] for v in pos.values())
+    return ok, f"positions {pos}, anchors {anchors}"
 
 
 def scan_entries_ok():
@@ -2264,6 +2318,45 @@ def _scan_run(args, cwd, home, extra_env=None, path_prefix=None):
     r = subprocess.run(["bash", str(SCAN_SCRIPT), *map(str, args)], cwd=str(cwd), env=env, capture_output=True,
                        text=True, encoding="utf-8", errors="replace", timeout=120)
     return r.returncode, r.stdout, r.stderr, time.monotonic() - t0
+
+
+def scan_pairing_ok():
+    """--pairing: the items 4-5 record per day and session label. A same-label
+    scan re-run within 10 minutes is folded; a label with fewer 4-5 lines than
+    scan lines is UNPAIRED even when another label's lines would fill the
+    day's count; an unlabelled (older) 4-5 line is pooled per day; nothing is
+    written. Returns (ok, detail)."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        root = pathlib.Path(d) / "ws"
+        _scan_ws(root)
+        so = root / "skill-observations"
+        (so / "session-starts.log").write_text(
+            "2030-01-01 08:00 [old] session start: 1 storage=ok\n"
+            "2030-01-02 10:45 [proj] session start: 1 storage=ok\n"
+            "2030-01-02 10:46 [proj] session start: 1 storage=ok\n"
+            "2030-01-02 10:47 [proj] session start 4-5: activation=ok concurrency=ok\n"
+            "2030-01-02 11:00 [other] session start: 1 storage=ok\n"
+            "2030-01-02 12:00 [third] session start: 1 storage=ok\n"
+            "2030-01-02 12:01 [third] session start 4-5: activation=ok concurrency=ok\n"
+            "2030-01-02 12:30 [third] session start 4-5: activation=ok concurrency=ok\n"
+            "2030-01-03 09:00 [late] session start: 1 storage=ok\n"
+            "2030-01-03 09:30 [late] session start: 1 storage=ok\n"
+            "2030-01-03 09:31 session start 4-5: activation=ok concurrency=ok\n", encoding="utf-8")
+        before = sorted(p.name for p in so.iterdir())
+        rc, out, err, _ = _scan_run(["--pairing", "2030-01-02", root], d, d)
+        after = sorted(p.name for p in so.iterdir())
+        rc2, _, err2, _ = _scan_run(["--pairing", "soon", root], d, d)
+    lines = out.splitlines()
+    ok = (rc == 0 and before == after and rc2 == 2 and "YYYY-MM-DD or all" in err2
+          and "pairing 2030-01-02 [proj]: scan 1, 4-5 1 (1 re-run scan line(s) folded)" in lines
+          and any(l.startswith("UNPAIRED: 2030-01-02 [other]: scan 1, 4-5 0") for l in lines)
+          and "pairing 2030-01-02 [third]: scan 1, 4-5 2" in lines
+          and "pairing 2030-01-03 [late]: scan 2, 4-5 0" in lines
+          and any(l.startswith("UNPAIRED: 2030-01-03: scan 2, 4-5 1 counting 1 unlabelled") for l in lines)
+          and not any("2030-01-01" in l for l in lines)
+          and lines[-1] == "end of pairing: from 2030-01-02, 4 day-label group(s), 2 unpaired")
+    return ok, f"exit {rc}/{rc2}, written {sorted(set(after) - set(before))}, out {out!r}, err {err!r}"
 
 
 def scan_order_ok():
@@ -2534,6 +2627,30 @@ def load_query_ok():
     return ok, f"exits {rc0}/{rc1}/{rc2}, checkpoint lines {ck0}/{ck1}/{ck2}, out {out1!r}"
 
 
+def load_loop_ok():
+    """Two loads chained in one shell: the second is BATCH REFUSED, exit 2,
+    one `loaded` line; the same two loads from two separate shells both
+    write. `; true` keeps each `bash -c` a shell rather than an exec."""
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / "work space"
+        log = root / "skill-observations" / "observation-log"
+        log.mkdir(parents=True)
+        (log / "0001-a.md").write_text("---\nid: 1\nskill: [x]\nstatus: open\n---\n", encoding="utf-8")
+        ck = root / "skill-observations" / "checkpoints.log"
+        ck.write_text("", encoding="utf-8")
+        cmd = 'bash "$0" "$1" x; bash "$0" "$1" y; echo "rc=$?"'
+        r = subprocess.run(["bash", "-c", cmd, str(LOAD_SCRIPT), str(root)], cwd=tmp, capture_output=True,
+                           text=True, encoding="utf-8", errors="replace")
+        n1 = len(ck.read_text(encoding="utf-8").splitlines())
+        for s in ("x", "y"):
+            subprocess.run(["bash", "-c", 'bash "$0" "$1" "$2"; true', str(LOAD_SCRIPT), str(root), s], cwd=tmp,
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+        n2 = len(ck.read_text(encoding="utf-8").splitlines())
+        ok = "rc=2" in r.stdout and "BATCH REFUSED" in r.stderr and n1 == 1 and n2 == 3
+        return ok, f"chained: {r.stdout.strip()!r} {r.stderr.strip()[:80]!r}, lines {n1} then {n2}"
+
+
 # skill-load.sh --correct, the line that follows a refused Skill call:
 # (name, run the lookup first?, reason, exit status, checkpoint lines in order).
 LOAD_CORRECT_FIXTURES = [
@@ -2620,6 +2737,10 @@ BINCHECK_FIXTURES = [
     ("no installed version anywhere: gate skipped with a note, digests decide", "match", 0, "hello a b", "version gate skipped"),
     ("an indented metadata.version line in the digests file is read: newer than verified_against, refused",
      "metaolder", 3, "", "installed 3.9.0 is newer than .bin/MANIFEST verified_against 3.8.0"),
+    ("a script name with ../ is refused before the file outside .bin/ runs", "traverse", 3, "",
+     "BIN REFUSED — '../outside.sh' is not a plain script name"),
+    ("an absolute script path is refused, nothing runs", "abspath", 3, "", "is not a plain script name"),
+    ("a name outside the .sh/.py set the digests cover is refused", "noext", 3, "", "is not a .sh or .py file"),
 ]
 
 
@@ -2638,6 +2759,8 @@ def bincheck_case(scenario):
             (bin_dir / "hello.sh").write_text('echo hello "$@" # older\n', encoding="utf-8")
         if scenario == "extra":
             (bin_dir / "extra.py").write_text("print(1)\n", encoding="utf-8")
+        outside = bin_dir.parent / "outside.sh"   # beside .bin/, never verified
+        outside.write_text('echo ran outside "$@"\n', encoding="utf-8")
         dig = pathlib.Path(tmp) / "installed.sha256"
         sums = "".join(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p}\n"
                        for p in sorted(installed.iterdir()))
@@ -2653,7 +2776,8 @@ def bincheck_case(scenario):
         flag = ["--installed-version", "3.10.0"] if scenario == "flag" else []
         args = ["bash", str(BINCHECK_SCRIPT), *flag, str(root),
                 str(dig if scenario != "nodig" else pathlib.Path(tmp) / "none"),
-                "gone.sh" if scenario == "absent" else "hello.sh", "a", "b"]
+                {"absent": "gone.sh", "traverse": "../outside.sh", "abspath": str(outside), "noext": "MANIFEST"}.get(scenario, "hello.sh"),
+                "a", "b"]
         r = subprocess.run(args, cwd=tmp, capture_output=True, text=True, encoding="utf-8", errors="replace")
         return r.returncode, r.stdout, r.stderr
 
@@ -3249,6 +3373,21 @@ REF_SHAPE_FIXTURES = [
     ("the marker behind `# ` is read the same way (an older validator reads a comment)",
      105, SPLIT_TRIGGER_THRESHOLD + 1,
      "a.md 105 more room\n# split_pending: a.md split decided, lands next round\n", None, None),
+    ("under its ceiling, > N triggers, no split pending: the split rule fails it",
+     98, SPLIT_TRIGGER_THRESHOLD + 1, "a.md 100\n", "split it by episode", "trim"),
+    ("past split_lines with 3 triggers: split, whatever the ceiling",
+     105, 3, "a.md 105 one new section\nsplit_lines: 100\n", "past the split line target", None),
+    ("split_lines behind `# ` is read the same way", 105, 3,
+     "a.md 105 one new section\n# split_lines: 100\n", "past the split line target", None),
+    ("past split_lines with one trigger: nothing to split along, passes",
+     105, 1, "a.md 105 one new section\nsplit_lines: 100\n", None, None),
+    ("within split_lines: passes", 98, 3, "a.md 100\nsplit_lines: 100\n", None, None),
+    ("split_lines: to set — the line target is not applied", 105, 3,
+     "a.md 105 one new section\n# split_lines: to set\n", None, None),
+    ("past split_lines with the split pending: trim-or-raise applies, passes", 105, 3,
+     "a.md 105 one new section\nsplit_lines: 100\nsplit_pending: a.md\n", None, None),
+    ("a split_lines value that is not a number is unreadable", 100, 3,
+     "a.md 100\nsplit_lines: soon\n", "unreadable line", None),
 ]
 
 
@@ -3533,6 +3672,7 @@ def selftest():
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} scan script: {name}" + ("" if ok else f" ({detail})"))
         for name, fn in (("--entries-to splits the entries off stdout and the end line names the file", scan_entries_ok),
+                         ("the staged: and review: lines are repeated after the entries, above the end line", scan_tail_lines_ok),
                          ("one line per entry, parked last; the full headers go to last-scan-headers.txt", scan_compact_ok),
                          ("--entries-to onto a non-empty file is refused, nothing written", scan_entries_refused_ok),
                          ("an argument after the root is refused by name, nothing written", scan_trailing_ok),
@@ -3545,6 +3685,8 @@ def selftest():
                          ("the end line names the bytes above it; a halted run still prints", scan_bytes_ok),
                          ("an actioned entry lacking a skill: member's disposition is named", scan_disp_ok),
                          ("the entries print before the sibling-log search's listing", scan_order_ok),
+                         ("--pairing: items 4-5 per day and label, a quick re-run folded, nothing written",
+                          scan_pairing_ok),
                          ("a stalled sibling-log search is cut at its time limit with a NOTE; the scan completes", scan_stall_ok),
                          ("a root whose parent is HOME: the home folder searched 4 levels, Library pruned, said on the line",
                           scan_home_parent_ok),
@@ -3585,6 +3727,10 @@ def selftest():
         ok, detail = load_query_ok()
         bad += not ok; total += 1
         print(f"{'ok  ' if ok else 'FAIL'} skill-load script: --query-only prints the same lookup and appends nothing"
+              + ("" if ok else f" ({detail})"))
+        ok, detail = load_loop_ok()
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} skill-load script: a second load chained in one shell is BATCH REFUSED; separate shells both write"
               + ("" if ok else f" ({detail})"))
         ok, detail = tools_missing_ok(LOAD_SCRIPT, False)
         bad += not ok; total += 1
