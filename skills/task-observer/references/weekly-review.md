@@ -1228,6 +1228,13 @@ entries target the same member. Then, before anything is presented:
   the Step 7 summary and offered for closing rather than applying.
   Weighting changes what is offered and in what order, never what is
   applied without consent.
+- **Every OPEN entry is acted on or asked, in every review.** Apply it to
+  a staged copy, or put it in the record as one concrete question with a
+  recommended option; an entry already asked stays under Waiting for the
+  user, and a park whose condition has not fired stays parked. A skip
+  whose only reason is an earlier review's record is not a skip: re-check
+  that reason now, or ask. An entry that proposes a new skill is asked,
+  never skipped.
 
 - **Fix the system that owns the problem.** Before adding a skill rule,
   check whether a code, configuration or CI change would remove the
@@ -2253,7 +2260,8 @@ sessions, superseded by a later rule, or repeatedly not followed and
 replaced by a barrier — and removed (staged) or proposed; or "none — <why>"]
 
 ### Skipped (needs manual review)
-[items with reasons]
+[items with reasons re-checked in this review, never one carried from an
+earlier record (Step 3); or "none"]
 
 [N] bundles staged, [N] bundles presented
 keep-two (as of [HH:MM]): [N] copies pruned, [N] kept as uninstalled, [N] pending a grant
@@ -2332,8 +2340,8 @@ file and which names the sections of this file each of its steps reads.
   of applying the observation when the user chooses that route — still
   staged, never installed, and still needing the routing entry, or
   nothing loads it.
-- Unsure how to integrate an observation → skip it and say so in the
-  summary.
+- Unsure how to integrate an observation → bring it as one question with
+  a recommended option (Step 3), never a bare skip.
 - Treat internal observations with the same rigour as open-source.
 
 ## Delivering updated skills
