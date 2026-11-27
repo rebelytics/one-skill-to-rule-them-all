@@ -109,6 +109,14 @@ local evidence, so the pruning pass can drop it as freely as any
 single-observation rule. Imported principles that never
 fire in the adopter's own work should be removed, not kept out of respect.
 
+**Remap every entry number inside an imported entry.** Entries here cite
+each other by number, and the live file numbers the imports in its own
+sequence. Rewrite each "entry N" in an imported entry to that entry's live
+number, or to "starter #N, not imported". Then grep the imported entries
+for `entry [0-9]` and check every hit before the marker is written. For
+example, a cited "entry 11" becomes "entry 4" where starter entry 11 was
+imported as live entry 4.
+
 **Read the import back before the marker certifies it.** The marker
 records that the adopter answered, and a copy that never landed looks the
 same from it. After copying, read the live file's `## Active Principles`
