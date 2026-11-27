@@ -156,7 +156,7 @@ skill that never loads cannot announce that it was relevant.
 ### The activation block
 
 ```text
-(task-observer activation block — template of v3.12.0)
+(task-observer activation block — template of v3.13.0)
 Before the first tool call of any session, the first turn after a
 compaction included, and before writing or proposing a plan, invoke the
 task-observer skill AND run its Session Start Protocol: loading alone
@@ -167,19 +167,19 @@ requires its plan call first puts it in that batch, the protocol as its
 first item, revised after the scan. Every turn with a tool call counts,
 however simple it looks. Report a step you did not run in one line before
 the answer when the user can act on it; every skipped step is recorded in
-session-starts.log, which the user can read. If the skill does not resolve,
-tell the user in your first reply, never only in a log, naming the probe
-(the skill listing, or the directory on disk); re-check the listing on
-every later turn with a tool call and run the protocol the first time it
+skill-observations/session-starts.log for the user. If the skill does not
+resolve, tell the user in your first reply, never only in a log, naming the
+probe (the skill listing, or the directory on disk); re-check the listing
+on every later turn with a tool call and run the protocol the first time it
 resolves. On disk but unlisted, or refused ("Unknown skill"): read its
 SKILL.md directly and run the protocol; that is the activation, said once.
 
 After each task, list this session's observation records and append, in the
-same turn, a one-line summary of that listing to checkpoints.log (ids and
-titles, or "none logged" plus one line per user correction and per
+same turn, a one-line summary of it to skill-observations/checkpoints.log
+(ids and titles, or "none logged" plus one line per user correction and per
 incident, each with why it is not an observation), never from memory. The
-reply names what was logged, or says nothing was logged, in one line;
-details are in checkpoints.log. It catches a skill that never ran.
+reply names what was logged, or that nothing was, in one line; details are
+in that file. It catches a skill that never ran.
 
 The task-observer workspace for this project is:
   [ABSOLUTE PATH]
@@ -768,7 +768,7 @@ if (toolUses < MIN_TOOL_USES) process.exit(0);
 
 if (!(started > 0)) block('task-observer backstop: cannot tell when this session started (no birth time, no ' +
   'transcript timestamp), so it cannot check the log. Check by hand that this session wrote an observation ' +
-  'or a checkpoints.log line, and write the one-line summary to checkpoints.log (the reply names what was logged, or that nothing was, in one line). Fires once per session.');
+  'or a checkpoints.log line, and write the one-line summary to skill-observations/checkpoints.log (the reply names what was logged, or that nothing was, in one line). Fires once per session.');
 
 const files = [path.join(base, 'checkpoints.log')];
 try {
@@ -788,8 +788,8 @@ if (touched.length) process.exit(0);
 
 block('task-observer backstop: this session used tools but wrote no observation file and no checkpoint line. ' +
   'If the skill was never invoked, invoke it now; then write pending observations, or append a ' +
-  '"no observations" line to checkpoints.log naming each user correction and incident of the session and why it ' +
-  'is not an observation, and write the one-line summary to checkpoints.log (the reply names what was logged, or that nothing was, in one line). Fires once per session.');
+  '"no observations" line to skill-observations/checkpoints.log naming each user correction and incident of the session and why it ' +
+  'is not an observation, and write the one-line summary to skill-observations/checkpoints.log (the reply names what was logged, or that nothing was, in one line). Fires once per session.');
 ```
 
 **The session's start time is the fragile input.** A transcript's birth
@@ -836,7 +836,7 @@ if (!session) process.exit(0);
 if (/^(Agent|Task)$/.test(String(input.tool_name || ''))) {   // a subagent hand-back
   console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext:
     'task-observer: a subagent handed back. Before the next launch or the integration edit, write an ' +
-    'observation for any friction it reports, or a "no observations" line to checkpoints.log.' } }));
+    'observation for any friction it reports, or a "no observations" line to skill-observations/checkpoints.log.' } }));
   process.exit(0);
 }
 const state = path.join(os.tmpdir(), `task-observer-plan-${session}.json`);
@@ -856,7 +856,7 @@ try { fs.writeFileSync(state, JSON.stringify(s)); } catch { process.exit(0); }
 if (Math.floor(s.count / 3) === Math.floor(before / 3)) process.exit(0);
 console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext:
   `task-observer checkpoint: ${s.count} plan items completed this session. Before the next item, write ` +
-  'pending observation files or append a "no observations" line to checkpoints.log (How to Log).' } }));
+  'pending observation files or append a "no observations" line to skill-observations/checkpoints.log (How to Log).' } }));
 ```
 
 The input fields are the host's: `todos` is the full list a todo tool
