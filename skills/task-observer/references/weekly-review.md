@@ -483,7 +483,8 @@ transcript with no such line after it is. Without transcripts, compare
 each session's `loaded` lines against the skills that session reports loading, and flag a skill
 with no line. A batch split recorded in the start-up lines as a deferred
 probe tool (`references/environments.md`, "A deferred probe tool moves the
-probe to batch 2") is not a finding. The failure shape: a late lookup
+probe to batch 2"), or as no pinned path in context before the skill load,
+is not a finding. The failure shape: a late lookup
 looks compliant from every later batch, and the record is the one place
 the mismatch shows.
 The same pass reads `session-starts.log`: every session with a `loaded
@@ -509,7 +510,6 @@ loses nothing (the restatement check catches an entry whose file was
 written just before the interruption). Never delete the inbox file itself
 — deleting a memory file needs the user's explicit request — leave it
 empty. Where the store is not readable from this run, say so under Log
-integrity ("inbox not read: <reason>"): the log is then not known to be
 **List the skills root for directories the loader skips.** A directory in
 a skills root with no `SKILL.md` is never loaded, yet a listing shows it
 beside the skills that are. Run this over each skills root the install
@@ -520,6 +520,7 @@ names one is re-routed in Step 3:
 for d in "<skills root>"/*/; do [ -f "$d/SKILL.md" ] || echo "no SKILL.md: $d"; done
 ```
 
+integrity ("inbox not read: <reason>"): the log is then not known to be
 complete. The failure shape: a capture fallback the processing step never
 drains is a second log nobody reviews.
 

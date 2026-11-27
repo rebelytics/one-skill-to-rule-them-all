@@ -1224,6 +1224,18 @@ per skill loaded in that batch, one call each, so `checkpoints.log` holds the
 `workspace: created=…` line followed by one `loaded` line per skill.
 
 **A missing mount in a bridged session is asked for in the same turn, and
+**No pinned path in context before the skill load moves the probe to batch
+2.** The rule about the first batch's content is written in this skill, and
+the pinned path is carried by the activation instruction or hook. Where no
+activation instruction or hook in context carries the path, the first batch
+is composed before either the rule or the path is known. Batch 1 then holds
+the skill load, plus the host's plan call where the host requires one. The
+probe, the session-start scan and the per-skill lookup ride together in
+batch 2, once the skill text has named the anchors to try. That order is not
+a batch-split finding. Record it in the start-up lines ("probe in batch 2:
+no pinned path in context before the skill load"). The same session's
+Session Start step 4 suggestion is then due: the missing pin is the cause.
+
 re-probed while it stays missing.** When the probe fails because the
 workspace folder is not connected, the folder-access request goes out in
 the batch right after the failed probe, before any work, with the tool's
