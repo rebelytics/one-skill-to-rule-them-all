@@ -1941,7 +1941,11 @@ prefix set in the environment is ignored and the bytecode lands beside
 the file. The Delivery sweep stays the backstop; an explicit delete
 scope — the subagent may remove only files it created, by path, under its
 own directories, and never runs a recursive delete on a directory it did
-not create; whether the pass is a content pass or a reformat —
+not create; an explicit loop scope — a delegate enumerates only the
+skills and paths its brief names, never a listing of a shared anchor,
+and refuses to overwrite an existing `.seed/` file (`set -C` before the
+write); where delegates share an anchor, the brief says so and names the
+other delegates' skills as off-limits; whether the pass is a content pass or a reformat —
 never both in one edit, and a snapshot of the staged directory taken
 before it (Delivery) — and an explicit rule that subagents do not change
 any observation's status and do not write observations (unless the brief
