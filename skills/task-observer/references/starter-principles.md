@@ -2,7 +2,7 @@
 
 Load triggers: the starter-set reconciliation is due (marker absent or older than this file's set)
 
-Starter set version: 4
+Starter set version: 5
 
 This file is NOT the adopter's principles file. It is an optional seed:
 a curated set of generic methodology principles, accumulated over a long
@@ -534,6 +534,21 @@ two before reading anything out of it; a mismatch means a sample, not the
 population. Prefer the interface that returns the artefact to the one
 that returns a summary of it, because only the latter can silently
 shorten.
+
+An empty result means nothing until the instrument has been shown to run.
+Check each tool a filter calls (`command -v`), never discard the stderr of
+a filter whose failure would read as "no match", run it once on an input
+known to match, and make a watch loop print its full initial state on its
+first pass, so that zero events can only mean it never ran. A missing tool
+and a clean search print the same nothing. Delete a raw capture only after
+its parser has printed the raw line count and the first error line.
+
+Presence has its counterpart: a read that returns *something* has not
+returned *the thing*. Block pages, captchas and login interstitials arrive
+as successful responses with a title and a URL. Assert a shape of the
+expected content (the site's own container, an expected phrase, a length
+floor) before using a page's text, and in a batch print that verdict per
+page, so one block page cannot hide in a run of successes.
 
 ### 29. A skill holds method; dated values live in a workspace file the skill names
 **Applies to:** all skills, open-source and internal
