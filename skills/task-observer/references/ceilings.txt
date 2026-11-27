@@ -16,7 +16,7 @@
 # released core ceiling: 600 (v3.13.0)
 # SKILL.md core_max_lines 600: the every-session rules, the session-start checklist and the pointer list into the references; episodic detail lives in the reference files
 # activation block: 31 lines (environments.md, "The activation block": the fenced text block, stamp line included; checked by hand, not by the validator)
-environments.md 2293 activation per host, workspace anchoring and scope, bridged sessions and the device script copy, hooks and their samples, scheduled prompts, install checks and the backfill; a consumer whose output is data kept out of the block's reach; split by episode pending; the skill-load hook on the Skill tool, the file-tool write path for a bridged session with no device shell, the starter set copied beside .bin/; the device shell failing alone while staging and commit still work
+environments.md 2308 activation per host, workspace anchoring and scope, bridged sessions and the device script copy, hooks and their samples, scheduled prompts, install checks and the backfill; a consumer whose output is data kept out of the block's reach; split by episode pending; the skill-load hook on the Skill tool, the file-tool write path for a bridged session with no device shell, the starter set copied beside .bin/; the device shell failing alone while staging and commit still work; a scheduled prompt drafting tasks instead of creating them; a refused folder request made again on the user's go-ahead
 # split_pending: environments.md the next split by episode
 # split_pending: weekly-review.md past the split line target
 # split_pending: skill-authoring.md past the split line target

@@ -1269,7 +1269,12 @@ to Log** denial rule: at most one identical retry, told to the user, never
 another tool. Refused again, or no folder-picker or device-bridge tool
 after one tool search: load `references/environments.md` ("No link to the
 user's computer"), mandatory, and keep its order — the log, else ask to
-park in the user's memory inbox, else a handoff file.
+park in the user's memory inbox, else a handoff file. In an interactive
+session the one-line report of the refusal names what the folder is
+needed for and that it can be re-requested on the user's go-ahead. The
+user's explicit instruction to retry is a new request: the identical call
+once more, its reason citing that instruction, never another tool or
+wording. An unattended run has no such turn and keeps the branch above.
 
 ### Install-layout hazards — three ways a skill silently stops existing
 
