@@ -15,6 +15,7 @@ A listing is not a security review: read a skill before you install it. This pag
 
 | Skill | What it does | Licence | Last skill update |
 |---|---|---|---|
+| [ai-citation-outreach](https://github.com/rebelytics/ai-citation-outreach) | Turns AI citation data into a qualified, categorised outreach list with drafted messages, run on a cadence with a feedback loop. | CC BY 4.0 | 2026-11 |
 | [ai-visibility-tracking-strategy-builder](https://github.com/rebelytics/ai-visibility-tracking-strategy-builder) | Builds and refines the prompt set and reporting structure for tracking how a brand appears in AI answers. | CC BY 4.0 | 2026-11 |
 | [bing-grounding-query-analysis](https://github.com/rebelytics/bing-grounding-query-analysis) | Turns an exported Bing Webmaster Tools grounding-query report into decisions: coverage and concentration first, then branded vs non-branded citations, entity confusion and six more cuts. | CC BY 4.0 | 2026-11 |
 | [bing-wmt-ai-grounding-export](https://github.com/rebelytics/bing-wmt-ai-grounding-export) | Exports Bing Webmaster Tools AI Performance data (cited pages and their grounding queries) at scale through the report's own API. | CC BY 4.0 | 2026-11 |
@@ -35,7 +36,12 @@ A listing is not a security review: read a skill before you install it. This pag
 
 | Skill | What it does | Licence | Last skill update |
 |---|---|---|---|
+| [breadcrumb-navigation-audit](https://github.com/rebelytics/breadcrumb-navigation-audit) | Audits breadcrumb navigation across multilingual or multi-regional sites: visible UI, mobile and desktop parity, linking and BreadcrumbList structured data. | CC BY 4.0 | 2026-11 |
+| [crawl-to-agent-instructions](https://github.com/rebelytics/crawl-to-agent-instructions) | Turns website crawl data into fix instructions a coding agent can act on, profiling each defect by the template element that emits it. | CC BY 4.0 | 2026-11 |
+| [hreflang-international-seo-audit](https://github.com/rebelytics/hreflang-international-seo-audit) | Audits hreflang annotations and country or language switchers across multi-domain and multi-locale sites. | CC BY 4.0 | 2026-11 |
+| [indexing-and-crawl-control](https://github.com/rebelytics/indexing-and-crawl-control) | Decides and evidences what search engines may crawl and index on a site, from noindex vs robots.txt to removal lists and faceted navigation. | CC BY 4.0 | 2026-11 |
 | [international-llms-txt-build](https://github.com/rebelytics/international-llms-txt-build) | Builds international and multilingual llms.txt structures for websites with multiple country or language versions. | CC BY 4.0 | 2026-11 |
+| [jsonld-validation-audit](https://github.com/rebelytics/jsonld-validation-audit) | Validates JSON-LD structured data at scale across every language and country version of a site, and verifies that a reported schema fix landed everywhere. | CC BY 4.0 | 2026-11 |
 | [pagination-independence-architecture](https://github.com/rebelytics/pagination-independence-architecture) | Designs category and listing architecture so a site's indexable value does not depend on paginated pages. | CC BY 4.0 | 2026-11 |
 | [redirect-verification](https://github.com/rebelytics/redirect-verification) | Checks a reported redirect or link fix against its spec, using crawl data and targeted live requests. | CC BY 4.0 | 2026-11 |
 | [schema-implementation](https://github.com/rebelytics/schema-implementation) | Implements schema.org structured data across a website, from page type analysis through developer-ready tickets to post-deployment verification. | CC BY 4.0 | 2026-11 |
