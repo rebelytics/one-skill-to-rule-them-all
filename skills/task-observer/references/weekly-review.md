@@ -216,7 +216,8 @@ skill routinely splits across several live ones. Where a bulk question
 genuinely must come first (very large backlog, a session budget that will
 not cover reading everything), say so in the question, mark the proposed
 split as provisional, and re-present it if the contents disagree. The
-order is `read → bucket → present counts → ask`, never `ask → read`.
+order is `read → bucket → reconcile ids → present counts → ask`, never
+`ask → read` (the id reconciliation: Step 3, before the decision list).
 Reading the bodies is necessary but not sufficient: a body can itself
 assert a checkable premise ("the target is foreign-maintained, so an
 upstream contribution is possible"), and an option built on it inherits
@@ -444,7 +445,6 @@ one such file per participating workspace, describing that workspace's
 own config, never a single copy at the anchor workspace. The baseline
 includes any review-source line Step 0 quoted: when it has changed or
 gone, say so, and Step 0's offer is due again at the next review.
-
 **Check that the tiers cover the workspace's scope.** A user-scope
 workspace serves every project, and a block in one project's instruction
 file activates that project only (`references/environments.md`, "The
@@ -455,6 +455,7 @@ scope goes in the summary's first line with the instruction to add at that
 scope, and the next review compares the line. In an aggregate run, a
 participating workspace with no `activation-tiers.txt` is a finding on that
 line too: its tiers were never recorded.
+
 Two more reads belong to the same pass. **Does the pre-skill tier's line
 name the batch content, or only the probe?** Where a tier read before any
 skill is in place — a preferences block, a user-level instruction file, a
@@ -509,7 +510,6 @@ pairs the lines per day and session label and folds a quick same-label
 re-run; each `UNPAIRED:` line it prints — items 4 and 5 not recorded — is
 a Log integrity finding too, with both counts.
 
-**Drain the observation inbox before the work queue is built.** Where this
 **List the skills root for directories the loader skips.** A directory in
 a skills root with no `SKILL.md` is never loaded, yet a listing shows it
 beside the skills that are. Run this over each skills root the install
@@ -520,6 +520,7 @@ names one is re-routed in Step 3:
 for d in "<skills root>"/*/; do [ -f "$d/SKILL.md" ] || echo "no SKILL.md: $d"; done
 ```
 
+**Drain the observation inbox before the work queue is built.** Where this
 run can read the user-scoped store that sessions without the log park
 observations in (`references/environments.md`, "No link to the user's
 computer"), read its inbox file. For each entry, one at a time: run the
@@ -1351,6 +1352,14 @@ underlying problem is rediscovered from different task contexts and filed
 against different skills, so grouping by filing category asks the user
 the same question more than once. Group the OPEN entries by the DECISION
 they require, not by the skill they are filed against; escalate one
+
+**Reconcile the ids before anything is presented.** The union of the ids
+across every bucket the user will see equals the OPEN queue Step 1 built,
+entry for entry. Compute both lists and print the difference both ways
+before the first decision message. Place each missing id in a bucket, or
+make it its own question; an id in a bucket but not in the queue is
+explained or removed. A read entry that reached no bucket is otherwise
+approved by nobody and stays OPEN with no disposition.
 decision per cluster with the member observation numbers listed under
 it; cross-reference rather than separately escalate any entry whose
 decision duplicates another's. Cheap first pass: scan the Principle lines
