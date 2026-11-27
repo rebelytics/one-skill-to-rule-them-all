@@ -1890,6 +1890,17 @@ SCAN_FIXTURES = [
     ("a marker below the shipped set: DUE names both versions", "oldmarker", True, 0,
      "DUE: starter-set reconciliation — marker v1 < shipped set v", 1, "DUE: workspace creation"),
     ("the artefacts and a current marker: no DUE line", "healthy", True, 0, "files: 2", 1, "DUE: "),
+    ("no starter marker: the DUE line names the offered: line a session without an answer writes", "fresh", True, 0,
+     "a session that gets no answer writes the marker as 'offered: v5 1'", 1, ""),
+    ("an offered: marker below the bound: DUE names the wait and the next line, never a malformed NOTE", "offered1",
+     True, 0, "offer unanswered in 1 session(s) (marker offered: v5 1); offer once, in a review or a session opened "
+     "for skill work, never in another task's reply; a session that gets no answer rewrites the marker as 'offered: v5 2'",
+     1, "NOTE: starter-set marker"),
+    ("an offered: marker at the bound: DUE routes the offer to the next review", "offered3", True, 0,
+     "offer unanswered in 3 sessions (marker offered: v5 3), the re-offer bound: the next review asks it as its own question",
+     1, "NOTE: starter-set marker"),
+    ("--brief: the finding, counts and entry lines and the end line, no staged: or review: line", "healthy", True, 0,
+     "--brief: the staged:, review:, session-start record", 1, "staged: no skill-updates/ at ", ["--brief"]),
     ("a marker with text beside the version: a NOTE quoting it, never parsed as other digits", "textmarker", True, 0,
      "NOTE: starter-set marker skill-observations/starter-principles-reviewed.txt is not one line holding only a version number (line 1: 'v2 (13 imported)')",
      1, "v213"),
@@ -1972,7 +1983,8 @@ def scan_case(scenario, pass_root, extra=None, entries=None, after=None, headers
             (so / "last-review-date.txt").write_text("never\n", encoding="utf-8")
             (so / "cross-cutting-principles.md").write_text("# P\n\n## Active Principles\n", encoding="utf-8")
             (so / "starter-principles-reviewed.txt").write_text(
-                {"oldmarker": "1\n", "textmarker": "v2 (13 imported)\n", "crlfmarker": "\ufeff5\r\n"}.get(scenario, "5\n"),
+                {"oldmarker": "1\n", "textmarker": "v2 (13 imported)\n", "crlfmarker": "\ufeff5\r\n",
+                 "offered1": "offered: v5 1\n", "offered3": "offered: v5 3\r\n"}.get(scenario, "5\n"),
                 encoding="utf-8")
         if scenario == "reviewed":   # a review 10 days ago; entries before, after and undated
             import datetime

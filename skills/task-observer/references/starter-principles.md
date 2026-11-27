@@ -1,6 +1,6 @@
 # Starter Cross-Cutting Principles (optional seed)
 
-Load triggers: the starter-set reconciliation is due (marker absent or older than this file's set)
+Load triggers: the starter-set reconciliation is due (marker absent, an `offered:` line, or older than this file's set)
 
 Starter set version: 5
 
@@ -54,8 +54,18 @@ finds it, so the offer never repeats until the set changes. The
 marker is one line holding only that version as a bare integer (`4`),
 with no prefix and no note beside it: the step 2 scan reports any
 other text instead of comparing it. A reply
-that does not address the offer is not a choice: leave the marker absent
-so the offer returns next session. Ask it as its own question, never as
+that does not address the offer is not a choice, and neither is a session
+that had the offer due and no moment to ask it. **Record the wait, not
+only the answer.** Such a session writes the marker as one line,
+`offered: v<N> <K>`: N the shipped set's version, K the count of sessions
+the offer has waited, 1 the first time, the previous K plus one after it.
+The scan's `DUE:` line names K and the line to write. At K = 3, the
+re-offer bound, sessions stop counting and the next review asks it as its
+own question (`weekly-review.md`, Step 1); a session the user opened for
+skill work may still ask it. Only an answer replaces the `offered:` line
+with the bare version. The failure shape: a duty that only an answer
+discharges, in a session that may not ask, stays due forever and leaves
+no trace of having been skipped. Ask it as its own question, never as
 the last line of another task's report, where it goes unread and the
 next reply approves that report instead. **Never pre-populate silently:** the
 live file's authority comes from the adopter's own evidence trail, and

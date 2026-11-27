@@ -60,7 +60,9 @@
 # unreadable — a .bin/ copy in a bridged session — an absent marker is still
 # DUE and an older one is not compared, so no line prints for it; the line
 # names where the offer may be made, since it is read mid-task; a marker
-# that is not one line holding only the version is a NOTE quoting line 1;
+# reading `offered: v<N> <K>` (an offer K sessions left unanswered) is DUE
+# with K named, and from K = 3 routes the offer to the next review; any other
+# marker that is not one line holding only the version is a NOTE quoting line 1;
 # `DUE: starter-set import lost` when checkpoints.log records a
 # reconciliation that imported entries and the principles file's Active
 # Principles hold none marked as imported;
@@ -433,8 +435,21 @@ done
 mk="$root/skill-observations/starter-principles-reviewed.txt"
 sp="${skill_dir:-$(dirname "$0")/..}/references/starter-principles.md"
 ship=; [ -r "$sp" ] && ship=$(sed -n 's/^Starter set version:[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$sp" | head -n 1)
+# The offer's waiting state: `offered: v<N> <K>`, one line, written by a
+# session that had the offer due and got no answer (it could not ask, or
+# asked and the reply did not address it). From K = 3 (the re-offer bound)
+# the next review asks it as its own question instead.
+mk_off=; [ -r "$mk" ] && mk_off=$(awk 'NR == 1 { sub(/^\357\273\277/, "") } { sub(/\r$/, ""); gsub(/^[[:space:]]+|[[:space:]]+$/, "") } NF { n++; v = $0 }
+            END { if (n == 1 && v ~ /^offered:[[:space:]]*v?[0-9]+[[:space:]]+[0-9]+$/) { sub(/^offered:[[:space:]]*v?/, "", v); print v } }' "$mk")
 if [ ! -e "$mk" ]; then
-  finding "DUE: starter-set reconciliation — skill-observations/starter-principles-reviewed.txt is absent; offer once, in a review or a session opened for skill work, never in another task's reply (references/starter-principles.md, Reconciliation)"
+  finding "DUE: starter-set reconciliation — skill-observations/starter-principles-reviewed.txt is absent; offer once, in a review or a session opened for skill work, never in another task's reply; a session that gets no answer writes the marker as 'offered: v${ship:-<shipped set>} 1' (references/starter-principles.md, Reconciliation)"
+elif [ -n "$mk_off" ]; then
+  mo_v=${mk_off%%[!0-9]*}; mo_k=${mk_off##*[!0-9]}; mo_k=$((10#$mo_k))
+  if [ "$mo_k" -ge 3 ]; then
+    finding "DUE: starter-set reconciliation — offer unanswered in $mo_k sessions (marker offered: v$mo_v $mo_k), the re-offer bound: the next review asks it as its own question; sessions no longer count it (references/weekly-review.md, Step 1)"
+  else
+    finding "DUE: starter-set reconciliation — offer unanswered in $mo_k session(s) (marker offered: v$mo_v $mo_k); offer once, in a review or a session opened for skill work, never in another task's reply; a session that gets no answer rewrites the marker as 'offered: v${ship:-$mo_v} $((mo_k + 1))' (references/starter-principles.md, Reconciliation)"
+  fi
 elif [ -z "$ship" ] && [ -z "$skill_dir" ] && case $(dirname "$0") in (*/skill-observations/.bin) true ;; (*) false ;; esac; then
   # From .bin/ the install is out of reach (a device shell sees only the
   # workspace), so --skill-dir is no remedy there: the refresh's copy is.

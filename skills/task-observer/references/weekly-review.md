@@ -1078,7 +1078,12 @@ Also read all active cross-cutting principles, and
 `skill-observations/starter-principles-deferred.md` where it exists:
 re-check each deferred entry's condition against the work observed since
 and re-offer, one line each, an entry whose condition has fired
-(`starter-principles.md`, "Reconciliation"). If there are no OPEN
+(`starter-principles.md`, "Reconciliation"). A starter marker reading
+`offered: v<N> <K>` with K at the re-offer bound (the scan's `DUE:` line
+says so) puts the reconciliation offer in this review's record as its own
+question, under Waiting for the user, never folded into another item; the
+review rewrites the marker only from the user's answer.
+If there are no OPEN
 observations and no outstanding principles: report "no open observations
 or outstanding principles", update the timestamp, and stop.
 
