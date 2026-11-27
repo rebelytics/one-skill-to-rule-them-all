@@ -510,6 +510,16 @@ written just before the interruption). Never delete the inbox file itself
 — deleting a memory file needs the user's explicit request — leave it
 empty. Where the store is not readable from this run, say so under Log
 integrity ("inbox not read: <reason>"): the log is then not known to be
+**List the skills root for directories the loader skips.** A directory in
+a skills root with no `SKILL.md` is never loaded, yet a listing shows it
+beside the skills that are. Run this over each skills root the install
+uses, and list each hit under Log integrity; an observation whose `skill:`
+names one is re-routed in Step 3:
+
+```bash
+for d in "<skills root>"/*/; do [ -f "$d/SKILL.md" ] || echo "no SKILL.md: $d"; done
+```
+
 complete. The failure shape: a capture fallback the processing step never
 drains is a second log nobody reviews.
 

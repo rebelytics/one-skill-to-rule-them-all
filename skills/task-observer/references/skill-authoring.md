@@ -1366,6 +1366,19 @@ caught only by a test built to break it.
 Session Start step 6 resolves every logged target: a deleted skill
 accumulates observations unnoticed; a dead one more so.
 
+**A target resolves where the loader finds its `SKILL.md`.** The probe
+reads the artefact the loader reads: `<skills root>/<name>/SKILL.md`. A
+directory listing answers a neighbouring question, and a folder of scripts,
+or a tool's output folder dropped into the skills root, passes it while no
+loader ever loads it. Plugin-provided and host-provided skills live outside
+the user skills root, so search their install paths before calling a target
+unresolved. A host skill found there is read-only: route the change, never
+edit it. The near-agreement of the two probes is what keeps the error
+alive: a name admitted once sits in every later list of validated names
+and is not checked again. For example, a `skill:` value naming a folder
+that holds only two helper scripts fails the check, however many entries
+already name it.
+
 A skill that drives something outside itself — a CLI binary, a daemon, an
 API key, a container runtime — is only as installed as the thing it
 drives: the listing says the files are there, not that they can run. The

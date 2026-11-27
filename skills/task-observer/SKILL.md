@@ -211,7 +211,7 @@ The `- [ ]` items under How to Log are ticked in the reply of the turn that writ
    own file; re-read one before changing its *status* (How to Log). Parallel
    sessions on one skill log the same findings: a fan-out expects restatements.
 - [ ] **6. Targets and staged work.** Resolve each distinct `skill:` value in
-   the scanned frontmatter against the installed skill set and mention, in
+   the scanned frontmatter against the installed skill set — a target resolves where the loader finds its `SKILL.md`, never where a directory exists — and mention, in
    one line, any that no longer resolve — and any that resolve but cannot
    run, because presence in a listing is not capability
    (`references/skill-authoring.md`, "Runtime prerequisites"). Say what you
@@ -270,8 +270,8 @@ different example — extend the existing entry instead, never a new file
 (`references/observation-log.md`, "Editing an existing observation", holds
 the steps; the `title:` still names the finding in one line).
 
-**Validate the target at write time.** `skill:` names a skill that exists
-now and performs the operation the Issue describes, written as its bare
+**Validate the target at write time.** `skill:` names a skill whose `SKILL.md` the loader finds now (a directory is not a skill:
+`references/skill-authoring.md`, "Runtime prerequisites") and that performs the operation the Issue describes, written as its bare
 name (`plugin:name` only where two skills share it). If the right home is
 not a skill — an instructions file, a memory note, the register a routine
 reads — put that path in `target_file:`; a skill not yet built goes in `proposes_skill:`.
