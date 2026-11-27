@@ -2663,6 +2663,40 @@ def load_loop_ok():
         return ok, f"chained: {r.stdout.strip()!r} {r.stderr.strip()[:80]!r}, lines {n1} then {n2}"
 
 
+def load_conflict_ok():
+    """A sync tool's conflict copies of an entry are left out of the count
+    and the listing, as the scan leaves them out."""
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / "work space"
+        log = root / "skill-observations" / "observation-log"
+        log.mkdir(parents=True)
+        head = "---\nid: 1\nskill: [x]\nstatus: open\n---\n"
+        for f in ("0001-a.md", "0001-a.sync-conflict-20260101-120000-ABC.md", "0001-a (host's conflicted copy).md"):
+            (log / f).write_text(head, encoding="utf-8")
+        r = subprocess.run(["bash", str(LOAD_SCRIPT), str(root), "x", "--query-only"], cwd=tmp, capture_output=True,
+                           text=True, encoding="utf-8", errors="replace")
+        ok = r.returncode == 0 and r.stdout == "x: 1 open observations\n0001-a.md\n"
+        return ok, f"exit {r.returncode}, out {r.stdout!r}"
+
+
+def load_refusal_text_ok():
+    """The chained second load's refusal says what the script saw and how to
+    re-run, never that no Skill call was made: it cannot see Skill calls."""
+    import subprocess
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp) / "work space"
+        log = root / "skill-observations" / "observation-log"
+        log.mkdir(parents=True)
+        (log / "0001-a.md").write_text("---\nid: 1\nskill: [x]\nstatus: open\n---\n", encoding="utf-8")
+        (root / "skill-observations" / "checkpoints.log").write_text("", encoding="utf-8")
+        r = subprocess.run(["bash", "-c", 'bash "$0" "$1" x; bash "$0" "$1" y; true', str(LOAD_SCRIPT), str(root)],
+                           cwd=tmp, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        ok = ("BATCH REFUSED" in r.stderr and "cannot see Skill calls" in r.stderr
+              and "re-run this lookup alone in its own call" in r.stderr and "no Skill call made" not in r.stderr)
+        return ok, f"err {r.stderr.strip()!r}"
+
+
 # skill-load.sh --correct, the line that follows a refused Skill call:
 # (name, run the lookup first?, reason, exit status, checkpoint lines in order).
 LOAD_CORRECT_FIXTURES = [
@@ -2765,6 +2799,13 @@ def bincheck_case(scenario):
         bin_dir.mkdir(parents=True)
         installed = pathlib.Path(tmp) / "installed"
         installed.mkdir()
+    ("a differing copy: the refusal names both stale sides and the re-hash that tells them apart", "differs", 3, "",
+     "a stale .bin/ (refresh it from the installed scripts: weekly-review.md, Step 1 gate, then re-run), or an installed "
+     "copy older than .bin/ — re-hash the installed scripts into a new digests file and retry once"),
+    ("a file with no installed digest: the refusal names an installed copy older than .bin/ too", "extra", 3, "",
+     "or an installed copy older than .bin/ — re-hash"),
+    ("equal versions, differing digests: the refusal says an equal version does not mean equal files", "samediff", 3, "",
+     "(an equal version, 3.9.0, does not mean equal files)"),
         (installed / "hello.sh").write_text('echo hello "$@"\n', encoding="utf-8")
         (bin_dir / "hello.sh").write_text('echo hello "$@"\n', encoding="utf-8")
         if scenario in ("differs", "samediff"):
@@ -2800,13 +2841,6 @@ def _py_stubs(tmp, python_works):
     `python`) is a Windows Store alias stand-in that prints the install hint
     and exits 9009; with python_works, `python` runs this interpreter."""
     import os
-    ("a differing copy: the refusal names both stale sides and the re-hash that tells them apart", "differs", 3, "",
-     "a stale .bin/ (refresh it from the installed scripts: weekly-review.md, Step 1 gate, then re-run), or an installed "
-     "copy older than .bin/ — re-hash the installed scripts into a new digests file and retry once"),
-    ("a file with no installed digest: the refusal names an installed copy older than .bin/ too", "extra", 3, "",
-     "or an installed copy older than .bin/ — re-hash"),
-    ("equal versions, differing digests: the refusal says an equal version does not mean equal files", "samediff", 3, "",
-     "(an equal version, 3.9.0, does not mean equal files)"),
     d = pathlib.Path(tmp) / "stub bin"
     d.mkdir()
     alias = '#!/bin/sh\necho "Python was not found; run without arguments to install from the Microsoft Store" >&2\nexit 9009\n'
@@ -3840,6 +3874,14 @@ def selftest():
             ok = rc == want_rc and want_err in err and check(before, after, out)
             bad += not ok; total += 1
             print(f"{'ok  ' if ok else 'FAIL'} extend-observation script: {name}"
+        ok, detail = load_conflict_ok()
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} skill-load script: a sync tool's conflict copies are left out of the count and the listing"
+              + ("" if ok else f" ({detail})"))
+        ok, detail = load_refusal_text_ok()
+        bad += not ok; total += 1
+        print(f"{'ok  ' if ok else 'FAIL'} skill-load script: the BATCH REFUSED text names the re-run, never a load no Skill call made"
+              + ("" if ok else f" ({detail})"))
                   + ("" if ok else f" (exit {rc}, err {err.strip()!r}, files {sorted(after)})"))
     elif shutil.which("bash"):
         bad += 1; total += 1

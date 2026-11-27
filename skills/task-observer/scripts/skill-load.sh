@@ -216,9 +216,12 @@ prog='function bare(t) { sub(/.*:/, "", t); sub(/.*\//, "", t); return t }
   fm && /^[A-Za-z_]/ { inl = 0 }
   fm && /^status:[[:space:]]*["\047]?(actioned|declined|superseded|parked)["\047]?[[:space:]]*(#.*)?$/ { rs = 1 }'
 
-out=$(LC_ALL=C find "$d" -maxdepth 1 -name '*.md' -exec awk -v want="$name" "$prog" {} +)
+# A sync tool's conflict copy carries its original's header: counted, it is
+# a second open entry for the same finding. Left out here, as the scan
+# leaves it out (session-start-scan.sh, the counts).
+out=$(LC_ALL=C find "$d" -maxdepth 1 -name '*.md' ! -name '*.sync-conflict-*' ! -name '*conflicted copy*' -exec awk -v want="$name" "$prog" {} +)
 stage=$?
-files=$(find "$d" -maxdepth 1 -name '*.md' ! -empty | wc -l | tr -d ' ')
+files=$(find "$d" -maxdepth 1 -name '*.md' ! -name '*.sync-conflict-*' ! -name '*conflicted copy*' ! -empty | wc -l | tr -d ' ')
 parsed=$(printf '%s\n' "$out" | grep -c '^H ')
 matches=$(printf '%s\n' "$out" | sed -n 's|^M .*/||p' | LC_ALL=C sort)
 count=0; [ -n "$matches" ] && count=$(printf '%s\n' "$matches" | wc -l | tr -d ' ')
