@@ -64,7 +64,8 @@
 #      or more than one skill name (a second name, or a list in one
 #      argument): one call per Skill invocation, in that invocation's batch;
 #      or BATCH REFUSED — a second `loaded` write from the same parent shell
-#      within 10 seconds (a loop or chain of calls, below); nothing written
+#      within 10 seconds (a loop or chain of calls, below; the script cannot
+#      see Skill calls, so the message says only what it saw); nothing written
 #
 # Why a script: a rule about what a tool batch must CONTAIN cannot be
 # enforced by prose inside the thing the batch loads — the agent reads the
@@ -81,7 +82,10 @@
 # its start time and $HOME folded by cksum, never the pid alone: a host
 # that runs every call in a fresh sandbox gives each call's shell the same
 # pid (2 under bwrap), and two sessions on one workspace have different
-# homes. A loop inside one call shares all three. Only a parent that is a shell
+# homes. The start time is `ps`'s, which counts whole seconds, plus the
+# clock-tick start from /proc/<pid>/stat where it exists: two sandboxed
+# calls started in the same second are then still two shells. A loop
+# inside one call shares all of them. Only a parent that is a shell
 # counts — a host that execs the command from its own process gives every
 # call one parent — and without `ps` the check is skipped.
 #
@@ -176,13 +180,15 @@ fi
 pkey=
 if [ -n "$pshell" ]; then
   pst=$(ps -o lstart= -p "$PPID" 2>/dev/null)
-  pkey=$(printf '%s|%s|%s' "$PPID" "$pst" "${HOME:-}" | cksum | cut -d' ' -f1)
+  # field 22 of /proc/<pid>/stat, counted after the parenthesised command name
+  pjt=; [ -r "/proc/$PPID/stat" ] && pjt=$(sed 's/.*) //' "/proc/$PPID/stat" 2>/dev/null | awk '{print $20}')
+  pkey=$(printf '%s|%s|%s|%s' "$PPID" "$pst" "$pjt" "${HOME:-}" | cksum | cut -d' ' -f1)
 fi
 if [ -n "$pshell" ] && [ -r "$last" ]; then
   read -r lp lt _ < "$last" 2>/dev/null
   case "${lp:-}${lt:-}" in (*[!0-9]*|"") ;; (*)
     if [ "$lp" = "$pkey" ] && [ $((now - lt)) -lt 10 ]; then
-      echo "BATCH REFUSED — a second 'loaded' write from the same shell (pid $pshell) within 10 seconds: a loop or chain of calls records loads no Skill call made; nothing written for '$name'. Run one call per Skill invocation, in that invocation's batch" >&2; exit 2
+      echo "BATCH REFUSED — a second 'loaded' write from the same shell (pid $pshell) within 10 seconds: lookups chained or looped in one call; nothing written for '$name'. This script cannot see Skill calls: if '$name' was invoked in this batch, re-run this lookup alone in its own call; a lookup no Skill call rides with takes --query-only" >&2; exit 2
     fi ;;
   esac
 fi

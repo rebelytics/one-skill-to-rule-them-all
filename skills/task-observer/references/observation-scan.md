@@ -166,7 +166,12 @@ The converse holds too: the lookup, and any checkpoint line recording the
 load, run only in the same batch as the Skill invocation, and take the
 skill name from a load that has actually happened — never from a list of
 skills you built to load, nor from a loop over one (a second `loaded` line
-from the same shell within seconds is BATCH REFUSED). A checkpoint line
+from the same shell within seconds is BATCH REFUSED). A batch that carries
+two Skill invocations carries two lookup calls beside them, never one call
+chaining both: the script cannot see Skill calls, so it refuses the second
+lookup of a chain whether or not its Skill call was made, and its message
+says only that. After such a refusal, re-run that lookup alone in its own
+call. A checkpoint line
 written without the load is a false record. Load a skill before writing a
 file it reads at run time: a state file that describes itself does not
 replace the skill that owns it.
